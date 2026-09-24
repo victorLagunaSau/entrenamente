@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ExaMente
 
-## Getting Started
+Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Lucide · Capacitor.
 
-First, run the development server:
+## Desarrollo
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Rutas
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| # | Ruta | Vista |
+|---|------|-------|
+| 1 | `/` | Landing B2C |
+| 2 | `/auth` | Login · Registro · Recuperación |
+| 3 | `/app/student` | Panel del Estudiante (sidebar + bottom nav) |
+| 4 | `/app/dashboard` | Dashboard Padres/Maestros |
+| 5 | `/admin/ingest` | Backoffice de ingesta (layout aislado) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+La **Dev Toolbar** (`src/components/layout/dev-toolbar.tsx`) es temporal: quitarla de `src/app/layout.tsx` antes de producción.
 
-## Learn More
+## Tema
 
-To learn more about Next.js, take a look at the following resources:
+Tokens en `src/app/globals.css` (oscuro por defecto): `background #12131C`, `primary #FF5E1A`, `secondary #FFD166`, texto `#FFFFFF` / `text-cool #E2E8F0`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Añadir componentes shadcn: `npx shadcn@latest add <componente>`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Móvil (Capacitor)
 
-## Deploy on Vercel
+`npm run build:export` genera un export estático en `out/` (`CAPACITOR_BUILD=1`). Para crear las plataformas nativas la primera vez:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm i @capacitor/ios @capacitor/android
+npx cap add ios && npx cap add android
+npm run build:mobile
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Despliegue
+
+Vercel detecta Next.js automáticamente (build normal, sin export).

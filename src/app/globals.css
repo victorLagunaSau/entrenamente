@@ -1,26 +1,98 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * ExaMente — Tema oscuro por defecto.
+ * Grafito Profundo #12131C · Naranja Neón #FF5E1A · Amarillo Mostaza Glow #FFD166
+ * Texto Blanco #FFFFFF · Gris Frío #E2E8F0
+ */
+:root,
+.dark {
+  --radius: 0.75rem;
+
+  --background: #12131c;
+  --foreground: #ffffff;
+  --card: #1a1b27;
+  --card-foreground: #ffffff;
+  --popover: #1a1b27;
+  --popover-foreground: #ffffff;
+
+  --primary: #ff5e1a;
+  --primary-foreground: #12131c;
+  --secondary: #ffd166;
+  --secondary-foreground: #12131c;
+
+  --muted: #222433;
+  --muted-foreground: #a3adbf;
+  --accent: #262839;
+  --accent-foreground: #e2e8f0;
+  --destructive: #ef4444;
+
+  --border: #2b2e40;
+  --input: #2b2e40;
+  --ring: #ff5e1a;
+
+  --text-cool: #e2e8f0;
+  --devbar-h: 48px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-cool: var(--text-cool);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+
+  --shadow-glow-primary: 0 0 24px -4px rgb(255 94 26 / 0.55);
+  --shadow-glow-secondary: 0 0 24px -4px rgb(255 209 102 / 0.5);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    padding-bottom: calc(var(--devbar-h) + env(safe-area-inset-bottom));
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
