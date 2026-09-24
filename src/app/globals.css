@@ -4,35 +4,43 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ExaMente — Tema oscuro por defecto.
- * Grafito Profundo #12131C · Naranja Neón #FF5E1A · Amarillo Mostaza Glow #FFD166
- * Texto Blanco #FFFFFF · Gris Frío #E2E8F0
+ * EntrenaMente — Tema oscuro por defecto, derivado del logo.
+ * Marca: Teal #13BEAD → Azul #1D70E6 (degradado del isotipo) sobre Navy #0A1B33.
+ * Energía (solo gamificación: rachas, XP, logros): Naranja #FF5E1A · Oro #FFD166.
  */
 :root,
 .dark {
   --radius: 0.75rem;
 
-  --background: #12131c;
+  --background: #0a1b33;
   --foreground: #ffffff;
-  --card: #1a1b27;
+  --card: #0f2442;
   --card-foreground: #ffffff;
-  --popover: #1a1b27;
+  --popover: #0f2442;
   --popover-foreground: #ffffff;
+  --surface-deep: #06122a;
 
-  --primary: #ff5e1a;
-  --primary-foreground: #12131c;
-  --secondary: #ffd166;
-  --secondary-foreground: #12131c;
+  --primary: #1d70e6;
+  --primary-foreground: #ffffff;
+  --secondary: #13bead;
+  --secondary-foreground: #0a1b33;
 
-  --muted: #222433;
-  --muted-foreground: #a3adbf;
-  --accent: #262839;
+  /* Azul legible como texto/ícono sobre navy (6:1). #1D70E6 solo como relleno. */
+  --brand-light: #4c9aff;
+  --brand-gradient: linear-gradient(135deg, #13bead 0%, #1d70e6 100%);
+
+  --energy: #ff5e1a;
+  --gold: #ffd166;
+
+  --muted: #13294a;
+  --muted-foreground: #9db0cb;
+  --accent: #173157;
   --accent-foreground: #e2e8f0;
   --destructive: #ef4444;
 
-  --border: #2b2e40;
-  --input: #2b2e40;
-  --ring: #ff5e1a;
+  --border: #1f3a62;
+  --input: #1f3a62;
+  --ring: #13bead;
 
   --text-cool: #e2e8f0;
   --devbar-h: 48px;
@@ -58,6 +66,10 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-cool: var(--text-cool);
+  --color-brand-light: var(--brand-light);
+  --color-surface-deep: var(--surface-deep);
+  --color-energy: var(--energy);
+  --color-gold: var(--gold);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -67,8 +79,9 @@
   --font-sans: var(--font-inter);
   --font-display: var(--font-space-grotesk);
 
-  --shadow-glow-primary: 0 0 24px -4px rgb(255 94 26 / 0.55);
-  --shadow-glow-secondary: 0 0 24px -4px rgb(255 209 102 / 0.5);
+  --shadow-glow-primary: 0 0 24px -4px rgb(29 112 230 / 0.6);
+  --shadow-glow-secondary: 0 0 24px -4px rgb(19 190 173 / 0.55);
+  --shadow-glow-energy: 0 0 24px -4px rgb(255 94 26 / 0.55);
 }
 
 @layer base {
@@ -88,6 +101,16 @@
   h3 {
     @apply font-display tracking-tight;
   }
+}
+
+@utility bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+
+@utility text-brand-gradient {
+  background-image: var(--brand-gradient);
+  background-clip: text;
+  color: transparent;
 }
 
 @utility scrollbar-none {

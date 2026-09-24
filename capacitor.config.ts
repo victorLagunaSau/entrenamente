@@ -1,10 +1,10 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.examente.app",
-  appName: "ExaMente",
+  appId: "com.entrenamente.app",
+  appName: "EntrenaMente",
   webDir: "out",
-  backgroundColor: "#12131C",
+  backgroundColor: "#0A1B33",
 };
 
 export default config;

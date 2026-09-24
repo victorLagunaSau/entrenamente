@@ -4,7 +4,7 @@ import { LineChart } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { WorkspacePlaceholder } from "@/components/layout/workspace-placeholder";
 
-export const metadata: Metadata = { title: "Dashboard · ExaMente" };
+export const metadata: Metadata = { title: "Dashboard · EntrenaMente" };
 
 export default function DashboardPage() {
   return (

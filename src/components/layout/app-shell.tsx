@@ -73,7 +73,7 @@ export function AppShell({
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active === item.id
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/15 text-brand-light"
                   : "text-cool hover:bg-accent hover:text-foreground"
               )}
             >
@@ -112,7 +112,7 @@ export function AppShell({
             onClick={() => setActive(item.id)}
             className={cn(
               "flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-              active === item.id ? "text-primary" : "text-muted-foreground"
+              active === item.id ? "text-brand-light" : "text-muted-foreground"
             )}
           >
             <item.icon className="size-6" />

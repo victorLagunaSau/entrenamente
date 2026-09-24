@@ -15,7 +15,7 @@ export function DevToolbar() {
   return (
     <nav
       aria-label="Navegación de desarrollo"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-secondary/30 bg-[#0B0C12]/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-secondary/30 bg-surface-deep/95 backdrop-blur"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="flex h-[var(--devbar-h)] items-center gap-2 overflow-x-auto px-3 scrollbar-none">

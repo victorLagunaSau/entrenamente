@@ -1,4 +1,4 @@
-# ExaMente
+# EntrenaMente
 
 Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Lucide · Capacitor.
 
@@ -23,7 +23,13 @@ La **Dev Toolbar** (`src/components/layout/dev-toolbar.tsx`) es temporal: quitar
 
 ## Tema
 
-Tokens en `src/app/globals.css` (oscuro por defecto): `background #12131C`, `primary #FF5E1A`, `secondary #FFD166`, texto `#FFFFFF` / `text-cool #E2E8F0`.
+Tokens en `src/app/globals.css` (oscuro por defecto), derivados del logo:
+
+- `background` Navy `#0A1B33` · `card` `#0F2442`
+- `primary` Azul `#1D70E6` (rellenos con texto blanco) · `brand-light` `#4C9AFF` (azul como texto/ícono)
+- `secondary` Teal `#13BEAD` · `bg-brand-gradient` Teal → Azul
+- `energy` `#FF5E1A` / `gold` `#FFD166` — reservados a gamificación (rachas, XP, logros)
+- Texto `#FFFFFF` / `text-cool #E2E8F0`
 
 Añadir componentes shadcn: `npx shadcn@latest add <componente>`.
 

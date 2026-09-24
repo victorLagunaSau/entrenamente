@@ -7,12 +7,15 @@ export function WorkspacePlaceholder({
   route,
   title,
   description,
+  tone = "brand",
   className,
 }: {
   icon: LucideIcon;
   route: string;
   title: string;
   description?: string;
+  /** "energy" para vistas gamificadas (rachas, XP). */
+  tone?: "brand" | "energy";
   className?: string;
 }) {
   return (
@@ -22,7 +25,12 @@ export function WorkspacePlaceholder({
         className
       )}
     >
-      <span className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+      <span
+        className={cn(
+          "grid size-14 place-items-center rounded-2xl",
+          tone === "energy" ? "bg-energy/15 text-energy" : "bg-primary/15 text-brand-light"
+        )}
+      >
         <Icon className="size-7" />
       </span>
       <code className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 font-mono text-xs text-secondary">

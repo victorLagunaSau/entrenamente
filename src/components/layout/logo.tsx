@@ -1,19 +1,32 @@
 import Link from "next/link";
-import { BrainCircuit } from "lucide-react";
+import { Brain } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export function Logo({ className, href = "/" }: { className?: string; href?: string }) {
+// Isotipo provisional: se reemplazará por los archivos finales del logo (SVG).
+export function Logo({
+  className,
+  href = "/",
+  tagline = false,
+}: {
+  className?: string;
+  href?: string;
+  tagline?: boolean;
+}) {
   return (
-    <Link
-      href={href}
-      className={cn("flex items-center gap-2 font-display text-xl font-bold", className)}
-    >
-      <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-glow-primary">
-        <BrainCircuit className="size-5" />
+    <Link href={href} className={cn("flex items-center gap-2.5", className)}>
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white shadow-glow-secondary">
+        <Brain className="size-5" />
       </span>
-      <span>
-        Exa<span className="text-primary">Mente</span>
+      <span className="flex flex-col leading-none">
+        <span className="font-display text-xl font-bold">
+          Entrena<span className="text-brand-light">Mente</span>
+        </span>
+        {tagline && (
+          <span className="mt-1 text-[9px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+            Simuladores de examen de admisión
+          </span>
+        )}
       </span>
     </Link>
   );

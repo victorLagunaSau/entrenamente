@@ -44,3 +44,6 @@ next-env.d.ts
 /ios/App/Pods
 /android/.gradle
 /.idea/
+
+# archivos de referencia
+/recursos

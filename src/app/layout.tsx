@@ -8,12 +8,12 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ExaMente",
-  description: "Prepárate para tus exámenes con práctica gamificada.",
+  title: "EntrenaMente",
+  description: "Simuladores de examen de admisión.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#12131C",
+  themeColor: "#0A1B33",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
