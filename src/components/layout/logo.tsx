@@ -1,33 +1,57 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Brain } from "lucide-react";
 
+import { BRAND, LOGOS, type Audience } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
-// Isotipo provisional: se reemplazará por los archivos finales del logo (SVG).
+/**
+ * Imagotipo oficial (variante para fondo oscuro).
+ * - compact: símbolo + nombre, para navbars.
+ * - full: incluye el lema.
+ * - vertical: símbolo arriba, para pantallas de acceso.
+ * El tamaño se controla con la altura vía className (p. ej. "h-9").
+ */
 export function Logo({
-  className,
+  audience = "estudiante",
+  variant = "compact",
   href = "/",
-  tagline = false,
+  className,
+  priority,
 }: {
-  className?: string;
+  audience?: Audience;
+  variant?: "compact" | "full" | "vertical";
   href?: string;
-  tagline?: boolean;
+  className?: string;
+  priority?: boolean;
 }) {
+  const logo = LOGOS[audience][variant];
+
   return (
-    <Link href={href} className={cn("flex items-center gap-2.5", className)}>
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white shadow-glow-secondary">
-        <Brain className="size-5" />
-      </span>
-      <span className="flex flex-col leading-none">
-        <span className="font-display text-xl font-bold">
-          Entrena<span className="text-brand-light">Mente</span>
-        </span>
-        {tagline && (
-          <span className="mt-1 text-[9px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
-            Simuladores de examen de admisión
-          </span>
-        )}
-      </span>
+    <Link href={href} className="inline-flex shrink-0 items-center" aria-label={BRAND.name}>
+      <Image
+        src={logo.src}
+        width={logo.w}
+        height={logo.h}
+        alt={BRAND.name}
+        priority={priority}
+        unoptimized
+        className={cn("h-9 w-auto", className)}
+      />
     </Link>
+  );
+}
+
+/** Solo el símbolo en formato de ícono de app (fondo degradado). */
+export function AppIcon({ audience, className }: { audience: Audience; className?: string }) {
+  const icon = LOGOS[audience].app;
+  return (
+    <Image
+      src={icon.src}
+      width={icon.w}
+      height={icon.h}
+      alt=""
+      unoptimized
+      className={cn("size-10 rounded-[22%]", className)}
+    />
   );
 }

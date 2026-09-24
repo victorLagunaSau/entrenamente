@@ -3,8 +3,10 @@ import { LineChart } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { WorkspacePlaceholder } from "@/components/layout/workspace-placeholder";
+import { brandIcons } from "@/lib/brand";
 
-export const metadata: Metadata = { title: "Dashboard · EntrenaMente" };
+// Versión maestro: favicon de la tabla con check.
+export const metadata: Metadata = { title: "Dashboard", icons: brandIcons("maestro") };
 
 export default function DashboardPage() {
   return (

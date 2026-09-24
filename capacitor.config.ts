@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: "com.entrenamente.app",
   appName: "EntrenaMente",
   webDir: "out",
-  backgroundColor: "#0A1B33",
+  backgroundColor: "#0A1830",
 };
 
 export default config;

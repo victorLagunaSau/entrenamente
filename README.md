@@ -1,4 +1,4 @@
-# EntrenaMente
+# Entrena Mente
 
 Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Lucide · Capacitor.
 
@@ -20,18 +20,21 @@ npm run dev
 | 5 | `/admin/ingest` | Backoffice de ingesta (layout aislado) |
 
 La **Dev Toolbar** (`src/components/layout/dev-toolbar.tsx`) es temporal: quitarla de `src/app/layout.tsx` antes de producción.
+## Marca y tema
 
-## Tema
+Tokens en `src/app/globals.css` (oscuro por defecto), según el kit de marca:
 
-Tokens en `src/app/globals.css` (oscuro por defecto), derivados del logo:
+- Fondo `#0A1830` · tarjetas en marino de marca `#0F2344`
+- `primary` Azul `#1E6FE6` (rellenos, texto blanco) · `brand-light` `#4C9AFF` (azul como texto/ícono sobre marino)
+- `secondary` Turquesa `#12C2A9` · `bg-brand-gradient` Turquesa → Azul
+- `muted-foreground` `#A9BCD0` (gris del lema) · `text-cool` `#E2E8F0`
+- `energy` `#FF5E1A` / `gold` `#FFD166`: solo para gamificación (rachas, XP, logros) y el badge de admin
+- Tipografía: Poppins (títulos) + Inter (texto)
 
-- `background` Navy `#0A1B33` · `card` `#0F2442`
-- `primary` Azul `#1D70E6` (rellenos con texto blanco) · `brand-light` `#4C9AFF` (azul como texto/ícono)
-- `secondary` Teal `#13BEAD` · `bg-brand-gradient` Teal → Azul
-- `energy` `#FF5E1A` / `gold` `#FFD166` — reservados a gamificación (rachas, XP, logros)
-- Texto `#FFFFFF` / `text-cool #E2E8F0`
+Dos versiones de marca (`src/lib/brand.ts`): **estudiante** (cuaderno) y **maestro** (tabla con check).
+`<Logo audience variant>` usa los SVG `-color-oscuro` de `public/assets/`; los favicons salen de `public/favicon/<versión>/`
+(`/app/dashboard` usa el de maestro, el resto el de estudiante).
 
-Añadir componentes shadcn: `npx shadcn@latest add <componente>`.
 
 ## Móvil (Capacitor)
 

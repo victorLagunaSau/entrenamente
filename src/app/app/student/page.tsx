@@ -4,7 +4,7 @@ import { Flame } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { WorkspacePlaceholder } from "@/components/layout/workspace-placeholder";
 
-export const metadata: Metadata = { title: "Estudiante · EntrenaMente" };
+export const metadata: Metadata = { title: "Estudiante" };
 
 export default function StudentPage() {
   return (

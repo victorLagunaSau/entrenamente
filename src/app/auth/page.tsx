@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AuthCard } from "./auth-card";
 
-export const metadata: Metadata = { title: "Acceso · EntrenaMente" };
+export const metadata: Metadata = { title: "Acceso" };
 
 export default function AuthPage() {
   return (

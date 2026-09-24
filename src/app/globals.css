@@ -4,43 +4,45 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * EntrenaMente — Tema oscuro por defecto, derivado del logo.
- * Marca: Teal #13BEAD → Azul #1D70E6 (degradado del isotipo) sobre Navy #0A1B33.
+ * Entrena Mente — Tema oscuro por defecto, según el kit de marca (recursos/brand/README.md).
+ * Marca: Turquesa #12C2A9 → Azul #1E6FE6 · Marino #0F2344 · Lema #A9BCD0 · Poppins.
  * Energía (solo gamificación: rachas, XP, logros): Naranja #FF5E1A · Oro #FFD166.
  */
 :root,
 .dark {
   --radius: 0.75rem;
 
-  --background: #0a1b33;
+  /* Superficies: el marino de marca es la tarjeta; el fondo va un paso más profundo. */
+  --background: #0a1830;
   --foreground: #ffffff;
-  --card: #0f2442;
+  --card: #0f2344;
   --card-foreground: #ffffff;
-  --popover: #0f2442;
+  --popover: #0f2344;
   --popover-foreground: #ffffff;
-  --surface-deep: #06122a;
+  --surface-deep: #06112a;
 
-  --primary: #1d70e6;
+  --primary: #1e6fe6;
   --primary-foreground: #ffffff;
-  --secondary: #13bead;
-  --secondary-foreground: #0a1b33;
+  --secondary: #12c2a9;
+  --secondary-foreground: #0a1830;
 
-  /* Azul legible como texto/ícono sobre navy (6:1). #1D70E6 solo como relleno. */
+  /* #1E6FE6 solo como relleno (texto blanco 4.7:1). Como texto/ícono sobre marino: */
   --brand-light: #4c9aff;
-  --brand-gradient: linear-gradient(135deg, #13bead 0%, #1d70e6 100%);
+  --brand-mid: #1590d6;
+  --brand-gradient: linear-gradient(135deg, #12c2a9 0%, #1590d6 50%, #1e6fe6 100%);
 
   --energy: #ff5e1a;
   --gold: #ffd166;
 
-  --muted: #13294a;
-  --muted-foreground: #9db0cb;
-  --accent: #173157;
+  --muted: #132b52;
+  --muted-foreground: #a9bcd0;
+  --accent: #16305a;
   --accent-foreground: #e2e8f0;
   --destructive: #ef4444;
 
-  --border: #1f3a62;
-  --input: #1f3a62;
-  --ring: #13bead;
+  --border: #1c3760;
+  --input: #1c3760;
+  --ring: #12c2a9;
 
   --text-cool: #e2e8f0;
   --devbar-h: 48px;
@@ -68,6 +70,7 @@
   --color-cool: var(--text-cool);
   --color-brand-light: var(--brand-light);
   --color-surface-deep: var(--surface-deep);
+  --color-brand-mid: var(--brand-mid);
   --color-energy: var(--energy);
   --color-gold: var(--gold);
 
@@ -77,10 +80,10 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --font-sans: var(--font-inter);
-  --font-display: var(--font-space-grotesk);
+  --font-display: var(--font-poppins);
 
-  --shadow-glow-primary: 0 0 24px -4px rgb(29 112 230 / 0.6);
-  --shadow-glow-secondary: 0 0 24px -4px rgb(19 190 173 / 0.55);
+  --shadow-glow-primary: 0 0 24px -4px rgb(30 111 230 / 0.6);
+  --shadow-glow-secondary: 0 0 24px -4px rgb(18 194 169 / 0.55);
   --shadow-glow-energy: 0 0 24px -4px rgb(255 94 26 / 0.55);
 }
 

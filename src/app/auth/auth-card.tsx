@@ -24,7 +24,7 @@ export function AuthCard() {
   return (
     <div className="w-full sm:max-w-md sm:rounded-2xl sm:border sm:bg-card sm:p-8 sm:shadow-2xl">
       <div className="mb-8 flex flex-col items-center gap-2 text-center">
-        <Logo tagline />
+        <Logo variant="vertical" className="h-28" priority />
         <p className="text-sm text-muted-foreground">Espacio de Trabajo: Autenticación</p>
       </div>
 
