@@ -36,6 +36,16 @@ Dos versiones de marca (`src/lib/brand.ts`): **estudiante** (cuaderno) y **maest
 (`/app/dashboard` usa el de maestro, el resto el de estudiante).
 
 
+## Formulario de informes (landing)
+
+El formulario envía vía [Web3Forms](https://web3forms.com) desde el cliente (funciona también en el export de Capacitor).
+El correo destino se configura al generar la access key en Web3Forms; nunca aparece en el código.
+
+```bash
+# .env.local (y en Vercel → Environment Variables)
+NEXT_PUBLIC_WEB3FORMS_KEY=tu-access-key
+```
+
 ## Móvil (Capacitor)
 
 `npm run build:export` genera un export estático en `out/` (`CAPACITOR_BUILD=1`). Para crear las plataformas nativas la primera vez:

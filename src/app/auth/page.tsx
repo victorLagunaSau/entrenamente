@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { AuthCard } from "./auth-card";
 
@@ -11,7 +12,9 @@ export default function AuthPage() {
         aria-hidden
         className="pointer-events-none fixed inset-x-0 top-1/4 -z-10 mx-auto h-64 max-w-md rounded-full bg-brand-gradient opacity-15 blur-3xl"
       />
-      <AuthCard />
+      <Suspense>
+        <AuthCard />
+      </Suspense>
     </main>
   );
 }
