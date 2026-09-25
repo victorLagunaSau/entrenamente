@@ -19,7 +19,6 @@ npm run dev
 | 4 | `/app/dashboard` | Dashboard Padres/Maestros |
 | 5 | `/admin/ingest` | Backoffice de ingesta (layout aislado) |
 
-La **Dev Toolbar** (`src/components/layout/dev-toolbar.tsx`) es temporal: quitarla de `src/app/layout.tsx` antes de producción.
 ## Marca y tema
 
 Tokens en `src/app/globals.css` (oscuro por defecto), según el kit de marca:
