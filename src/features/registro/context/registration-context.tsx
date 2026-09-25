@@ -27,6 +27,8 @@ type State = {
   busy: boolean;
   serverErrors: Partial<Record<keyof AccountData | "form", string>>;
   profile: Profile | null;
+  /** La cuenta se creó pero falta confirmar el correo para poder entrar. */
+  needsEmailConfirmation: boolean;
   invite: InviteState;
   /** Invitación creada por el padre en el Paso 4B. */
   createdInvite: Invite | null;
@@ -43,7 +45,7 @@ type Action =
   | { type: "attempt"; step: StepId }
   | { type: "busy"; busy: boolean }
   | { type: "serverErrors"; errors: State["serverErrors"] }
-  | { type: "registered"; profile: Profile; createdInvite?: Invite }
+  | { type: "registered"; profile: Profile; needsEmailConfirmation: boolean; createdInvite?: Invite }
   | { type: "invite"; invite: InviteState }
   | { type: "checkout"; plan: PlanId | null };
 
@@ -59,6 +61,7 @@ const initialState: State = {
   busy: false,
   serverErrors: {},
   profile: null,
+  needsEmailConfirmation: false,
   invite: { status: "none" },
   createdInvite: null,
   checkoutPlan: null,
@@ -89,7 +92,12 @@ function reducer(state: State, action: Action): State {
     case "serverErrors":
       return { ...state, serverErrors: action.errors };
     case "registered":
-      return { ...state, profile: action.profile, createdInvite: action.createdInvite ?? null };
+      return {
+        ...state,
+        profile: action.profile,
+        needsEmailConfirmation: action.needsEmailConfirmation,
+        createdInvite: action.createdInvite ?? null,
+      };
     case "invite": {
       const invite = action.invite;
       // Con invitación válida la meta viene definida por el padre.
@@ -188,22 +196,26 @@ export function RegistrationProvider({
 
       if (step === SUBMIT_STEP[flow]) {
         if (flow === "parent") {
-          const { profile, invite } = await service.registerParent({ account: state.account, goal: state.goal });
-          dispatch({ type: "registered", profile, createdInvite: invite });
+          const { profile, invite, needsEmailConfirmation } = await service.registerParent({
+            account: state.account,
+            goal: state.goal,
+          });
+          dispatch({ type: "registered", profile, needsEmailConfirmation, createdInvite: invite });
         } else {
-          const profile = await service.registerStudent({
+          const { profile, needsEmailConfirmation } = await service.registerStudent({
             account: state.account,
             goal: state.goal,
             extra: state.extra,
             inviteCode: state.invite.status === "valid" ? state.invite.invite.code : undefined,
           });
-          dispatch({ type: "registered", profile });
+          dispatch({ type: "registered", profile, needsEmailConfirmation });
         }
       }
 
       dispatch({ type: "go", delta: 1 });
-    } catch {
-      dispatch({ type: "serverErrors", errors: { form: "No pudimos completar el registro. Intenta de nuevo." } });
+    } catch (e) {
+      const form = e instanceof service.RegistrationError ? e.message : "No pudimos completar el registro. Intenta de nuevo.";
+      dispatch({ type: "serverErrors", errors: { form } });
     } finally {
       dispatch({ type: "busy", busy: false });
     }
