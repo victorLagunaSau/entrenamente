@@ -45,7 +45,6 @@
   --ring: #12c2a9;
 
   --text-cool: #e2e8f0;
-  --devbar-h: 48px;
 }
 
 @theme inline {
@@ -97,7 +96,6 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    padding-bottom: calc(var(--devbar-h) + env(safe-area-inset-bottom));
   }
   h1,
   h2,
