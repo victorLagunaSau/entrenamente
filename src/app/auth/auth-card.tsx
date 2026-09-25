@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { KeyRound, LogIn, UserPlus } from "lucide-react";
 
 import { Logo } from "@/components/layout/logo";
@@ -21,6 +22,10 @@ function Field({ id, label, ...props }: { id: string; label: string } & React.Co
 const noop = (e: React.FormEvent) => e.preventDefault();
 
 export function AuthCard() {
+  // /auth?mode=register abre directo la pestaña de registro (CTAs de la landing).
+  const mode = useSearchParams().get("mode");
+  const initialTab = mode === "register" || mode === "recover" ? mode : "login";
+
   return (
     <div className="w-full sm:max-w-md sm:rounded-2xl sm:border sm:bg-card sm:p-8 sm:shadow-2xl">
       <div className="mb-8 flex flex-col items-center gap-2 text-center">
@@ -28,7 +33,7 @@ export function AuthCard() {
         <p className="text-sm text-muted-foreground">Espacio de Trabajo: Autenticación</p>
       </div>
 
-      <Tabs defaultValue="login">
+      <Tabs key={initialTab} defaultValue={initialTab}>
         <TabsList>
           <TabsTrigger value="login">
             <LogIn className="size-4" /> Login

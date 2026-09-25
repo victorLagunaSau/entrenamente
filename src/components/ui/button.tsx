@@ -13,6 +13,9 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-glow-primary",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/90 hover:shadow-glow-secondary",
+        // Naranja neón: solo para el CTA principal de conversión (texto oscuro para contraste 6:1).
+        energy:
+          "bg-energy text-background font-bold shadow-glow-energy hover:bg-[#ff7a3d] hover:shadow-[0_0_36px_-2px_rgb(255_94_26/0.9)]",
         outline:
           "border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
         ghost: "text-cool hover:bg-accent hover:text-foreground",
