@@ -1,82 +1,93 @@
 /**
- * Servicio de registro SIMULADO. Misma firma que tendrá la versión con Supabase
- * (auth.signUp + insert en `profiles`) y Stripe; los componentes solo usan estas funciones.
+ * Servicio de registro con Supabase. Los datos del wizard viajan en los metadatos de
+ * `auth.signUp`; el trigger `handle_new_user` (supabase/migrations) crea el perfil, la meta
+ * y la invitación, y valida los códigos del lado del servidor.
  *
- * Datos de prueba:
- * - Correo ya registrado: `demo@entrenamente.com`
- * - Invitación válida siempre: `DEMO2026` (además de las que genere un padre en este navegador)
+ * Siguen SIMULADOS: el envío de la invitación por correo y Stripe Checkout.
  */
+
+import { authErrorMessage } from "@/features/auth/services/auth-service";
+import { authCallbackUrl, supabase } from "@/lib/supabase/client";
 
 import type { AccountData, ExtraData, GoalData, Invite, PlanId, Profile, UserType } from "../types";
 
-const TAKEN_EMAILS = new Set(["demo@entrenamente.com"]);
-const INVITES_KEY = "em:mock-invites";
-
-const DEMO_INVITE: Omit<Invite, "url"> = {
-  code: "DEMO2026",
-  parentName: "Laura Méndez",
-  goal: { universityId: "ipn", careerId: "ipn-sistemas" },
-};
+/** Error con mensaje listo para mostrarse en el wizard. */
+export class RegistrationError extends Error {}
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // El enlace sigue el formato del spec (/auth?invite_code=…); /auth lo redirige al wizard.
-const inviteUrl = (code: string) => {
-  const origin = typeof window === "undefined" ? "https://examente.com" : window.location.origin;
-  return `${origin}/auth?invite_code=${code}`;
-};
+const inviteUrl = (code: string) => `${window.location.origin}/auth?invite_code=${code}`;
 
-function readInvites(): Record<string, Omit<Invite, "url">> {
-  try {
-    return JSON.parse(localStorage.getItem(INVITES_KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-
-function saveInvite(invite: Omit<Invite, "url">) {
-  try {
-    localStorage.setItem(INVITES_KEY, JSON.stringify({ ...readInvites(), [invite.code]: invite }));
-  } catch {
-    // Sin almacenamiento (modo privado): la invitación solo vive en esta sesión.
-  }
-}
-
+// Mismo alfabeto que valida la tabla `invites` (sin I, O, 0 ni 1).
 function newCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length: 8 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
-function mockProfile(account: AccountData, userType: UserType, origin: Profile["access_origin"]): Profile {
+type SignUpResult = { profile: Profile; needsEmailConfirmation: boolean };
+
+async function signUp(
+  account: AccountData,
+  userType: UserType,
+  metadata: Record<string, string | boolean | null>,
+  origin: Profile["access_origin"]
+): Promise<SignUpResult> {
+  const email = account.email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: account.password,
+    options: {
+      emailRedirectTo: authCallbackUrl(),
+      data: { full_name: account.fullName.trim(), alias: account.alias.trim(), user_type: userType, ...metadata },
+    },
+  });
+  if (error) throw new RegistrationError(authErrorMessage(error));
+  // Con confirmación de correo activa, un correo ya registrado regresa un usuario sin identidades.
+  if (!data.user || data.user.identities?.length === 0) {
+    throw new RegistrationError("Este correo ya tiene una cuenta. Inicia sesión.");
+  }
+
   const now = new Date().toISOString();
   return {
-    id: crypto.randomUUID(),
-    full_name: account.fullName.trim(),
-    alias: account.alias.trim() || null,
-    email: account.email.trim().toLowerCase(),
-    user_type: userType,
-    is_admin: false,
-    payment_status: origin === "parent_invite" ? "paid" : "free_trial",
-    access_origin: origin,
-    license_coupon_code: null,
-    granted_for_free_reason: null,
-    authorized_by: null,
-    license_expiration_date: null,
-    created_at: now,
-    updated_at: now,
+    needsEmailConfirmation: !data.session,
+    // Sin sesión (correo sin confirmar) RLS no deja leer `profiles`: se refleja lo que guardó el trigger.
+    profile: {
+      id: data.user.id,
+      full_name: account.fullName.trim(),
+      alias: account.alias.trim() || null,
+      email,
+      user_type: userType,
+      is_admin: false,
+      payment_status: origin === "parent_invite" ? "paid" : "free_trial",
+      access_origin: origin,
+      license_coupon_code: null,
+      granted_for_free_reason: null,
+      authorized_by: null,
+      license_expiration_date: null,
+      created_at: now,
+      updated_at: now,
+    },
   };
 }
 
 export async function isEmailAvailable(email: string): Promise<boolean> {
-  await wait(400);
-  return !TAKEN_EMAILS.has(email.trim().toLowerCase());
+  const { data, error } = await supabase.rpc("is_email_available", { p_email: email });
+  if (error) throw error;
+  return data === true;
 }
 
 export async function getInvite(code: string): Promise<Invite | null> {
-  await wait(500);
-  const normalized = code.trim().toUpperCase();
-  const found = normalized === DEMO_INVITE.code ? DEMO_INVITE : readInvites()[normalized];
-  return found ? { ...found, url: inviteUrl(found.code) } : null;
+  const { data, error } = await supabase.rpc("get_invite", { p_code: code });
+  const row = !error && Array.isArray(data) ? data[0] : null;
+  if (!row) return null;
+  return {
+    code: row.code,
+    url: inviteUrl(row.code),
+    parentName: row.parent_name,
+    goal: { universityId: row.university_id, careerId: row.career_id },
+  };
 }
 
 export async function registerStudent(input: {
@@ -84,23 +95,34 @@ export async function registerStudent(input: {
   goal: GoalData;
   extra: ExtraData;
   inviteCode?: string;
-}): Promise<Profile> {
-  await wait(900);
-  TAKEN_EMAILS.add(input.account.email.trim().toLowerCase());
-  return mockProfile(input.account, "student", input.inviteCode ? "parent_invite" : "free_trial");
+}): Promise<SignUpResult> {
+  return signUp(
+    input.account,
+    "student",
+    {
+      university_id: input.goal.universityId,
+      career_id: input.goal.careerId,
+      origin_school: input.extra.notStudying ? "" : input.extra.originSchool.trim(),
+      not_studying: input.extra.notStudying,
+      invite_code: input.inviteCode ?? null,
+    },
+    input.inviteCode ? "parent_invite" : "free_trial"
+  );
 }
 
-export async function registerParent(input: { account: AccountData; goal: GoalData }): Promise<{
-  profile: Profile;
-  invite: Invite;
-}> {
-  await wait(900);
-  TAKEN_EMAILS.add(input.account.email.trim().toLowerCase());
-  const invite = { code: newCode(), parentName: input.account.fullName.trim(), goal: input.goal };
-  saveInvite(invite);
+export async function registerParent(input: { account: AccountData; goal: GoalData }): Promise<
+  SignUpResult & { invite: Invite }
+> {
+  const code = newCode();
+  const result = await signUp(
+    { ...input.account, alias: "" },
+    "parent",
+    { university_id: input.goal.universityId, career_id: input.goal.careerId, new_invite_code: code },
+    "free_trial"
+  );
   return {
-    profile: mockProfile({ ...input.account, alias: "" }, "parent", "free_trial"),
-    invite: { ...invite, url: inviteUrl(invite.code) },
+    ...result,
+    invite: { code, url: inviteUrl(code), parentName: input.account.fullName.trim(), goal: input.goal },
   };
 }
 

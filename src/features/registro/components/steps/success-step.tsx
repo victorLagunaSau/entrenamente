@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useRegistration } from "../../context/registration-context";
 import { findCareer, findUniversity } from "../../data/catalog";
 import { formatMxn, PLANS } from "../../data/plans";
+import { ConfirmEmailNotice } from "../confirm-email-notice";
 import { Confetti } from "../confetti";
 import { StepHeader } from "../step-header";
 
@@ -31,6 +32,8 @@ export function SuccessStep() {
         title={`¡Tu cuenta está lista, ${alias}!`}
         description={invited ? "Tu licencia ya está activa. Entra a tu panel y empieza a entrenar." : "Elige cómo quieres empezar a entrenar."}
       />
+
+      <ConfirmEmailNotice />
 
       {university && career && (
         <div className="mx-auto flex w-full max-w-sm items-center gap-3 rounded-xl border bg-background/40 p-3 text-left">

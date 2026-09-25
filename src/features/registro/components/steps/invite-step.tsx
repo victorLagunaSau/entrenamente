@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useRegistration } from "../../context/registration-context";
 import { formatMxn, PLANS } from "../../data/plans";
 import * as service from "../../services/registration-service";
+import { ConfirmEmailNotice } from "../confirm-email-notice";
 import { FormField, invalidClass } from "../form-field";
 import { StepHeader } from "../step-header";
 
@@ -124,6 +125,8 @@ export function InviteStep() {
         </span>
         <ArrowRight className="size-4 shrink-0 text-gold" aria-hidden />
       </button>
+
+      <ConfirmEmailNotice />
 
       <Button asChild size="lg">
         <Link href="/app/dashboard">
