@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Backoffice", robots: { index: false 
 /** Layout aislado del flujo de usuarios finales. */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[calc(100dvh-var(--devbar-h))] flex-col">
+    <div className="flex min-h-dvh flex-col">
       <header className="border-b border-gold/20 bg-surface-deep">
         <div className="flex h-14 items-center justify-between px-4 md:px-8">
           <Logo audience="maestro" href="/admin/ingest" className="h-8" />

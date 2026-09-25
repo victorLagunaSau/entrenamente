@@ -121,12 +121,17 @@ const RegistrationContext = React.createContext<Ctx | null>(null);
 
 export function RegistrationProvider({
   inviteCode,
+  initialFlow,
   children,
 }: {
   inviteCode?: string | null;
+  initialFlow?: Exclude<Flow, "invited"> | null;
   children: React.ReactNode;
 }) {
-  const [state, dispatch] = React.useReducer(reducer, initialState);
+  // Con perfil preseleccionado se arranca en el paso siguiente a la bienvenida.
+  const [state, dispatch] = React.useReducer(reducer, initialState, (s) =>
+    initialFlow ? { ...s, flow: initialFlow, stepIndex: 1 } : s
+  );
 
   React.useEffect(() => {
     if (!inviteCode) return;

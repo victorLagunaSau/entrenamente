@@ -54,7 +54,6 @@
   --uni-uvm: #b91c24;
   --uni-tec: #1450a0;
   --uni-udg: #2c3e50;
-  --devbar-h: 48px;
 }
 
 @theme inline {
@@ -113,7 +112,6 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    padding-bottom: calc(var(--devbar-h) + env(safe-area-inset-bottom));
   }
   h1,
   h2,
@@ -130,6 +128,85 @@
   background-image: var(--brand-gradient);
   background-clip: text;
   color: transparent;
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(76 154 255 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(76 154 255 / 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@utility text-energy-glow {
+  color: var(--energy);
+  text-shadow: 0 0 18px rgb(255 94 26 / 0.65);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px -6px rgb(255 94 26 / 0.7);
+  }
+  50% {
+    box-shadow: 0 0 36px -2px rgb(255 94 26 / 0.9);
+  }
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-float-slow {
+  animation: float 8s ease-in-out 1.5s infinite;
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2.4s ease-in-out infinite;
+}
+
+/* Aparición progresiva al hacer scroll, solo CSS (sin JS). Si el navegador no lo soporta, el contenido se ve normal. */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal-up linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 28%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal,
+  .animate-float,
+  .animate-float-slow,
+  .animate-pulse-glow {
+    animation: none !important;
+  }
 }
 
 @utility scrollbar-none {

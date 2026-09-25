@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, KeyRound, LogIn } from "lucide-react";
 
 import { Logo } from "@/components/layout/logo";
@@ -23,7 +24,9 @@ const noop = (e: React.FormEvent) => e.preventDefault();
 
 /** Login y recuperación de contraseña. El registro vive en /registro (wizard). */
 export function AuthCard() {
-  const [view, setView] = React.useState<"login" | "recover">("login");
+  // /auth?mode=recover abre directo la recuperación.
+  const initialView = useSearchParams().get("mode") === "recover" ? "recover" : "login";
+  const [view, setView] = React.useState<"login" | "recover">(initialView);
 
   return (
     <div className="w-full sm:max-w-md sm:rounded-2xl sm:border sm:bg-card sm:p-8 sm:shadow-2xl">

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 import { RegistrationProvider, useRegistration } from "../context/registration-context";
 import { SUBMIT_STEP } from "../lib/steps";
-import type { StepId } from "../types";
+import type { Flow, StepId } from "../types";
 import { BrandAside } from "./brand-aside";
 import { CheckoutDialog } from "./checkout-dialog";
 import { AccountStep } from "./steps/account-step";
@@ -36,9 +36,16 @@ const STEP_COMPONENTS: Record<StepId, React.ComponentType> = {
 /** Pasos con sus propios botones: bienvenida (elige perfil) y pantallas finales. */
 const SELF_NAV_STEPS: StepId[] = ["profile", "success", "invite"];
 
-export function RegistrationWizard({ inviteCode }: { inviteCode?: string | null }) {
+export function RegistrationWizard({
+  inviteCode,
+  initialFlow,
+}: {
+  inviteCode?: string | null;
+  /** Perfil ya elegido (p. ej. desde un plan de la landing): salta la bienvenida. */
+  initialFlow?: Exclude<Flow, "invited"> | null;
+}) {
   return (
-    <RegistrationProvider inviteCode={inviteCode}>
+    <RegistrationProvider inviteCode={inviteCode} initialFlow={initialFlow}>
       <WizardCard />
       <CheckoutDialog />
     </RegistrationProvider>

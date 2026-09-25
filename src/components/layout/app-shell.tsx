@@ -61,8 +61,8 @@ export function AppShell({
   const [active, setActive] = React.useState(nav[0]?.id);
 
   return (
-    <div className="flex min-h-[calc(100dvh-var(--devbar-h))]">
-      <aside className="sticky top-0 hidden h-[calc(100dvh-var(--devbar-h))] w-64 shrink-0 flex-col border-r bg-card/60 p-4 md:flex">
+    <div className="flex min-h-dvh">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r bg-card/60 p-4 md:flex">
         <Logo audience={audience} className="h-10" />
         <p className="mt-6 px-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
           {roleLabel}
@@ -106,7 +106,8 @@ export function AppShell({
         aria-label="Navegación principal"
         className="fixed inset-x-0 z-40 grid border-t bg-card/95 backdrop-blur md:hidden"
         style={{
-          bottom: "calc(var(--devbar-h) + env(safe-area-inset-bottom))",
+          bottom: 0,
+          paddingBottom: "env(safe-area-inset-bottom)",
           gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))`,
         }}
       >

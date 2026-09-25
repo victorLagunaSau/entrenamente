@@ -27,6 +27,7 @@ las páginas de `src/app/` solo los importan. Lo compartido queda en `src/compon
 
 | Módulo | Carpeta |
 |---|---|
+| Landing | `src/features/landing` |
 | Login / recuperación | `src/features/auth` |
 | Registro (wizard) | `src/features/registro` |
 | Panel del estudiante | `src/features/student` |
@@ -34,9 +35,8 @@ las páginas de `src/app/` solo los importan. Lo compartido queda en `src/compon
 | Backoffice | `src/features/admin` |
 
 **Registro con datos simulados** (`src/features/registro/services/registration-service.ts`, se reemplaza por Supabase + Stripe):
-correo ya registrado `demo@entrenamente.com` · invitación válida `/auth?invite_code=DEMO2026` · en el modal de pago, la casilla «DEV» simula una tarjeta rechazada.
+perfil preseleccionado `/registro?perfil=estudiante|tutor` · correo ya registrado `demo@entrenamente.com` · invitación válida `/auth?invite_code=DEMO2026` · en el modal de pago, la casilla «DEV» simula una tarjeta rechazada.
 
-La **Dev Toolbar** (`src/components/layout/dev-toolbar.tsx`) es temporal: quitarla de `src/app/layout.tsx` antes de producción.
 ## Marca y tema
 
 Tokens en `src/app/globals.css` (oscuro por defecto), según el kit de marca:
@@ -53,6 +53,16 @@ Dos versiones de marca (`src/lib/brand.ts`): **estudiante** (cuaderno) y **maest
 `<Logo audience variant>` usa los SVG `-color-oscuro` de `public/assets/`; los favicons salen de `public/favicon/<versión>/`
 (`/app/dashboard` usa el de maestro, el resto el de estudiante).
 
+
+## Formulario de informes (landing)
+
+El formulario envía vía [Web3Forms](https://web3forms.com) desde el cliente (funciona también en el export de Capacitor).
+El correo destino se configura al generar la access key en Web3Forms; nunca aparece en el código.
+
+```bash
+# .env.local (y en Vercel → Environment Variables)
+NEXT_PUBLIC_WEB3FORMS_KEY=tu-access-key
+```
 
 ## Móvil (Capacitor)
 

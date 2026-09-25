@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 
-import { DevToolbar } from "@/components/layout/dev-toolbar";
 import { BRAND, brandIcons } from "@/lib/brand";
 import "./globals.css";
 
@@ -30,7 +29,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="es" className="dark">
       <body className={`${inter.variable} ${poppins.variable}`}>
         {children}
-        <DevToolbar />
       </body>
     </html>
   );
