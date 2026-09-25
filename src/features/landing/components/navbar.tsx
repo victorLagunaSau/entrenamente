@@ -37,13 +37,13 @@ export function Navbar() {
             <Link href="/auth">Iniciar Sesión</Link>
           </Button>
           <Button asChild variant="energy">
-            <Link href="/auth?mode=register">Registrarme Gratis</Link>
+            <Link href="/registro">Registrarme Gratis</Link>
           </Button>
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
           <Button asChild variant="energy" size="sm" className="h-9">
-            <Link href="/auth?mode=register">Registrarme</Link>
+            <Link href="/registro">Registrarme</Link>
           </Button>
           <Button
             variant="ghost"
@@ -66,7 +66,7 @@ export function Navbar() {
             <Link href="/auth">Iniciar Sesión</Link>
           </Button>
           <Button asChild variant="energy" size="lg">
-            <Link href="/auth?mode=register">Registrarme Gratis</Link>
+            <Link href="/registro">Registrarme Gratis</Link>
           </Button>
         </div>
       )}

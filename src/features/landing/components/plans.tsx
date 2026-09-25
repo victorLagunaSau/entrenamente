@@ -14,6 +14,7 @@ const PLANS = [
     body: "Crea tu ruta personalizada de preparación, haz simulacros de 10 minutos y mide tu progreso diariamente.",
     features: ["Ruta personalizada", "Simulacros de 10 minutos", "Progreso diario"],
     featured: true,
+    signup: "/registro?perfil=estudiante",
   },
   {
     id: "padres",
@@ -22,6 +23,7 @@ const PLANS = [
     title: "Plan Padres y Tutores",
     body: "Acompaña la preparación de tus hijos. Monitorea su porcentaje de aciertos por materia y evolución en una línea de tiempo desde tu propio panel.",
     features: ["Aciertos por materia", "Línea de tiempo de evolución", "Panel propio"],
+    signup: "/registro?perfil=tutor",
   },
   {
     id: "docentes",
@@ -30,6 +32,8 @@ const PLANS = [
     title: "Plan Docentes y Grupos",
     body: "Genera pruebas de ensayo en minutos para tus alumnos sin gastar tus exámenes oficiales y detecta lagunas del grupo antes de la evaluación real.",
     features: ["Pruebas de ensayo en minutos", "Cuida tus exámenes oficiales", "Detección de lagunas del grupo"],
+    // Perfil docente aún no disponible en el registro: entra a la bienvenida.
+    signup: "/registro",
   },
 ];
 
@@ -93,7 +97,7 @@ export function Plans() {
                 variant={p.featured ? "energy" : "outline"}
                 className={cn("mt-auto h-12 w-full", !p.featured && "border-cool/25")}
               >
-                <Link href={`/auth?mode=register&plan=${p.id}`}>
+                <Link href={p.signup}>
                   Probar gratis <ArrowRight />
                 </Link>
               </Button>

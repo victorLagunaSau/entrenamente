@@ -14,10 +14,28 @@ npm run dev
 | # | Ruta | Vista |
 |---|------|-------|
 | 1 | `/` | Landing B2C |
-| 2 | `/auth` | Login · Registro · Recuperación |
+| 2 | `/auth` | Login · Recuperación (redirige `?invite_code=` al registro) |
+| 2b | `/registro` | Wizard de registro: Estudiante, Padre/Tutor y estudiante invitado |
 | 3 | `/app/student` | Panel del Estudiante (sidebar + bottom nav) |
 | 4 | `/app/dashboard` | Dashboard Padres/Maestros |
 | 5 | `/admin/ingest` | Backoffice de ingesta (layout aislado) |
+
+## Estructura
+
+Cada módulo vive en `src/features/<módulo>/` con sus propios `components/`, `context/`, `data/`, `lib/` y `services/`;
+las páginas de `src/app/` solo los importan. Lo compartido queda en `src/components/{ui,layout}` y `src/lib`.
+
+| Módulo | Carpeta |
+|---|---|
+| Landing | `src/features/landing` |
+| Login / recuperación | `src/features/auth` |
+| Registro (wizard) | `src/features/registro` |
+| Panel del estudiante | `src/features/student` |
+| Dashboard padres/tutores | `src/features/dashboard` |
+| Backoffice | `src/features/admin` |
+
+**Registro con datos simulados** (`src/features/registro/services/registration-service.ts`, se reemplaza por Supabase + Stripe):
+perfil preseleccionado `/registro?perfil=estudiante|tutor` · correo ya registrado `demo@entrenamente.com` · invitación válida `/auth?invite_code=DEMO2026` · en el modal de pago, la casilla «DEV» simula una tarjeta rechazada.
 
 ## Marca y tema
 
@@ -28,6 +46,7 @@ Tokens en `src/app/globals.css` (oscuro por defecto), según el kit de marca:
 - `secondary` Turquesa `#12C2A9` · `bg-brand-gradient` Turquesa → Azul
 - `muted-foreground` `#A9BCD0` (gris del lema) · `text-cool` `#E2E8F0`
 - `energy` `#FF5E1A` / `gold` `#FFD166`: solo para gamificación (rachas, XP, logros) y el badge de admin
+- Universidades `--uni-*` (`bg-uni-unam`, `bg-uni-ipn`/`poli`, `uam`, `uvm`, `tec`, `udg`): solo para identificar cada institución con `<UniversityBadge>`
 - Tipografía: Poppins (títulos) + Inter (texto)
 
 Dos versiones de marca (`src/lib/brand.ts`): **estudiante** (cuaderno) y **maestro** (tabla con check).

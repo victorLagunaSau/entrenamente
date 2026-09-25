@@ -1,11 +1,11 @@
-import { ContactForm } from "@/components/landing/contact-form";
-import { Diagnosis } from "@/components/landing/diagnosis";
-import { Footer } from "@/components/landing/footer";
-import { Hero } from "@/components/landing/hero";
-import { Methods } from "@/components/landing/methods";
-import { Navbar } from "@/components/landing/navbar";
-import { Plans } from "@/components/landing/plans";
-import { Universities } from "@/components/landing/universities";
+import { ContactForm } from "@/features/landing/components/contact-form";
+import { Diagnosis } from "@/features/landing/components/diagnosis";
+import { Footer } from "@/features/landing/components/footer";
+import { Hero } from "@/features/landing/components/hero";
+import { Methods } from "@/features/landing/components/methods";
+import { Navbar } from "@/features/landing/components/navbar";
+import { Plans } from "@/features/landing/components/plans";
+import { Universities } from "@/features/landing/components/universities";
 
 export default function LandingPage() {
   return (

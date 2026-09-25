@@ -45,6 +45,15 @@
   --ring: #12c2a9;
 
   --text-cool: #e2e8f0;
+
+  /* Colores institucionales: solo para identificar universidades (badges, chips), nunca como color de UI. */
+  --uni-unam: #1f3a93;
+  --uni-ipn: #7b1f3a;
+  --uni-poli: var(--uni-ipn);
+  --uni-uam: #d4561a;
+  --uni-uvm: #b91c24;
+  --uni-tec: #1450a0;
+  --uni-udg: #2c3e50;
 }
 
 @theme inline {
@@ -72,6 +81,13 @@
   --color-brand-mid: var(--brand-mid);
   --color-energy: var(--energy);
   --color-gold: var(--gold);
+  --color-uni-unam: var(--uni-unam);
+  --color-uni-ipn: var(--uni-ipn);
+  --color-uni-poli: var(--uni-poli);
+  --color-uni-uam: var(--uni-uam);
+  --color-uni-uvm: var(--uni-uvm);
+  --color-uni-tec: var(--uni-tec);
+  --color-uni-udg: var(--uni-udg);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -197,5 +213,17 @@ html {
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Confetti de la pantalla de éxito del registro (src/features/registro/components/confetti.tsx). */
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--confetti-drift, 0), 105vh, 0) rotate(var(--confetti-spin, 540deg));
+    opacity: 0;
   }
 }

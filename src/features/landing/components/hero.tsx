@@ -29,7 +29,7 @@ export function Hero() {
 
           <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Button asChild variant="energy" size="lg" className="h-14 px-8 text-base">
-              <Link href="/auth?mode=register">
+              <Link href="/registro">
                 Probar Gratis Ahora <ArrowRight className="size-5" />
               </Link>
             </Button>
