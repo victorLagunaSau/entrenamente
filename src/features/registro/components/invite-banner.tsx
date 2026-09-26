@@ -9,7 +9,7 @@ import { findCareer, findUniversity } from "../data/catalog";
 export function InviteBanner() {
   const { state } = useRegistration();
   if (state.invite.status !== "valid") return null;
-  const { parentName, goal } = state.invite.invite;
+  const { parentName, goal, sponsored } = state.invite.invite;
   const university = findUniversity(goal.universityId);
   const career = findCareer(goal.universityId, goal.careerId);
 
@@ -17,7 +17,9 @@ export function InviteBanner() {
     <div className="flex gap-3 rounded-xl border border-secondary/30 bg-secondary/10 p-4">
       <BadgeCheck className="size-5 shrink-0 text-secondary" aria-hidden />
       <div className="text-sm">
-        <p className="font-semibold text-foreground">{parentName} te invitó y ya activó tu licencia.</p>
+        <p className="font-semibold text-foreground">
+          {sponsored ? `${parentName} te invitó y ya activó tu acceso.` : `${parentName} te invitó a entrenar.`}
+        </p>
         {university && career && (
           <p className="mt-1 text-cool">
             Tu meta: <span className="font-medium">{university.short}</span> · {career.name}

@@ -43,6 +43,8 @@ export function validateAccount(a: AccountData, flow: Flow): FieldErrors<Account
   else if (!/[A-Za-z]/.test(a.password) || !/\d/.test(a.password))
     e.password = "Combina letras y al menos un número.";
 
+  if (!a.acceptedPrivacy) e.acceptedPrivacy = "Para crear tu cuenta necesitas aceptar el aviso de privacidad.";
+
   return e;
 }
 

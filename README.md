@@ -54,6 +54,17 @@ Dos versiones de marca (`src/lib/brand.ts`): **estudiante** (cuaderno) y **maest
 (`/app/dashboard` usa el de maestro, el resto el de estudiante).
 
 
+## Base de datos (Supabase)
+
+Migraciones en `supabase/migrations/`, en orden; se pegan en **SQL Editor → Run** (cada archivo es una transacción):
+
+1. `20260925000000_auth_profiles.sql`: perfiles, metas, invitaciones y trigger de alta.
+2. `20260926000000_usuarios_licencias.sql`: modelo «Spotify familiar». Perfil base (`profiles`), `student_profiles`, meta inicial, `licenses`, `license_seats` (qué estudiante ocupa cada lugar), `coupons` y el interruptor `get_my_access()` (`active` / `free` / `inactive`).
+
+Reglas clave: las personas son permanentes y las licencias temporales. Pagos, cupones y becas crean una licencia con lugares; el acceso de un estudiante se calcula en vivo desde su lugar, así que cuando una licencia vence nadie tiene que «apagar» a sus alumnos. Las licencias solo se escriben desde el servidor (`redeem_coupon`, el webhook de Stripe o un admin).
+
+En **Authentication → Sign In / Providers → Email** la opción «Confirm email» está desactivada: el usuario entra directo al registrarse.
+
 ## Formulario de informes (landing)
 
 El formulario envía vía [Web3Forms](https://web3forms.com) desde el cliente (funciona también en el export de Capacitor).
