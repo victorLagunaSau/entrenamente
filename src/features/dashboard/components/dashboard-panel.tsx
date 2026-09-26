@@ -1,29 +1,41 @@
-import { LineChart } from "lucide-react";
+"use client";
 
-import { AppShell } from "@/components/layout/app-shell";
-import { WorkspacePlaceholder } from "@/components/layout/workspace-placeholder";
+import { CreditCard, Settings, UserPlus, Users } from "lucide-react";
 
+import { HomeTools } from "@/features/modes/components/home-tools";
+import { ModeGuard, useMode } from "@/features/modes/components/mode-guard";
+import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
+import { PanelShell } from "@/features/modes/components/panel-shell";
+
+/** Home de padres/tutores: gestionan a sus estudiantes; no ven ni hacen cuestionarios. */
 export function DashboardPanel() {
   return (
-    <AppShell variant="dashboard">
-      <div className="flex flex-col gap-6">
-        {/* Esqueleto de KPIs para validar el layout de métricas */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {["Alumnos", "Promedio", "Exámenes", "Racha media"].map((kpi) => (
-            <div key={kpi} className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">{kpi}</p>
-              <p className="mt-2 font-display text-2xl font-semibold text-cool">—</p>
-            </div>
-          ))}
-        </div>
-        <WorkspacePlaceholder
-          icon={LineChart}
-          route="/app/dashboard"
-          title="Espacio de Trabajo: Dashboard de Seguimiento Multialumno / Multihijo"
-          description="Vista ejecutiva: métricas, tablas planas y comparativas por alumno."
-          className="min-h-[45dvh]"
-        />
-      </div>
-    </AppShell>
+    <ModeGuard mode="parent">
+      <PanelShell>
+        <ParentHome />
+      </PanelShell>
+    </ModeGuard>
+  );
+}
+
+function ParentHome() {
+  const { viewer } = useMode();
+
+  return (
+    <div className="flex flex-col gap-6">
+      <ModeSwitcher />
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold sm:text-3xl">¡Hola, {viewer.alias}!</h1>
+        <p className="text-sm text-muted-foreground">Gestiona a tus estudiantes y sus licencias.</p>
+      </header>
+      <HomeTools
+        tools={[
+          { label: "Mis estudiantes", description: "Quiénes están ligados a tu cuenta.", icon: Users },
+          { label: "Invitar estudiante", description: "Envía un código para ligar a un estudiante.", icon: UserPlus },
+          { label: "Licencias", description: "Tu plan y los lugares asignados.", icon: CreditCard },
+          { label: "Mi cuenta", description: "Tus datos y preferencias.", icon: Settings },
+        ]}
+      />
+    </div>
   );
 }
