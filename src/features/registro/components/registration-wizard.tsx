@@ -156,7 +156,7 @@ function WizardCard() {
       {step === "profile" && (
         <p className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
           ¿Ya tienes cuenta?{" "}
-          <Link href="/auth" className="font-semibold text-brand-light underline-offset-4 hover:underline">
+          <Link href="/login" className="font-semibold text-brand-light underline-offset-4 hover:underline">
             Inicia sesión
           </Link>
         </p>

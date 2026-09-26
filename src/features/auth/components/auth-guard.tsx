@@ -16,7 +16,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   React.useEffect(() => {
-    if (session === null) router.replace(`/auth?next=${encodeURIComponent(pathname)}`);
+    if (session === null) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [session, pathname, router]);
 
   if (!session) {
