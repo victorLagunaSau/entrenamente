@@ -16,6 +16,9 @@ const buttonVariants = cva(
         // Naranja neón: solo para el CTA principal de conversión (texto oscuro para contraste 6:1).
         energy:
           "bg-energy text-background font-bold shadow-glow-energy hover:bg-[#ff7a3d] hover:shadow-[0_0_36px_-2px_rgb(255_94_26/0.9)]",
+        // Degradado del logo (turquesa → azul): acción principal con sesión iniciada.
+        brand:
+          "bg-brand-gradient text-white font-bold shadow-glow-secondary [text-shadow:0_1px_2px_rgb(10_24_48/0.45)] hover:brightness-110 hover:shadow-[0_0_36px_-2px_rgb(18_194_169/0.8)]",
         outline:
           "border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
         ghost: "text-cool hover:bg-accent hover:text-foreground",

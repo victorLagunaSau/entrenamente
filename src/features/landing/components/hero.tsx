@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ExamMock } from "./exam-mock";
+import { HeroPrimaryCta } from "./train-cta";
 
 export function Hero() {
   return (
@@ -28,11 +28,7 @@ export function Hero() {
           </h2>
 
           <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Button asChild variant="energy" size="lg" className="h-14 px-8 text-base">
-              <Link href="/registro">
-                Probar Gratis Ahora <ArrowRight className="size-5" />
-              </Link>
-            </Button>
+            <HeroPrimaryCta />
             <Button asChild variant="outline" size="lg" className="h-14 border-cool/25 px-8 text-base">
               <a href="#planes">Ver Planes</a>
             </Button>
