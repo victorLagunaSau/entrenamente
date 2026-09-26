@@ -14,11 +14,13 @@ npm run dev
 | # | Ruta | Vista |
 |---|------|-------|
 | 1 | `/` | Landing B2C |
-| 2 | `/auth` | Login · Recuperación (redirige `?invite_code=` al registro) |
+| 2 | `/login` | Login con correo y contraseña |
+| 2a | `/login/recuperar` · `/login/nueva-contrasena` | Recuperación de contraseña (enlace por correo → nueva contraseña) |
 | 2b | `/registro` | Wizard de registro: Estudiante, Padre/Tutor y estudiante invitado |
 | 3 | `/app/student` | Panel del Estudiante (sidebar + bottom nav) |
 | 4 | `/app/dashboard` | Dashboard Padres/Maestros |
 | 5 | `/admin/ingest` | Backoffice de ingesta (layout aislado) |
+| — | `/auth` · `/auth/callback` | `/auth` solo redirige enlaces antiguos (`?invite_code=` → registro, resto → login); `/auth/callback` recibe los enlaces de correo |
 
 ## Estructura
 
@@ -28,7 +30,8 @@ las páginas de `src/app/` solo los importan. Lo compartido queda en `src/compon
 | Módulo | Carpeta |
 |---|---|
 | Landing | `src/features/landing` |
-| Login / recuperación | `src/features/auth` |
+| Login / recuperación | `src/features/login` |
+| Sesión compartida (guard, callback) | `src/features/auth` |
 | Registro (wizard) | `src/features/registro` |
 | Panel del estudiante | `src/features/student` |
 | Dashboard padres/tutores | `src/features/dashboard` |

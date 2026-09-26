@@ -1,11 +1,11 @@
 /**
- * Autenticación con Supabase: correo/contraseña, Google y recuperación de contraseña.
- * Los componentes solo usan estas funciones; los mensajes de error ya vienen en español.
+ * Sesión de Supabase compartida por los módulos: mensajes de error en español, cierre de
+ * sesión y panel de destino. El login vive en features/login y el alta en features/registro.
  */
 
 import type { AuthError } from "@supabase/supabase-js";
 
-import { authCallbackUrl, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 
 export type AuthResult = { ok: true } | { ok: false; error: string };
 
@@ -22,35 +22,6 @@ const MESSAGES: Record<string, string> = {
 
 export function authErrorMessage(error: AuthError | null | undefined) {
   return (error?.code && MESSAGES[error.code]) || "Algo salió mal. Intenta de nuevo.";
-}
-
-const result = (error: AuthError | null): AuthResult =>
-  error ? { ok: false, error: authErrorMessage(error) } : { ok: true };
-
-export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
-  const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-  return result(error);
-}
-
-/** Redirige a Google; al volver, /auth/callback termina el inicio de sesión. */
-export async function signInWithGoogle(next?: string): Promise<AuthResult> {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: authCallbackUrl(next), queryParams: { prompt: "select_account" } },
-  });
-  return result(error);
-}
-
-export async function sendPasswordReset(email: string): Promise<AuthResult> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-    redirectTo: authCallbackUrl("/auth?mode=update"),
-  });
-  return result(error);
-}
-
-export async function updatePassword(password: string): Promise<AuthResult> {
-  const { error } = await supabase.auth.updateUser({ password });
-  return result(error);
 }
 
 export async function signOut() {

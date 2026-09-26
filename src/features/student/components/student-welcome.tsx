@@ -28,7 +28,7 @@ export function StudentWelcome() {
 
   const logout = async () => {
     await signOut();
-    router.replace("/auth");
+    router.replace("/login");
   };
 
   if (failed) {

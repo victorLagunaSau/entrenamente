@@ -34,7 +34,7 @@ export function Navbar() {
             <a href="#planes">Planes</a>
           </Button>
           <Button asChild variant="outline" className="border-cool/25">
-            <Link href="/auth">Iniciar Sesión</Link>
+            <Link href="/login">Iniciar Sesión</Link>
           </Button>
           <Button asChild variant="energy">
             <Link href="/registro">Registrarme Gratis</Link>
@@ -63,7 +63,7 @@ export function Navbar() {
             <a href="#planes">Planes</a>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/auth">Iniciar Sesión</Link>
+            <Link href="/login">Iniciar Sesión</Link>
           </Button>
           <Button asChild variant="energy" size="lg">
             <Link href="/registro">Registrarme Gratis</Link>

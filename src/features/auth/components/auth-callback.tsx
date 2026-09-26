@@ -44,7 +44,7 @@ export function AuthCallback() {
         <h1 className="text-xl font-bold">No pudimos iniciar tu sesión</h1>
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button asChild size="lg">
-          <Link href="/auth">Volver a iniciar sesión</Link>
+          <Link href="/login">Volver a iniciar sesión</Link>
         </Button>
       </div>
     );
