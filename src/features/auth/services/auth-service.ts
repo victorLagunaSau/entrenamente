@@ -5,6 +5,7 @@
 
 import type { AuthError } from "@supabase/supabase-js";
 
+import { homePathFor } from "@/features/modes/modes";
 import { supabase } from "@/lib/supabase/client";
 
 export type AuthResult = { ok: true } | { ok: false; error: string };
@@ -32,7 +33,7 @@ export async function signOut() {
 export async function homePathForCurrentUser(): Promise<string> {
   // Filtrar por el propio id: padres y admins también pueden leer otros perfiles (RLS).
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return "/app/student";
+  if (!auth.user) return homePathFor(null);
   const { data } = await supabase.from("profiles").select("user_type").eq("id", auth.user.id).maybeSingle();
-  return data?.user_type === "student" || !data ? "/app/student" : "/app/dashboard";
+  return homePathFor(data?.user_type ?? null);
 }

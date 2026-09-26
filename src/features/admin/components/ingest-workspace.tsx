@@ -1,15 +1,15 @@
 import { FileJson } from "lucide-react";
 
-import { WorkspacePlaceholder } from "@/components/layout/workspace-placeholder";
+import { AdminModule } from "./admin-module";
 
 export function IngestWorkspace() {
   return (
-    <WorkspacePlaceholder
+    <AdminModule
       icon={FileJson}
-      route="/admin/ingest"
-      title="Espacio de Trabajo: Backoffice de Ingesta de Preguntas (JSON)"
-      description="Carga, validación y previsualización de bancos de preguntas."
-      className="min-h-[60dvh]"
+      highlight
+      eyebrow="/admin/ingest"
+      title="Módulo: Ingesta y Banco de Preguntas"
+      description="Espacio reservado para la importación masiva de reactivos mediante archivos JSON (Preguntas, Variantes, Ponderaciones y Explicaciones de IA)."
     />
   );
 }
