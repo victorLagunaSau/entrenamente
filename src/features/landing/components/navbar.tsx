@@ -7,10 +7,13 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TrainButton, useLandingSession } from "./train-cta";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  // Con sesión, Iniciar Sesión y Registrarme se sustituyen por "Ir a entrenar".
+  const { loggedIn, homePath } = useLandingSession();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -33,18 +36,26 @@ export function Navbar() {
           <Button asChild variant="ghost">
             <a href="#planes">Planes</a>
           </Button>
-          <Button asChild variant="outline" className="border-cool/25">
-            <Link href="/login">Iniciar Sesión</Link>
-          </Button>
-          <Button asChild variant="energy">
-            <Link href="/registro">Registrarme Gratis</Link>
-          </Button>
+          {loggedIn && <TrainButton href={homePath} />}
+          {loggedIn === false && (
+            <>
+              <Button asChild variant="outline" className="border-cool/25">
+                <Link href="/login">Iniciar Sesión</Link>
+              </Button>
+              <Button asChild variant="energy">
+                <Link href="/registro">Registrarme Gratis</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
-          <Button asChild variant="energy" size="sm" className="h-9">
-            <Link href="/registro">Registrarme</Link>
-          </Button>
+          {loggedIn && <TrainButton href={homePath} size="sm" className="h-9" />}
+          {loggedIn === false && (
+            <Button asChild variant="energy" size="sm" className="h-9">
+              <Link href="/registro">Registrarme</Link>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -62,12 +73,16 @@ export function Navbar() {
           <Button asChild variant="ghost" size="lg" className="justify-start" onClick={() => setOpen(false)}>
             <a href="#planes">Planes</a>
           </Button>
-          <Button asChild variant="outline" size="lg">
-            <Link href="/login">Iniciar Sesión</Link>
-          </Button>
-          <Button asChild variant="energy" size="lg">
-            <Link href="/registro">Registrarme Gratis</Link>
-          </Button>
+          {loggedIn === false && (
+            <>
+              <Button asChild variant="outline" size="lg">
+                <Link href="/login">Iniciar Sesión</Link>
+              </Button>
+              <Button asChild variant="energy" size="lg">
+                <Link href="/registro">Registrarme Gratis</Link>
+              </Button>
+            </>
+          )}
         </div>
       )}
     </header>
