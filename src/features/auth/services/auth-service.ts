@@ -59,6 +59,9 @@ export async function signOut() {
 
 /** Panel al que entra cada tipo de usuario tras iniciar sesión. */
 export async function homePathForCurrentUser(): Promise<string> {
-  const { data } = await supabase.from("profiles").select("user_type").maybeSingle();
+  // Filtrar por el propio id: padres y admins también pueden leer otros perfiles (RLS).
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return "/app/student";
+  const { data } = await supabase.from("profiles").select("user_type").eq("id", auth.user.id).maybeSingle();
   return data?.user_type === "student" || !data ? "/app/student" : "/app/dashboard";
 }

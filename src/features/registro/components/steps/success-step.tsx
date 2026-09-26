@@ -13,10 +13,11 @@ import { ConfirmEmailNotice } from "../confirm-email-notice";
 import { Confetti } from "../confetti";
 import { StepHeader } from "../step-header";
 
-/** Paso final del estudiante: cuenta creada; entrada al panel o al plan ilimitado. */
+/** Paso final del estudiante: cuenta creada; entrada a los módulos /plan-gratuito o /acceso-ilimitado. */
 export function SuccessStep() {
-  const { state, dispatch } = useRegistration();
-  const invited = state.flow === "invited";
+  const { state } = useRegistration();
+  // Invitado con lugar pagado por su padre/tutor: ya entra activo, sin pasar por planes.
+  const sponsored = state.flow === "invited" && state.invite.status === "valid" && state.invite.invite.sponsored;
   const university = findUniversity(state.goal.universityId);
   const career = findCareer(state.goal.universityId, state.goal.careerId);
   const alias = state.account.alias.trim() || state.account.fullName.split(" ")[0];
@@ -30,7 +31,7 @@ export function SuccessStep() {
       </span>
       <StepHeader
         title={`¡Tu cuenta está lista, ${alias}!`}
-        description={invited ? "Tu licencia ya está activa. Entra a tu panel y empieza a entrenar." : "Elige cómo quieres empezar a entrenar."}
+        description={sponsored ? "Tu acceso ya está activo. Entra a tu panel y empieza a entrenar." : "Elige cómo quieres empezar a entrenar."}
       />
 
       <ConfirmEmailNotice />
@@ -42,11 +43,11 @@ export function SuccessStep() {
             <span className="block text-xs text-muted-foreground">Tu meta</span>
             <span className="block truncate text-sm font-semibold">{career.name}</span>
           </span>
-          {invited && <BadgeCheck className="ml-auto size-5 shrink-0 text-secondary" aria-label="Licencia activa" />}
+          {sponsored && <BadgeCheck className="ml-auto size-5 shrink-0 text-secondary" aria-label="Acceso activo" />}
         </div>
       )}
 
-      {invited ? (
+      {sponsored ? (
         <Button asChild size="lg">
           <Link href="/app/student">
             Ir a mi panel <ArrowRight />
@@ -55,13 +56,12 @@ export function SuccessStep() {
       ) : (
         <div className="flex flex-col gap-3">
           <Button asChild size="lg">
-            <Link href="/app/student">
+            <Link href="/plan-gratuito">
               Comenzar plan gratuito <ArrowRight />
             </Link>
           </Button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "checkout", plan: "unlimited" })}
+          <Link
+            href="/acceso-ilimitado"
             className="group relative rounded-lg bg-gradient-to-r from-energy to-gold p-px transition-shadow hover:shadow-glow-energy focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <span className="flex h-auto min-h-12 flex-col items-center justify-center gap-0.5 rounded-[calc(0.5rem-1px)] bg-card px-4 py-2.5 transition-colors group-hover:bg-card/80">
@@ -72,7 +72,7 @@ export function SuccessStep() {
                 {formatMxn(unlimited.priceMxn)}/{unlimited.period} · escuelas y carreras sin límite
               </span>
             </span>
-          </button>
+          </Link>
         </div>
       )}
     </div>

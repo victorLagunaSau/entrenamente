@@ -5,7 +5,7 @@ import * as React from "react";
 import { FLOW_STEPS, SUBMIT_STEP } from "../lib/steps";
 import { validateAccount, validateGoal, type FieldErrors } from "../lib/validation";
 import * as service from "../services/registration-service";
-import type { AccountData, ExtraData, Flow, GoalData, Invite, PlanId, Profile, StepId } from "../types";
+import type { AccountData, ExtraData, Flow, GoalData, Invite, PlanId, StepId } from "../types";
 
 type InviteState =
   | { status: "none" }
@@ -26,7 +26,8 @@ type State = {
   attempted: Partial<Record<StepId, boolean>>;
   busy: boolean;
   serverErrors: Partial<Record<keyof AccountData | "form", string>>;
-  profile: Profile | null;
+  /** ID del usuario creado en Supabase; a partir de aquí ya no se puede regresar. */
+  userId: string | null;
   /** La cuenta se creó pero falta confirmar el correo para poder entrar. */
   needsEmailConfirmation: boolean;
   invite: InviteState;
@@ -45,7 +46,7 @@ type Action =
   | { type: "attempt"; step: StepId }
   | { type: "busy"; busy: boolean }
   | { type: "serverErrors"; errors: State["serverErrors"] }
-  | { type: "registered"; profile: Profile; needsEmailConfirmation: boolean; createdInvite?: Invite }
+  | { type: "registered"; userId: string; needsEmailConfirmation: boolean; createdInvite?: Invite }
   | { type: "invite"; invite: InviteState }
   | { type: "checkout"; plan: PlanId | null };
 
@@ -53,14 +54,14 @@ const initialState: State = {
   flow: null,
   stepIndex: 0,
   direction: 1,
-  account: { fullName: "", alias: "", email: "", password: "" },
+  account: { fullName: "", alias: "", email: "", password: "", acceptedPrivacy: false },
   goal: { universityId: null, careerId: null },
   extra: { originSchool: "", notStudying: false },
   touched: {},
   attempted: {},
   busy: false,
   serverErrors: {},
-  profile: null,
+  userId: null,
   needsEmailConfirmation: false,
   invite: { status: "none" },
   createdInvite: null,
@@ -94,7 +95,7 @@ function reducer(state: State, action: Action): State {
     case "registered":
       return {
         ...state,
-        profile: action.profile,
+        userId: action.userId,
         needsEmailConfirmation: action.needsEmailConfirmation,
         createdInvite: action.createdInvite ?? null,
       };
@@ -168,7 +169,7 @@ export function RegistrationProvider({
   const stepValid: Record<StepId, boolean> = {
     profile: state.flow !== null,
     name: !accountErrors.fullName && !accountErrors.alias,
-    account: !accountErrors.email && !accountErrors.password,
+    account: !accountErrors.email && !accountErrors.password && !accountErrors.acceptedPrivacy,
     university: !goalErrors.universityId,
     career: !goalErrors.careerId,
     extra: true,
@@ -196,19 +197,19 @@ export function RegistrationProvider({
 
       if (step === SUBMIT_STEP[flow]) {
         if (flow === "parent") {
-          const { profile, invite, needsEmailConfirmation } = await service.registerParent({
+          const { userId, invite, needsEmailConfirmation } = await service.registerParent({
             account: state.account,
             goal: state.goal,
           });
-          dispatch({ type: "registered", profile, needsEmailConfirmation, createdInvite: invite });
+          dispatch({ type: "registered", userId, needsEmailConfirmation, createdInvite: invite });
         } else {
-          const { profile, needsEmailConfirmation } = await service.registerStudent({
+          const { userId, needsEmailConfirmation } = await service.registerStudent({
             account: state.account,
             goal: state.goal,
             extra: state.extra,
             inviteCode: state.invite.status === "valid" ? state.invite.invite.code : undefined,
           });
-          dispatch({ type: "registered", profile, needsEmailConfirmation });
+          dispatch({ type: "registered", userId, needsEmailConfirmation });
         }
       }
 
@@ -235,7 +236,7 @@ export function RegistrationProvider({
     accountErrors,
     goalErrors,
     canContinue: stepValid[step] && !state.busy,
-    isLocked: state.profile !== null,
+    isLocked: state.userId !== null,
     dispatch,
     next,
     back,
