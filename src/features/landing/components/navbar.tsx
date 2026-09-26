@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TrainButton, useLandingSession } from "./train-cta";
 
+/** Con sesión, "Planes" lleva al módulo de pago en lugar de la sección de planes. */
+const UPGRADE_PATH = "/acceso-ilimitado";
+
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -34,7 +37,7 @@ export function Navbar() {
 
         <div className="hidden items-center gap-2 md:flex">
           <Button asChild variant="ghost">
-            <a href="#planes">Planes</a>
+            {loggedIn ? <Link href={UPGRADE_PATH}>Mejora tu plan</Link> : <a href="#planes">Planes</a>}
           </Button>
           {loggedIn && <TrainButton href={homePath} />}
           {loggedIn === false && (
@@ -71,7 +74,7 @@ export function Navbar() {
       {open && (
         <div className="flex flex-col gap-2 border-t px-4 pt-3 pb-5 md:hidden">
           <Button asChild variant="ghost" size="lg" className="justify-start" onClick={() => setOpen(false)}>
-            <a href="#planes">Planes</a>
+            {loggedIn ? <Link href={UPGRADE_PATH}>Mejora tu plan</Link> : <a href="#planes">Planes</a>}
           </Button>
           {loggedIn === false && (
             <>

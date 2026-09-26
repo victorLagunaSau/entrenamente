@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, Dumbbell } from "lucide-react";
+import { ArrowRight, Brain } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/features/auth/hooks/use-session";
@@ -28,7 +28,7 @@ export function TrainButton({ href, className, size }: { href: string; className
   return (
     <Button asChild variant="brand" size={size} className={className}>
       <Link href={href}>
-        <Dumbbell className={size === "lg" ? "size-5" : undefined} /> Ir a entrenar
+        <Brain className={size === "lg" ? "size-5" : undefined} /> Ir a entrenar
       </Link>
     </Button>
   );
