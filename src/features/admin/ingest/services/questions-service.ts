@@ -36,6 +36,27 @@ export async function loadMaterias(): Promise<Materia[]> {
   return materias;
 }
 
+/* ─────────────────────────── Preconsulta de filtros ─────────────────────────── */
+
+/** Conteos de reactivos distintos por opción de filtro (nunca trae preguntas). */
+export type Resumen = {
+  instituciones: { clave: string; total: number }[];
+  areas: { id: string; total: number }[];
+  carreras: { id: string; total: number }[];
+  materias: { clave: string; total: number }[];
+};
+
+/** Cascada Institución → Área → Carrera → Materia: solo opciones que tienen preguntas. */
+export async function getResumen(filtro: { institucion?: string | null; area?: string | null; carrera?: string | null } = {}): Promise<Resumen> {
+  const { data, error } = await supabase.rpc("resumen_banco", {
+    p_institucion: filtro.institucion ?? null,
+    p_area: filtro.area ?? null,
+    p_carrera: filtro.carrera ?? null,
+  });
+  if (error) fail(error);
+  return data as Resumen;
+}
+
 /* ─────────────────────────── Lectura ─────────────────────────── */
 
 const SELECT =

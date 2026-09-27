@@ -9,6 +9,7 @@ import { scoreTone } from "@/features/exam/components/exam-question";
 import { MathText } from "@/features/exam/components/math-text";
 import { FORM_CLOSE, FORM_OPEN } from "@/features/exam/lib/form-tags";
 import { type Dificultad, PONDERACIONES, type Ponderacion, type Respuesta, formatScore } from "@/features/exam/types";
+import { useMode } from "@/features/modes/components/mode-guard";
 import { FormField } from "@/features/registro/components/form-field";
 import { cn } from "@/lib/utils";
 
@@ -45,9 +46,17 @@ const toDraft = (q: Pregunta): PreguntaDraft => {
 };
 
 /** La correcta no lleva diagnóstico; los vacíos se guardan como null. */
-const clean = (d: PreguntaDraft): PreguntaDraft => ({
+/** Fuente cuando la pregunta no viene de una guía. */
+export const FUENTE_PROPIA = "Desarrollada por Entrena Mente";
+/** Fuente detallada por omisión: la clave (alias) de quien la capturó. */
+export const fuenteDetalladaDe = (autor: string) => `Capturada por ${autor}`;
+
+/** Normaliza antes de validar/guardar; las fuentes vacías toman los valores por omisión. */
+const clean = (d: PreguntaDraft, autor: string): PreguntaDraft => ({
   ...d,
   id: d.id.trim().toUpperCase(),
+  fuente: d.fuente.trim() || FUENTE_PROPIA,
+  fuenteDetallada: d.fuenteDetallada.trim() || fuenteDetalladaDe(autor),
   pregunta: d.pregunta.trim(),
   lecturaAsociada: d.lecturaAsociada?.trim() ? d.lecturaAsociada : null,
   respuestas: d.respuestas.map((r) => ({
@@ -58,20 +67,25 @@ const clean = (d: PreguntaDraft): PreguntaDraft => ({
   solucionPasoAPaso: d.solucionPasoAPaso.map((p) => p.trim()).filter(Boolean),
 });
 
+/**
+ * Alta (pestaña "+ Pregunta", `editing` null) o edición (ventana desde el catálogo).
+ * En alta, al guardar se limpia el reactivo pero se conserva la clasificación para capturar la siguiente.
+ */
 export function QuestionForm({
   editing,
   onSaved,
-  onNew,
   onPreview,
+  inDialog,
 }: {
   editing: Pregunta | null;
   onSaved: (q: Pregunta) => void;
-  onNew: () => void;
   /** Vista previa del borrador, aunque no esté guardado. */
   onPreview: (q: Pregunta) => void;
+  /** Dentro de la ventana de edición: sin encabezado propio y pie pegado al borde de la ventana. */
+  inDialog?: boolean;
 }) {
   const [draft, setDraft] = React.useState<PreguntaDraft>(() => (editing ? toDraft(editing) : emptyDraft()));
-  const [isNew, setIsNew] = React.useState(!editing);
+  const isNew = !editing;
   const [submitted, setSubmitted] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [savedId, setSavedId] = React.useState<string | null>(null);
@@ -80,13 +94,17 @@ export function QuestionForm({
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const materias = getMaterias();
   const { catalogo } = useCatalogo();
+  const { viewer } = useMode();
+  // Prefijo de ids: el alta (pestaña) y la edición (ventana) están montadas a la vez y no deben repetir ids.
+  const px = inDialog ? "qe" : "q";
+  const autor = viewer.alias || viewer.email;
 
   const issues = React.useMemo(() => {
-    const list = reviewPregunta(clean(draft), { catalogo: catalogo ?? [] });
+    const list = reviewPregunta(clean(draft, autor), { catalogo: catalogo ?? [] });
     if (isNew && idTaken === draft.id.trim().toUpperCase())
       list.unshift({ level: "error", field: "id", message: "Ya existe una pregunta con este ID." });
     return list;
-  }, [draft, isNew, catalogo, idTaken]);
+  }, [draft, isNew, catalogo, idTaken, autor]);
   const errors = submitted ? firstByField(issues.filter((i) => i.level === "error")) : {};
   const avisos = issues.filter((i) => i.level === "aviso");
 
@@ -103,7 +121,7 @@ export function QuestionForm({
     if (!first) return;
     const parts = first.field.split(".");
     const el =
-      document.getElementById(`q-${parts.join("-")}`) ?? document.getElementById(`q-${parts.slice(0, 2).join("-")}`) ?? document.getElementById(`q-${parts[0]}`);
+      document.getElementById(`${px}-${parts.join("-")}`) ?? document.getElementById(`${px}-${parts.slice(0, 2).join("-")}`) ?? document.getElementById(`${px}-${parts[0]}`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     el?.focus({ preventScroll: true });
   };
@@ -115,13 +133,13 @@ export function QuestionForm({
     if (hasErrors) return focusFirstError();
     setSaving(true);
     setSaveError(null);
-    const payload = clean(draft);
+    const payload = clean(draft, autor);
     let saved: Pregunta;
     try {
       if (isNew && (await codigoExiste(payload.id))) {
         setIdTaken(payload.id);
         setSaving(false);
-        document.getElementById("q-id")?.focus();
+        document.getElementById(`${px}-id`)?.focus();
         return;
       }
       saved = await saveQuestion(payload);
@@ -131,40 +149,39 @@ export function QuestionForm({
       return;
     }
     setSaving(false);
-    setDraft(toDraft(saved));
-    setIsNew(false);
     setSubmitted(false);
     setSavedId(saved.id);
+    if (isNew) {
+      // Siguiente captura: misma clasificación y carreras, reactivo en blanco.
+      const { institucion, materia, dificultad, fuente, valorPuntos, destinos } = draft;
+      setDraft({ ...emptyDraft(), institucion, materia, dificultad, fuente, valorPuntos, destinos });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else setDraft(toDraft(saved));
     onSaved(saved);
   };
 
   const preview = () => {
     setSubmitted(true);
     if (hasErrors) return focusFirstError();
-    onPreview({ ...clean(draft), actualizado: new Date().toISOString() });
+    onPreview({ ...clean(draft, autor), actualizado: new Date().toISOString() });
   };
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {!inDialog && (
         <div>
-          <h2 className="text-lg font-semibold">{isNew ? "Nueva pregunta" : `Editando ${draft.id}`}</h2>
+          <h2 className="text-lg font-semibold">Nueva pregunta</h2>
           <p className="text-sm text-muted-foreground">
-            {isNew ? "Alta manual de un reactivo en el formato estándar del banco." : "Los cambios aplican solo a esta variante."}
+            Alta manual de un reactivo en el formato estándar del banco. Para editar, búscala en el Catálogo.
           </p>
         </div>
-        {!isNew && (
-          <Button type="button" variant="outline" size="sm" onClick={onNew}>
-            <Plus /> Nueva pregunta
-          </Button>
-        )}
-      </div>
+      )}
 
       {/* Identificación */}
       <Section title="Identificación">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <FormField
-            id="q-id"
+            id={`${px}-id`}
             label="ID"
             error={errors.id}
             hint="INSTITUCIÓN-ÁREA-MATERIA-000-V00"
@@ -181,7 +198,7 @@ export function QuestionForm({
               />
             )}
           </FormField>
-          <FormField id="q-institucion" label="Institución" error={errors.institucion}>
+          <FormField id={`${px}-institucion`} label="Institución" error={errors.institucion}>
             {(a11y) => (
               <NativeSelect
                 {...a11y}
@@ -200,7 +217,7 @@ export function QuestionForm({
               </NativeSelect>
             )}
           </FormField>
-          <FormField id="q-materia" label="Materia" error={errors.materia}>
+          <FormField id={`${px}-materia`} label="Materia" error={errors.materia}>
             {(a11y) => (
               <NativeSelect {...a11y} value={draft.materia} onChange={(e) => set({ materia: e.target.value })}>
                 <option value="" disabled>
@@ -214,7 +231,7 @@ export function QuestionForm({
               </NativeSelect>
             )}
           </FormField>
-          <FormField id="q-dificultad" label="Dificultad" error={errors.dificultad}>
+          <FormField id={`${px}-dificultad`} label="Dificultad" error={errors.dificultad}>
             {(a11y) => (
               <NativeSelect {...a11y} value={draft.dificultad} onChange={(e) => set({ dificultad: e.target.value as Dificultad })}>
                 {DIFICULTADES.map((d) => (
@@ -225,7 +242,7 @@ export function QuestionForm({
               </NativeSelect>
             )}
           </FormField>
-          <FormField id="q-valorPuntos" label="Valor (puntos)" error={errors.valorPuntos}>
+          <FormField id={`${px}-valorPuntos`} label="Valor (puntos)" error={errors.valorPuntos}>
             {(a11y) => (
               <Input
                 {...a11y}
@@ -237,16 +254,24 @@ export function QuestionForm({
               />
             )}
           </FormField>
-          <FormField id="q-fuente" label="Fuente" optional className="sm:col-span-2">
-            {(a11y) => <Input {...a11y} value={draft.fuente} onChange={(e) => set({ fuente: e.target.value })} placeholder="Guía oficial UNAM 2025 Área 1 (GL261)" />}
+          <FormField id={`${px}-fuente`} label="Fuente" optional className="sm:col-span-2" hint={`Vacía: «${FUENTE_PROPIA}».`}>
+            {(a11y) => (
+              <Input {...a11y} value={draft.fuente} onChange={(e) => set({ fuente: e.target.value })} placeholder={FUENTE_PROPIA} />
+            )}
           </FormField>
-          <FormField id="q-fuenteDetallada" label="Fuente detallada" optional className="sm:col-span-2 lg:col-span-4">
+          <FormField
+            id={`${px}-fuenteDetallada`}
+            label="Fuente detallada"
+            optional
+            className="sm:col-span-2 lg:col-span-4"
+            hint={`Vacía: «${fuenteDetalladaDe(autor)}». Si viene de una guía: pregunta, página y tema.`}
+          >
             {(a11y) => (
               <Input
                 {...a11y}
                 value={draft.fuenteDetallada}
                 onChange={(e) => set({ fuenteDetallada: e.target.value })}
-                placeholder="… - Pregunta 91 - Pág. 67 - Tema 1.2.2.0.0"
+                placeholder={fuenteDetalladaDe(autor)}
               />
             )}
           </FormField>
@@ -257,7 +282,7 @@ export function QuestionForm({
       <Section title="Carreras" description="Relación muchos a muchos: la misma pregunta puede servir a varias carreras. Marcar un área marca todas sus carreras.">
         {catalogo ? (
           <CarrerasSelector
-            id="q-destinos"
+            id={`${px}-destinos`}
             catalogo={catalogo}
             institucion={draft.institucion || null}
             value={draft.destinos}
@@ -280,7 +305,7 @@ export function QuestionForm({
           </Button>
         ) : (
           <FormulaField
-            id="q-lecturaAsociada"
+            id={`${px}-lecturaAsociada`}
             label="Lectura asociada"
             value={draft.lecturaAsociada}
             onChange={(lecturaAsociada) => set({ lecturaAsociada })}
@@ -291,7 +316,7 @@ export function QuestionForm({
           />
         )}
         <FormulaField
-          id="q-pregunta"
+          id={`${px}-pregunta`}
           label="Pregunta"
           value={draft.pregunta}
           onChange={(pregunta) => set({ pregunta })}
@@ -307,7 +332,7 @@ export function QuestionForm({
         description="Exactamente una con 1.0; las parciales valen 0.75, 0.5 o 0.25. Al estudiante se le muestran en orden aleatorio."
       >
         {errors.respuestas && (
-          <p id="q-respuestas" tabIndex={-1} className="text-sm text-destructive">
+          <p id={`${px}-respuestas`} tabIndex={-1} className="text-sm text-destructive">
             {errors.respuestas}
           </p>
         )}
@@ -319,7 +344,7 @@ export function QuestionForm({
                 <span className={cn("grid size-7 place-items-center rounded-md border font-mono text-xs font-bold", scoreTone(r.ponderacion))}>{r.id}</span>
                 <div className="w-36">
                   <NativeSelect
-                    id={`q-respuestas-${i}-ponderacion`}
+                    id={`${px}-respuestas-${i}-ponderacion`}
                     aria-label={`Ponderación de la opción ${r.id}`}
                     aria-invalid={Boolean(errors[`respuestas.${i}.ponderacion`])}
                     value={r.ponderacion}
@@ -346,12 +371,12 @@ export function QuestionForm({
                   </Button>
                 )}
               </div>
-              <FormField id={`q-respuestas-${i}-texto`} label="Texto" error={errors[`respuestas.${i}.texto`]}>
+              <FormField id={`${px}-respuestas-${i}-texto`} label="Texto" error={errors[`respuestas.${i}.texto`]}>
                 {(a11y) => <Input {...a11y} value={r.texto} onChange={(e) => setRespuesta(i, { texto: e.target.value })} />}
               </FormField>
               {r.texto.includes(FORM_OPEN) && <MathText text={r.texto} className="block rounded-md bg-card px-3 py-2 text-sm" />}
               {r.ponderacion < 1 && (
-                <FormField id={`q-respuestas-${i}-diagnosticoError`} label="Diagnóstico del error" error={errors[`respuestas.${i}.diagnosticoError`]}>
+                <FormField id={`${px}-respuestas-${i}-diagnosticoError`} label="Diagnóstico del error" error={errors[`respuestas.${i}.diagnosticoError`]}>
                   {(a11y) => (
                     <Textarea
                       {...a11y}
@@ -385,7 +410,7 @@ export function QuestionForm({
               <span className="mt-3 w-6 shrink-0 font-mono text-xs text-muted-foreground">{i + 1}.</span>
               <div className="min-w-0 flex-1">
                 <FormulaField
-                  id={`q-solucionPasoAPaso-${i}`}
+                  id={`${px}-solucionPasoAPaso-${i}`}
                   label={`Paso ${i + 1}`}
                   hideLabel
                   value={paso}
@@ -416,10 +441,16 @@ export function QuestionForm({
         </ul>
       )}
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t bg-background/90 px-4 py-3 backdrop-blur sm:mx-0 sm:flex-row sm:items-center sm:rounded-2xl sm:border">
+      <div
+        className={cn(
+          "sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t bg-background/90 py-3 backdrop-blur sm:flex-row sm:items-center",
+          // La ventana tiene padding: el pie se pega a su borde real (-bottom-6) para que nada asome debajo.
+          inDialog ? "-bottom-6 -mx-6 -mb-6 bg-card px-6 pb-6" : "-mx-4 px-4 sm:mx-0 sm:rounded-2xl sm:border"
+        )}
+      >
         {savedId && (
           <p className="flex items-center gap-1.5 text-sm text-secondary sm:mr-auto" role="status">
-            <CheckCircle2 className="size-4" /> {savedId} guardada en el banco.
+            <CheckCircle2 className="size-4" /> {savedId} guardada en el banco{isNew ? "; captura la siguiente" : ""}.
           </p>
         )}
         {saveError && (
