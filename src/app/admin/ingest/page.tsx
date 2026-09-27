@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { IngestWorkspace } from "@/features/admin/components/ingest-workspace";
+import { IngestWorkspace } from "@/features/admin/ingest/components/ingest-workspace";
 
 export const metadata: Metadata = { title: "Preguntas" };
 

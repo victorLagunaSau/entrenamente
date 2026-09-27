@@ -27,7 +27,7 @@ export function AdminHome() {
           },
           {
             label: "Banco de Preguntas",
-            description: "Ingesta masiva de reactivos por JSON.",
+            description: "Búsqueda, captura, edición y carga por JSON.",
             icon: FileJson,
             href: "/admin/ingest",
           },
