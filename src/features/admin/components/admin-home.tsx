@@ -1,6 +1,6 @@
 "use client";
 
-import { FileJson, Users } from "lucide-react";
+import { FileJson, School, Users } from "lucide-react";
 
 import { HomeTools } from "@/features/modes/components/home-tools";
 import { useMode } from "@/features/modes/components/mode-guard";
@@ -30,6 +30,12 @@ export function AdminHome() {
             description: "Ingesta masiva de reactivos por JSON.",
             icon: FileJson,
             href: "/admin/ingest",
+          },
+          {
+            label: "Escuelas y Carreras",
+            description: "Universidades, exámenes especiales, áreas y carreras.",
+            icon: School,
+            href: "/admin/escuelas",
           },
         ]}
       />

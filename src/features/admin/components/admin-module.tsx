@@ -23,16 +23,7 @@ export function AdminModule({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <Link
-          href="/admin"
-          className="mb-3 inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Inicio
-        </Link>
-        <code className="font-mono text-xs tracking-wider text-gold">{eyebrow}</code>
-        <h1 className="text-2xl font-bold text-balance md:text-3xl">{title}</h1>
-      </header>
+      <AdminPageHeader eyebrow={eyebrow} title={title} />
 
       <section
         className={cn(
@@ -52,5 +43,22 @@ export function AdminModule({
         {children}
       </section>
     </div>
+  );
+}
+
+/** Regreso al home de admin + ruta del módulo + título. */
+export function AdminPageHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description?: string }) {
+  return (
+    <header className="flex flex-col gap-1">
+      <Link
+        href="/admin"
+        className="mb-3 inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" /> Inicio
+      </Link>
+      <code className="font-mono text-xs tracking-wider text-gold">{eyebrow}</code>
+      <h1 className="text-2xl font-bold text-balance md:text-3xl">{title}</h1>
+      {description && <p className="max-w-2xl text-sm text-muted-foreground text-pretty">{description}</p>}
+    </header>
   );
 }
