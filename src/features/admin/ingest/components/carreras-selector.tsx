@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Check, Minus } from "lucide-react";
+import { Check, CheckCircle2, Minus, Pencil } from "lucide-react";
 
 import { carrerasPorArea } from "@/features/escuelas/lib/catalogo";
 import type { Institucion } from "@/features/escuelas/types";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { findInstitucion } from "../lib/catalog";
@@ -15,6 +16,7 @@ import { InstitucionDot, NativeSelect } from "./fields";
  * Asignación Universidad › Área › Carreras (catálogo de /admin/escuelas).
  * Marcar un área marca todas sus carreras; una guía puede cubrir varias áreas y carreras.
  * Con `onInstitucionChange` muestra el select de institución; si no, usa la que recibe.
+ * Al presionar "Listo" se colapsa en un resumen de cuántas carreras afecta ("Cambiar" lo reabre).
  */
 export function CarrerasSelector({
   id,
@@ -45,10 +47,49 @@ export function CarrerasSelector({
     // Solo carreras de la institución actual.
     onChange([...next].filter((c) => all.includes(c)));
   };
+  // Abierto mientras no haya selección; con selección previa (edición) arranca colapsado.
+  const [abierto, setAbierto] = React.useState(value.length === 0);
+  React.useEffect(() => {
+    if (value.length === 0) setAbierto(true);
+  }, [value.length]);
+
   const stateOf = (ids: string[]) => {
     const n = ids.filter((c) => selected.has(c)).length;
     return n === 0 ? "off" : n === ids.length ? "on" : "mixed";
   };
+
+  if (!abierto && inst && value.length > 0) {
+    const resumen = groups
+      .map(({ area, carreras }) => ({ area, total: carreras.length, marcadas: carreras.filter((c) => selected.has(c.id)).length }))
+      .filter((g) => g.marcadas > 0);
+    return (
+      <div id={id} className="flex flex-col gap-3 rounded-xl border border-secondary/40 bg-secondary/5 p-3 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <p className="flex flex-wrap items-center gap-2 text-sm">
+            <CheckCircle2 className="size-4 shrink-0 text-secondary" />
+            <InstitucionDot clave={inst.clave} />
+            <span className="font-semibold">{inst.clave}</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="font-display text-base font-bold tabular-nums">{value.length}</span>
+            <span>
+              {value.length === 1 ? "carrera" : "carreras"} de {all.length}
+            </span>
+          </p>
+          <ul className="flex flex-wrap gap-1.5 text-xs">
+            {resumen.map(({ area, total, marcadas }) => (
+              <li key={area?.id ?? "sin-area"} className="rounded-full border bg-background/40 px-2.5 py-1 text-cool">
+                {area ? <span className="font-mono text-gold">{area.codigo}</span> : "Sin área"}{" "}
+                {marcadas === total ? `completa (${total})` : `${marcadas} de ${total}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => setAbierto(true)}>
+          <Pencil /> Cambiar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div id={id} className={cn("flex flex-col gap-3 rounded-xl border p-3", invalid && "border-destructive")}>
@@ -139,6 +180,14 @@ export function CarrerasSelector({
               </fieldset>
             );
           })}
+          <div className="flex items-center justify-end gap-3">
+            <span className="text-xs text-muted-foreground">
+              {value.length} {value.length === 1 ? "carrera marcada" : "carreras marcadas"}
+            </span>
+            <Button type="button" size="sm" disabled={value.length === 0} onClick={() => setAbierto(false)}>
+              <Check /> Listo
+            </Button>
+          </div>
         </>
       )}
     </div>
