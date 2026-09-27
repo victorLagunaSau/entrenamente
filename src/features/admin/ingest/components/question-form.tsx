@@ -58,20 +58,25 @@ const clean = (d: PreguntaDraft): PreguntaDraft => ({
   solucionPasoAPaso: d.solucionPasoAPaso.map((p) => p.trim()).filter(Boolean),
 });
 
+/**
+ * Alta (pestaña "+ Pregunta", `editing` null) o edición (ventana desde el catálogo).
+ * En alta, al guardar se limpia el reactivo pero se conserva la clasificación para capturar la siguiente.
+ */
 export function QuestionForm({
   editing,
   onSaved,
-  onNew,
   onPreview,
+  inDialog,
 }: {
   editing: Pregunta | null;
   onSaved: (q: Pregunta) => void;
-  onNew: () => void;
   /** Vista previa del borrador, aunque no esté guardado. */
   onPreview: (q: Pregunta) => void;
+  /** Dentro de la ventana de edición: sin encabezado propio y pie pegado al borde de la ventana. */
+  inDialog?: boolean;
 }) {
   const [draft, setDraft] = React.useState<PreguntaDraft>(() => (editing ? toDraft(editing) : emptyDraft()));
-  const [isNew, setIsNew] = React.useState(!editing);
+  const isNew = !editing;
   const [submitted, setSubmitted] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [savedId, setSavedId] = React.useState<string | null>(null);
@@ -131,10 +136,14 @@ export function QuestionForm({
       return;
     }
     setSaving(false);
-    setDraft(toDraft(saved));
-    setIsNew(false);
     setSubmitted(false);
     setSavedId(saved.id);
+    if (isNew) {
+      // Siguiente captura: misma clasificación y carreras, reactivo en blanco.
+      const { institucion, materia, dificultad, fuente, valorPuntos, destinos } = draft;
+      setDraft({ ...emptyDraft(), institucion, materia, dificultad, fuente, valorPuntos, destinos });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else setDraft(toDraft(saved));
     onSaved(saved);
   };
 
@@ -146,19 +155,14 @@ export function QuestionForm({
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {!inDialog && (
         <div>
-          <h2 className="text-lg font-semibold">{isNew ? "Nueva pregunta" : `Editando ${draft.id}`}</h2>
+          <h2 className="text-lg font-semibold">Nueva pregunta</h2>
           <p className="text-sm text-muted-foreground">
-            {isNew ? "Alta manual de un reactivo en el formato estándar del banco." : "Los cambios aplican solo a esta variante."}
+            Alta manual de un reactivo en el formato estándar del banco. Para editar, búscala en el Catálogo.
           </p>
         </div>
-        {!isNew && (
-          <Button type="button" variant="outline" size="sm" onClick={onNew}>
-            <Plus /> Nueva pregunta
-          </Button>
-        )}
-      </div>
+      )}
 
       {/* Identificación */}
       <Section title="Identificación">
@@ -416,10 +420,16 @@ export function QuestionForm({
         </ul>
       )}
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t bg-background/90 px-4 py-3 backdrop-blur sm:mx-0 sm:flex-row sm:items-center sm:rounded-2xl sm:border">
+      <div
+        className={cn(
+          "sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t bg-background/90 py-3 backdrop-blur sm:flex-row sm:items-center",
+          // La ventana tiene padding: el pie se pega a su borde real (-bottom-6) para que nada asome debajo.
+          inDialog ? "-bottom-6 -mx-6 -mb-6 bg-card px-6 pb-6" : "-mx-4 px-4 sm:mx-0 sm:rounded-2xl sm:border"
+        )}
+      >
         {savedId && (
           <p className="flex items-center gap-1.5 text-sm text-secondary sm:mr-auto" role="status">
-            <CheckCircle2 className="size-4" /> {savedId} guardada en el banco.
+            <CheckCircle2 className="size-4" /> {savedId} guardada en el banco{isNew ? "; captura la siguiente" : ""}.
           </p>
         )}
         {saveError && (

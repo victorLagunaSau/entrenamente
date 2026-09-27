@@ -9,23 +9,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MathText } from "@/features/exam/components/math-text";
 import type { Dificultad } from "@/features/exam/types";
-import { cn } from "@/lib/utils";
-
 import { carrerasPorArea } from "@/features/escuelas/lib/catalogo";
+import { cn } from "@/lib/utils";
 
 import { DIFICULTADES, carreraNombre, findInstitucion } from "../lib/catalog";
 import { missingFilters, searchMode } from "../lib/search";
 import { useCatalogo } from "../lib/use-catalogo";
-import { deleteQuestion, getMaterias, searchQuestions } from "../services/questions-service";
+import { type Resumen, deleteQuestion, getMaterias, getResumen, searchQuestions } from "../services/questions-service";
 import type { Pregunta, QuestionFilters, SearchResult } from "../types";
 import { DifficultyBadge, InstitucionDot, NativeSelect } from "./fields";
 
 const EMPTY_FILTERS: QuestionFilters = { query: "", institucion: null, materia: null, carreras: null, dificultad: null };
 
 /**
- * Buscador tipo Google: los filtros salen del catálogo fijo (no del banco) y la consulta
- * solo se ejecuta al presionar "Buscar". Sin ID, institución y materia son obligatorias
- * para no lanzar consultas costosas (ver lib/search).
+ * Buscador tipo Google. Filtros en cascada Institución → Área → Carrera → Materia: cada nivel
+ * ofrece solo opciones con preguntas, según la preconsulta `resumen_banco` (solo conteos).
+ * La consulta de preguntas se ejecuta al presionar "Buscar"; sin ID, institución y materia son
+ * obligatorias para no lanzar consultas costosas (ver lib/search).
  */
 export function CatalogTab({
   version,
@@ -33,13 +33,15 @@ export function CatalogTab({
   onPreview,
   onChanged,
 }: {
-  /** Cambia cuando otra pestaña guarda o importa: repite la última búsqueda. */
+  /** Cambia cuando otra pestaña guarda o importa: repite la última búsqueda y la preconsulta. */
   version: number;
   onEdit: (q: Pregunta) => void;
   onPreview: (q: Pregunta) => void;
   onChanged: () => void;
 }) {
   const [draft, setDraft] = React.useState<QuestionFilters>(EMPTY_FILTERS);
+  const [area, setArea] = React.useState<string | null>(null);
+  const [carrera, setCarrera] = React.useState<string | null>(null);
   // Última búsqueda enviada; null = aún no se ha buscado nada.
   const [submitted, setSubmitted] = React.useState<QuestionFilters | null>(null);
   const [page, setPage] = React.useState(1);
@@ -50,18 +52,39 @@ export function CatalogTab({
   const mode = searchMode(draft);
   const missing = missingFilters(draft);
   const byId = mode === "id";
-  // Se lee en cada render: el importador puede haber registrado materias nuevas.
-  const materias = getMaterias();
   const { catalogo } = useCatalogo();
   const inst = catalogo && draft.institucion ? findInstitucion(catalogo, draft.institucion) : null;
-  // Valor del select "Carrera / Área": "area:<id>" (todas sus carreras) o "carrera:<id>".
-  const [destinoKey, setDestinoKey] = React.useState("");
-  const pickDestino = (key: string) => {
-    setDestinoKey(key);
-    const [kind, id] = key.split(":");
-    const carreras = !key || !inst ? null : kind === "area" ? inst.carreras.filter((c) => c.areaId === id).map((c) => c.id) : [id];
-    set({ carreras });
-  };
+
+  // Preconsulta: qué opciones tienen preguntas (se repite al cambiar institución/área/carrera).
+  const [resumen, setResumen] = React.useState<Resumen | null>(null);
+  const [resumenError, setResumenError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let alive = true;
+    setResumenError(null);
+    getResumen({ institucion: draft.institucion, area, carrera })
+      .then((r) => alive && setResumen(r))
+      .catch((e: unknown) => alive && setResumenError(e instanceof Error ? e.message : "No se pudo consultar el banco."));
+    return () => {
+      alive = false;
+    };
+  }, [draft.institucion, area, carrera, version]);
+
+  const totalDe = (list: { total: number }[] | undefined, key: string, value: string) =>
+    (list as ({ total: number } & Record<string, unknown>)[] | undefined)?.find((x) => x[key] === value)?.total ?? 0;
+  const instituciones = (catalogo ?? []).filter((i) => totalDe(resumen?.instituciones, "clave", i.clave) > 0);
+  const areas = inst ? carrerasPorArea(inst).filter((g) => g.area && totalDe(resumen?.areas, "id", g.area.id) > 0) : [];
+  const carreras = inst
+    ? inst.carreras.filter((c) => (!area || c.areaId === area) && totalDe(resumen?.carreras, "id", c.id) > 0)
+    : [];
+  const materias = draft.institucion ? (resumen?.materias ?? []) : [];
+  const materiaNombreDe = (clave: string) => getMaterias().find((m) => m.clave === clave)?.nombre ?? clave;
+  const totalMateria = draft.materia ? totalDe(resumen?.materias, "clave", draft.materia) : 0;
+
+  // Si la materia elegida ya no tiene preguntas con el nuevo área/carrera, se limpia.
+  React.useEffect(() => {
+    if (resumen && draft.materia && draft.institucion && !resumen.materias.some((m) => m.clave === draft.materia))
+      setDraft((f) => ({ ...f, materia: null }));
+  }, [resumen, draft.materia, draft.institucion]);
 
   React.useEffect(() => {
     if (!submitted) return;
@@ -89,13 +112,16 @@ export function CatalogTab({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!mode) return;
-    setSubmitted({ ...draft, query: draft.query.trim() });
+    // Carrera elegida → solo esa; área → todas sus carreras; ninguna → sin filtro de carrera.
+    const ids = carrera ? [carrera] : area && inst ? inst.carreras.filter((c) => c.areaId === area).map((c) => c.id) : null;
+    setSubmitted({ ...draft, query: draft.query.trim(), carreras: ids });
     setPage(1);
   };
 
   const clear = () => {
     setDraft(EMPTY_FILTERS);
-    setDestinoKey("");
+    setArea(null);
+    setCarrera(null);
     setSubmitted(null);
     setResult(null);
     setPage(1);
@@ -123,73 +149,81 @@ export function CatalogTab({
           </Button>
         </div>
 
-        <div className={cn("grid gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-4", byId && "opacity-50")}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="filter-institucion">
-              Institución <Required />
-            </Label>
+        <div className={cn("grid gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-5", byId && "opacity-50")}>
+          <Filtro id="filter-institucion" label="Institución" required>
             <NativeSelect
               id="filter-institucion"
               aria-required={!byId}
               value={draft.institucion ?? ""}
+              disabled={!resumen}
               onChange={(e) => {
-                set({ institucion: e.target.value || null, carreras: null });
-                setDestinoKey("");
+                set({ institucion: e.target.value || null, materia: null });
+                setArea(null);
+                setCarrera(null);
               }}
             >
               <option value="" disabled>
-                Elige…
+                {!resumen ? "Cargando…" : instituciones.length ? "Elige…" : "Banco vacío"}
               </option>
-              {catalogo?.map((i) => (
+              {instituciones.map((i) => (
                 <option key={i.id} value={i.clave}>
-                  {i.clave}
+                  {i.clave} ({totalDe(resumen?.instituciones, "clave", i.clave)})
                 </option>
               ))}
             </NativeSelect>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="filter-materia">
-              Materia <Required />
-            </Label>
+          </Filtro>
+          <Filtro id="filter-area" label="Área">
+            <NativeSelect
+              id="filter-area"
+              value={area ?? ""}
+              disabled={!inst || areas.length === 0}
+              onChange={(e) => {
+                setArea(e.target.value || null);
+                setCarrera(null);
+              }}
+            >
+              <option value="">{!inst ? "Elige institución" : areas.length ? "Todas" : "Sin áreas"}</option>
+              {areas.map(({ area: a }) => (
+                <option key={a!.id} value={a!.id}>
+                  {a!.codigo} · {a!.nombre} ({totalDe(resumen?.areas, "id", a!.id)})
+                </option>
+              ))}
+            </NativeSelect>
+          </Filtro>
+          <Filtro id="filter-carrera" label="Carrera">
+            <NativeSelect
+              id="filter-carrera"
+              value={carrera ?? ""}
+              disabled={!inst || carreras.length === 0}
+              onChange={(e) => setCarrera(e.target.value || null)}
+            >
+              <option value="">{!inst ? "Elige institución" : carreras.length ? "Todas" : "Sin carreras con preguntas"}</option>
+              {carreras.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} ({totalDe(resumen?.carreras, "id", c.id)})
+                </option>
+              ))}
+            </NativeSelect>
+          </Filtro>
+          <Filtro id="filter-materia" label="Materia" required>
             <NativeSelect
               id="filter-materia"
               aria-required={!byId}
               value={draft.materia ?? ""}
+              disabled={!draft.institucion || materias.length === 0}
               onChange={(e) => set({ materia: e.target.value || null })}
             >
               <option value="" disabled>
-                Elige…
+                {!draft.institucion ? "Elige institución" : materias.length ? "Elige…" : "Sin materias"}
               </option>
               {materias.map((m) => (
                 <option key={m.clave} value={m.clave}>
-                  {m.nombre}
+                  {materiaNombreDe(m.clave)} ({m.total})
                 </option>
               ))}
             </NativeSelect>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="filter-destino" className="flex items-baseline justify-between gap-2">
-              Carrera / Área <Optional />
-            </Label>
-            <NativeSelect id="filter-destino" value={destinoKey} disabled={!inst} onChange={(e) => pickDestino(e.target.value)}>
-              <option value="">{inst ? "Todas" : "Elige una institución"}</option>
-              {inst &&
-                carrerasPorArea(inst).map(({ area, carreras }) => (
-                  <optgroup key={area?.id ?? "sin-area"} label={area ? `${area.codigo} · ${area.nombre}` : "Sin área"}>
-                    {area && <option value={`area:${area.id}`}>Toda el área {area.codigo}</option>}
-                    {carreras.map((c) => (
-                      <option key={c.id} value={`carrera:${c.id}`}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-            </NativeSelect>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="filter-dificultad" className="flex items-baseline justify-between gap-2">
-              Dificultad <Optional />
-            </Label>
+          </Filtro>
+          <Filtro id="filter-dificultad" label="Dificultad">
             <NativeSelect
               id="filter-dificultad"
               value={draft.dificultad ?? ""}
@@ -202,11 +236,13 @@ export function CatalogTab({
                 </option>
               ))}
             </NativeSelect>
-          </div>
+          </Filtro>
         </div>
 
         <p className="flex items-start gap-2 text-xs text-muted-foreground" aria-live="polite">
-          {byId ? (
+          {resumenError ? (
+            <span className="text-destructive">{resumenError}</span>
+          ) : byId ? (
             <>
               <Hash className="mt-px size-3.5 shrink-0 text-secondary" /> Búsqueda directa por ID: se ignoran los filtros.
             </>
@@ -214,8 +250,8 @@ export function CatalogTab({
             <>
               <Info className="mt-px size-3.5 shrink-0" />
               {missing.length
-                ? `Sin ID, elige ${missing.join(" y ")} para buscar.`
-                : "Listo: carrera, dificultad y tema acotan aún más la búsqueda."}
+                ? `Sin ID, elige ${missing.join(" y ")} para buscar. Los números indican cuántas preguntas hay.`
+                : `Traerá hasta ${totalMateria} ${totalMateria === 1 ? "pregunta" : "preguntas"}; dificultad y tema acotan aún más.`}
             </>
           )}
         </p>
@@ -228,7 +264,7 @@ export function CatalogTab({
             <Search className="size-6" />
           </span>
           <p className="max-w-sm text-sm text-muted-foreground text-pretty">
-            Busca por ID, o elige institución y materia (y opcionalmente carrera, dificultad o tema) y presiona{" "}
+            Busca por ID, o elige institución y materia (área, carrera, dificultad y tema son opcionales) y presiona{" "}
             <span className="font-semibold text-cool">Buscar</span>.
           </p>
         </div>
@@ -302,8 +338,18 @@ function Required() {
   );
 }
 
-function Optional() {
-  return <span className="text-xs font-normal text-muted-foreground">Opcional</span>;
+function Filtro({ id, label, required, children }: { id: string; label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <Label htmlFor={id} className="flex items-baseline justify-between gap-2">
+        <span>
+          {label} {required && <Required />}
+        </span>
+        {!required && <span className="text-xs font-normal text-muted-foreground">Opcional</span>}
+      </Label>
+      {children}
+    </div>
+  );
 }
 
 const materiaNombre = (clave: string) => getMaterias().find((m) => m.clave === clave)?.nombre ?? clave;
