@@ -8,7 +8,9 @@ import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 
-import { getHomeCareers, type HomeCareer } from "../services/student-home-mock";
+import { getFreeExamHistory } from "../services/exam-record-service";
+import { getStudentCareers } from "../services/student-careers-service";
+import { getHomeCareers, type HomeCareer } from "../services/student-home";
 import { getStudentSummary, type StudentSummary } from "../services/student-service";
 import { FreeExamModule, StreaksModule, StudyPlanModule } from "./home-modules";
 import { StudentNav, StudentTopNav } from "./student-nav";
@@ -35,9 +37,13 @@ function StudentHome() {
 
   React.useEffect(() => {
     getStudentSummary()
-      .then((s) => {
+      .then(async (s) => {
+        // Si el récord falla, el home se muestra igual con las fichas sin historial.
+        const [list, history] = s
+          ? await Promise.all([getStudentCareers(s.id), getFreeExamHistory(s.id).catch(() => new Map())])
+          : [[], new Map()];
         setSummary(s);
-        if (s) setCareers(getHomeCareers(s.goal));
+        setCareers(getHomeCareers(list, history));
       })
       .catch(() => setFailed(true));
   }, []);
