@@ -13,16 +13,16 @@ export const NIVELES: { value: Nivel; nombre: string; detalle: string; volumen: 
 ];
 
 /**
- * ⚠️ Límite de prueba para desarrollo: el examen pide solo entre 5 y 10 preguntas para probar la interfaz rápido.
- * `null` = volumen real de cada nivel.
+ * ⚠️ Temporal: el botón "Prueba" de cada nivel arma un examen corto para probar la interfaz rápido.
+ * Quitar junto con el botón cuando ya no haga falta.
  */
-export const MOCK_LIMIT: [number, number] | null = [5, 10];
+export const PRUEBA_VOLUMEN: [number, number] = [5, 10];
 
-export const volumenDe = (nivel: Nivel) => MOCK_LIMIT ?? NIVELES.find((n) => n.value === nivel)!.volumen;
+export const volumenDe = (nivel: Nivel, prueba = false) => (prueba ? PRUEBA_VOLUMEN : NIVELES.find((n) => n.value === nivel)!.volumen);
 
-/** Número de preguntas a pedir: al azar dentro del volumen del nivel. */
-export function pickTotal(nivel: Nivel) {
-  const [min, max] = volumenDe(nivel);
+/** Número de preguntas a pedir: al azar dentro del volumen del nivel (o del de prueba). */
+export function pickTotal(nivel: Nivel, prueba = false) {
+  const [min, max] = volumenDe(nivel, prueba);
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
@@ -61,7 +61,7 @@ export type ExamTarget = {
   carrera: { id: string; nombre: string; area: string | null };
 };
 
-export type ExamConfig = ExamTarget & { nivel: Nivel };
+export type ExamConfig = ExamTarget & { nivel: Nivel; prueba?: boolean };
 
 /* ─────────────────────────── Historial congelado ─────────────────────────── */
 

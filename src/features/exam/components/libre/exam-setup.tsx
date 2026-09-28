@@ -8,7 +8,7 @@ import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
 import { getStudentSummary } from "@/features/student/services/student-service";
 import type { Dificultad } from "@/features/exam/types";
 
-import { type ExamTarget, MOCK_LIMIT, NIVELES, type Nivel, volumenDe } from "../../lib/libre";
+import { type ExamTarget, NIVELES, type Nivel, PRUEBA_VOLUMEN } from "../../lib/libre";
 import { getDisponibles } from "../../services/libre-service";
 import { UniBar } from "./uni-bar";
 
@@ -51,7 +51,7 @@ export function ExamLevelPicker({
 }: {
   target: ExamTarget;
   conteo: Record<Dificultad, number>;
-  onPick: (nivel: Nivel) => void;
+  onPick: (nivel: Nivel, prueba?: boolean) => void;
 }) {
   const total = conteo.facil + conteo.media + conteo.dificil;
 
@@ -60,46 +60,50 @@ export function ExamLevelPicker({
       <UniBar target={target} />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4 md:p-8">
         <Link href="/app/student" className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Mi home
+          <ArrowLeft className="size-4" /> Regresar
         </Link>
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold sm:text-3xl">Examen libre</h1>
           <p className="text-sm text-muted-foreground text-pretty">
             {target.institucion.clave} · {target.carrera.nombre}. Elige la dificultad para comenzar.
           </p>
-          {MOCK_LIMIT && (
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs text-muted-foreground">
-              <FlaskConical className="size-3.5" /> Modo prueba: {MOCK_LIMIT[0]}–{MOCK_LIMIT[1]} preguntas
-            </span>
-          )}
         </div>
 
         <div role="list" aria-label="Nivel de dificultad" className="grid gap-3 sm:grid-cols-3">
           {NIVELES.map((n) => {
             const [min, max] = n.volumen;
             return (
-              <button
-                key={n.value}
-                type="button"
-                role="listitem"
-                onClick={() => onPick(n.value)}
-                className="group flex flex-col gap-1.5 rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors outline-none hover:border-foreground/40 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                <span className="flex items-center justify-between font-display text-lg font-semibold text-primary">
-                  {n.nombre}
-                  <ChevronRight className="size-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </span>
-                <span className="font-mono text-xs text-cool">
-                  {min}–{max} preguntas
-                </span>
-                <span className="text-xs text-muted-foreground text-pretty">{n.detalle}</span>
-                <span className="mt-1 text-xs text-muted-foreground">{conteo[n.value]} de este nivel en el banco</span>
-              </button>
+              <div key={n.value} role="listitem" className="relative">
+                <button
+                  type="button"
+                  onClick={() => onPick(n.value)}
+                  className="group flex size-full flex-col gap-1.5 rounded-2xl border bg-card p-5 pb-14 text-left shadow-sm transition-colors outline-none hover:border-foreground/40 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  <span className="flex items-center justify-between font-display text-lg font-semibold text-primary">
+                    {n.nombre}
+                    <ChevronRight className="size-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                  <span className="font-mono text-xs text-cool">
+                    {min}–{max} preguntas
+                  </span>
+                  <span className="text-xs text-muted-foreground text-pretty">{n.detalle}</span>
+                  <span className="mt-1 text-xs text-muted-foreground">{conteo[n.value]} de este nivel en el banco</span>
+                </button>
+                {/* ⚠️ Temporal: examen corto para probar la interfaz. */}
+                <button
+                  type="button"
+                  onClick={() => onPick(n.value, true)}
+                  aria-label={`Prueba de nivel ${n.nombre}: ${PRUEBA_VOLUMEN[0]} a ${PRUEBA_VOLUMEN[1]} preguntas`}
+                  className="absolute right-4 bottom-4 inline-flex items-center gap-1.5 rounded-full border border-dashed bg-card px-3 py-1 font-mono text-xs text-muted-foreground transition-colors outline-none hover:border-foreground/40 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  <FlaskConical className="size-3.5" /> Prueba · {PRUEBA_VOLUMEN[0]}–{PRUEBA_VOLUMEN[1]}
+                </button>
+              </div>
             );
           })}
         </div>
 
-        {total < volumenDe("facil")[0] && (
+        {total < NIVELES[0].volumen[0] && (
           <p className="text-xs text-muted-foreground">Por ahora hay {total} preguntas para esta carrera: tu examen será más corto.</p>
         )}
       </main>
