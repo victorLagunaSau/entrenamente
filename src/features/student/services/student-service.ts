@@ -7,6 +7,7 @@ import type { AccessStatus } from "@/features/registro/types";
 import { supabase } from "@/lib/supabase/client";
 
 export type StudentSummary = {
+  id: string;
   alias: string;
   fullName: string;
   goal: { universityId: string; careerId: string } | null;
@@ -38,6 +39,7 @@ export async function getStudentSummary(): Promise<StudentSummary | null> {
   if (profile.error || !profile.data) throw profile.error ?? new Error("Perfil no encontrado");
 
   return {
+    id: userId,
     alias: profile.data.alias,
     fullName: profile.data.full_name,
     goal: goal.data ? { universityId: goal.data.university_id, careerId: goal.data.career_id } : null,

@@ -22,7 +22,7 @@ import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import type { HomeCareer, PastExam } from "../services/student-home-mock";
+import type { HomeCareer, PastExam } from "../services/student-home";
 
 /** Estructura común: título del módulo (con acción opcional a la derecha) y una ficha por carrera. */
 function HomeModule({
@@ -189,7 +189,7 @@ function ExamRecord({ exams }: { exams: PastExam[] }) {
                   title={`${e.level} · ${e.score}%`}
                 />
               </span>
-              <span className="truncate text-[10px] text-muted-foreground">{dateFmt.format(new Date(`${e.date}T12:00:00`))}</span>
+              <span className="truncate text-[10px] text-muted-foreground">{dateFmt.format(new Date(e.date))}</span>
             </span>
           );
         })}
@@ -229,8 +229,10 @@ export function FreeExamModule({ careers }: { careers: HomeCareer[] }) {
                 <NotebookPen /> Presentar examen <ChevronRight />
               </Link>
             </Button>
-            <Button variant="outline" size="sm" disabled title="Próximamente">
-              <Library /> Guías de estudio
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/app/student/guias?carrera=${encodeURIComponent(career.id)}`}>
+                <Library /> Guías de estudio
+              </Link>
             </Button>
           </div>
         </li>
