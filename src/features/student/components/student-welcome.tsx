@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, GraduationCap, Power, Sparkles, Zap } from "lucide-react";
+import { Flame, GraduationCap, Power, School, Sparkles, Zap } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils";
 
 import type { StudentSummary } from "../services/student-service";
 
-const dateFmt = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" });
+const dateFmt = new Intl.DateTimeFormat("es-MX", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
 
 /** Módulo 1 · Saludo: apodo (con fuego si hay rachas activas), plan y acceso a sus carreras. */
 export function StudentWelcome({ summary, streakDays }: { summary: StudentSummary; streakDays: number | null }) {
@@ -42,10 +46,15 @@ export function StudentWelcome({ summary, streakDays }: { summary: StudentSummar
             </span>
           </div>
         )}
-        {/* Pendiente: la vista de carreras aún no existe. */}
-        <Button variant="outline" size="sm" disabled title="Próximamente">
-          <GraduationCap /> Ir a carreras
-        </Button>
+        {/* Pendiente: las vistas de carreras y de alta de escuelas aún no existen. */}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" disabled title="Próximamente">
+            <School /> Agregar escuela
+          </Button>
+          <Button variant="outline" size="sm" disabled title="Próximamente">
+            <GraduationCap /> Ir a carreras
+          </Button>
+        </div>
       </div>
     </section>
   );

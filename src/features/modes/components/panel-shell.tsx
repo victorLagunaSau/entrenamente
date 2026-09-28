@@ -8,13 +8,27 @@ import { House } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/features/auth/services/auth-service";
+import { cn } from "@/lib/utils";
 
 import { MODES } from "../modes";
 import { AccountMenu } from "./account-menu";
 import { useMode } from "./mode-guard";
 
-/** Estructura de todos los homes: sin barra lateral. `footer` = menú inferior fijo (p. ej. el del estudiante). */
-export function PanelShell({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
+/**
+ * Estructura de todos los homes: sin barra lateral. `footer` = menú inferior fijo (solo celular y tablet);
+ * `topNav` = sus accesos en la barra superior (computadora). `accountExtra` = opciones extra del menú de cuenta.
+ */
+export function PanelShell({
+  children,
+  footer,
+  topNav,
+  accountExtra,
+}: {
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  topNav?: React.ReactNode;
+  accountExtra?: React.ReactNode;
+}) {
   const { viewer, mode } = useMode();
   const router = useRouter();
   const pathname = usePathname();
@@ -34,23 +48,21 @@ export function PanelShell({ children, footer }: { children: React.ReactNode; fo
           <Logo audience={audience} href={home} className="h-8" />
           <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link
-                href={home}
-                onClick={() => pathname === home && window.scrollTo({ top: 0, behavior: "smooth" })}
-              >
+              <Link href={home} onClick={() => pathname === home && window.scrollTo({ top: 0, behavior: "smooth" })}>
                 <House /> Inicio
               </Link>
             </Button>
-            <AccountMenu alias={viewer.alias} email={viewer.email} onLogout={logout} leaving={leaving} />
+            {topNav}
+            <AccountMenu alias={viewer.alias} email={viewer.email} onLogout={logout} leaving={leaving} extra={accountExtra} />
           </div>
         </div>
       </header>
 
       <main
-        className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-8"
-        style={{
-          paddingBottom: footer ? "calc(6rem + env(safe-area-inset-bottom))" : "max(2rem, env(safe-area-inset-bottom))",
-        }}
+        className={cn(
+          "mx-auto w-full max-w-6xl flex-1 p-4 md:p-8",
+          footer ? "pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8" : "pb-[max(2rem,env(safe-area-inset-bottom))]"
+        )}
       >
         {children}
       </main>

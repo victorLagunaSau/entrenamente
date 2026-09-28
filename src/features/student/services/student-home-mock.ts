@@ -5,6 +5,14 @@
 
 import { findCareer, findUniversity } from "@/features/registro/data/catalog";
 
+/** Examen libre ya presentado (resumen para el récord de la carrera). */
+export type PastExam = {
+  id: string;
+  date: string;
+  level: "Fácil" | "Medio" | "Difícil";
+  score: number;
+};
+
 export type HomeCareer = {
   id: string;
   name: string;
@@ -14,7 +22,17 @@ export type HomeCareer = {
   planProgress: number | null;
   /** Días seguidos de la racha; null = racha sin activar. */
   streakDays: number | null;
+  /** Exámenes libres presentados, del más antiguo al más reciente. */
+  exams: PastExam[];
 };
+
+const EXAMPLE_EXAMS: PastExam[] = [
+  { id: "ej-1", date: "2026-09-02", level: "Fácil", score: 58 },
+  { id: "ej-2", date: "2026-09-09", level: "Fácil", score: 64 },
+  { id: "ej-3", date: "2026-09-16", level: "Medio", score: 61 },
+  { id: "ej-4", date: "2026-09-21", level: "Medio", score: 71 },
+  { id: "ej-5", date: "2026-09-26", level: "Medio", score: 78 },
+];
 
 const EXAMPLE_EXTRA = { universityId: "uam", careerId: "uam-diseno" };
 
@@ -35,6 +53,7 @@ export function getHomeCareers(goal: { universityId: string; careerId: string } 
         universityShort: university.short,
         planProgress: i === 0 ? 35 : null,
         streakDays: i === 0 ? 4 : null,
+        exams: i === 0 ? EXAMPLE_EXAMS : [],
       },
     ];
   });

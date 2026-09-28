@@ -14,18 +14,15 @@ const ITEMS: NavItem[] = [
   { label: "Rachas", icon: Flame, target: "rachas" },
 ];
 
-/** Pie del home como menú de app (estilo banca): lleva a cada módulo y marca el visible. */
-export function StudentNav() {
+/** Sección visible + salto suave. Tras tocar una opción, el scroll no cambia la marca hasta que termine. */
+function useSectionNav() {
   const [current, setCurrent] = React.useState("");
-  // Tras tocar una opción, el scroll suave no debe cambiar la marca hasta que termine.
   const lockedUntil = React.useRef(0);
 
   React.useEffect(() => {
     // Activa la última sección cuyo inicio ya pasó el 40 % de la pantalla; al fondo, la última; arriba (saludo), ninguna.
     const update = () => {
-      const sections = ITEMS.map((i) => document.getElementById(i.target)).filter(
-        (el): el is HTMLElement => el !== null
-      );
+      const sections = ITEMS.map((i) => document.getElementById(i.target)).filter((el): el is HTMLElement => el !== null);
       if (sections.length === 0 || Date.now() < lockedUntil.current) return;
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
       const passed = sections.filter((el) => el.getBoundingClientRect().top <= window.innerHeight * 0.4);
@@ -45,13 +42,23 @@ export function StudentNav() {
     setCurrent(target);
     lockedUntil.current = Date.now() + 1000;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.getElementById(target)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    document.getElementById(target)?.scrollIntoView({
+      behavior: reduce ? "auto" : "smooth",
+      block: "start",
+    });
   };
+
+  return { current, go };
+}
+
+/** Celular y tablet: pie fijo como menú de app (estilo banca). */
+export function StudentNav() {
+  const { current, go } = useSectionNav();
 
   return (
     <nav
       aria-label="Menú del estudiante"
-      className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/90 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/90 backdrop-blur lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto grid h-16 max-w-md grid-cols-3">
@@ -71,6 +78,37 @@ export function StudentNav() {
                 <span className={cn("grid h-7 w-12 place-items-center rounded-full transition-colors", active && "bg-secondary/15")}>
                   <item.icon className="size-5" aria-hidden />
                 </span>
+                {item.label}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/** Computadora: los mismos accesos en la barra superior. */
+export function StudentTopNav() {
+  const { current, go } = useSectionNav();
+
+  return (
+    <nav aria-label="Secciones del home" className="hidden lg:block">
+      <ul className="flex items-center gap-1">
+        {ITEMS.map((item) => {
+          const active = item.target === current;
+          return (
+            <li key={item.label}>
+              <button
+                type="button"
+                onClick={() => go(item.target)}
+                aria-current={active ? "true" : undefined}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                  active ? "bg-secondary/15 text-secondary" : "text-cool hover:bg-accent hover:text-foreground"
+                )}
+              >
+                <item.icon className="size-4" aria-hidden />
                 {item.label}
               </button>
             </li>
