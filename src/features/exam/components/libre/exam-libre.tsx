@@ -70,7 +70,7 @@ function ExamStages({ target, conteo }: { target: ExamTarget; conteo: Record<Dif
   React.useEffect(() => {
     if (!prepConfig) return;
     let active = true;
-    generarExamen(prepConfig.carrera.id, prepConfig.nivel, pickTotal(prepConfig.nivel))
+    generarExamen(prepConfig.carrera.id, prepConfig.nivel, pickTotal(prepConfig.nivel, prepConfig.prueba))
       .then((items) => active && setStage({ step: "prep", config: prepConfig, items, error: null }))
       .catch(
         (e: unknown) =>
@@ -85,7 +85,11 @@ function ExamStages({ target, conteo }: { target: ExamTarget; conteo: Record<Dif
 
   if (stage.step === "nivel") {
     return (
-      <ExamLevelPicker target={target} conteo={conteo} onPick={(nivel) => setStage({ step: "prep", config: { ...target, nivel }, items: null, error: null })} />
+      <ExamLevelPicker
+        target={target}
+        conteo={conteo}
+        onPick={(nivel, prueba) => setStage({ step: "prep", config: { ...target, nivel, prueba }, items: null, error: null })}
+      />
     );
   }
 
