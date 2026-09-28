@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -31,6 +32,7 @@ function HomeModule({
   tone,
   action,
   listClassName = "sm:grid-cols-2",
+  after,
   children,
 }: {
   id: string;
@@ -39,6 +41,8 @@ function HomeModule({
   tone: "brand" | "secondary" | "energy";
   action?: React.ReactNode;
   listClassName?: string;
+  /** Contenido secundario bajo las fichas (p. ej. accesos pequeños). */
+  after?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const iconTone = {
@@ -58,7 +62,8 @@ function HomeModule({
         </h2>
         {action}
       </div>
-      <ul className={cn("grid gap-3", listClassName)}>{children}</ul>
+      {React.Children.count(children) > 0 && <ul className={cn("grid gap-3", listClassName)}>{children}</ul>}
+      {after}
     </section>
   );
 }
@@ -261,7 +266,7 @@ function WeekFlames({ days, doneToday }: { days: number; doneToday: boolean }) {
   );
 }
 
-/** Módulo 4 · Rachas (micro exámenes). Se activan por carrera; la lógica llega después. */
+/** Módulo 4 · Rachas (micro exámenes). Fichas solo para las activas; las demás, un botón chico por carrera. */
 export function StreaksModule({
   careers,
   onActivate,
@@ -271,35 +276,56 @@ export function StreaksModule({
   onActivate: (careerId: string) => void;
   onSolveToday: (careerId: string) => void;
 }) {
+  const active = careers.filter((c) => c.streakDays !== null);
+  const inactive = careers.filter((c) => c.streakDays === null);
+
   return (
-    <HomeModule id="rachas" title="Rachas" icon={Flame} tone="energy" listClassName="grid-cols-2 lg:grid-cols-4">
-      {careers.map((career) => {
-        const days = career.streakDays;
+    <HomeModule
+      id="rachas"
+      title="Rachas"
+      icon={Flame}
+      tone="energy"
+      listClassName="grid-cols-2 lg:grid-cols-4"
+      after={
+        inactive.length > 0 && (
+          <ul className="flex flex-wrap gap-2" aria-label="Carreras sin racha">
+            {inactive.map((career) => (
+              <li key={career.id} className="max-w-full">
+                <button
+                  type="button"
+                  onClick={() => onActivate(career.id)}
+                  className="inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border border-dashed bg-transparent pr-3 pl-2.5 text-xs font-medium text-cool transition-colors hover:border-energy/50 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  <Flame className="size-3.5 shrink-0 text-energy" aria-hidden />
+                  <span className="shrink-0">Activar racha ·</span>
+                  <span className="shrink-0 font-bold">{career.universityShort}</span>
+                  <span className="min-w-0 truncate">{career.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    >
+      {active.map((career) => {
+        const days = career.streakDays ?? 0;
         return (
-          <li key={career.id} className={cn(card, "gap-3 p-3 sm:p-5", days !== null && "border-energy/40")}>
+          <li key={career.id} className={cn(card, "gap-3 border-energy/40 p-3 sm:p-5")}>
             <UniversityBadge id={career.universityId} label={career.universityShort} size="sm" className="self-start" />
             <p className="line-clamp-2 min-h-10 text-sm leading-5 font-semibold">{career.name}</p>
-            {days === null ? (
-              <Button variant="outline" className="mt-auto w-full" onClick={() => onActivate(career.id)}>
-                <Flame className="text-energy" /> Activar racha
-              </Button>
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold text-energy">{days}</span>
+              <span className="text-sm text-muted-foreground">{days === 1 ? "día de racha" : "días de racha"}</span>
+            </p>
+            <WeekFlames days={days} doneToday={career.streakDoneToday} />
+            {career.streakDoneToday ? (
+              <p className="mt-auto flex h-10 items-center justify-center gap-2 rounded-md border border-secondary/40 bg-secondary/10 text-sm font-semibold text-secondary">
+                <CircleCheck className="size-4" aria-hidden /> Hoy resuelto
+              </p>
             ) : (
-              <>
-                <p className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold text-energy">{days}</span>
-                  <span className="text-sm text-muted-foreground">{days === 1 ? "día de racha" : "días de racha"}</span>
-                </p>
-                <WeekFlames days={days} doneToday={career.streakDoneToday} />
-                {career.streakDoneToday ? (
-                  <p className="mt-auto flex h-10 items-center justify-center gap-2 rounded-md border border-secondary/40 bg-secondary/10 text-sm font-semibold text-secondary">
-                    <CircleCheck className="size-4" aria-hidden /> Hoy resuelto
-                  </p>
-                ) : (
-                  <Button variant="energy" className="mt-auto w-full" onClick={() => onSolveToday(career.id)}>
-                    <Flame /> Examen de hoy
-                  </Button>
-                )}
-              </>
+              <Button variant="energy" className="mt-auto w-full" onClick={() => onSolveToday(career.id)}>
+                <Flame /> Examen de hoy
+              </Button>
             )}
           </li>
         );
