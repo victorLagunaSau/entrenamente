@@ -61,7 +61,11 @@ function StudentHome() {
   const streaks = careers.flatMap((c) => (c.streakDays !== null ? [c.streakDays] : []));
   const bestStreak = streaks.length > 0 ? Math.max(...streaks) : null;
 
-  const activateStreak = (careerId: string) => setCareers((prev) => prev.map((c) => (c.id === careerId ? { ...c, streakDays: 0 } : c)));
+  const updateCareer = (careerId: string, patch: (c: HomeCareer) => Partial<HomeCareer>) =>
+    setCareers((prev) => prev.map((c) => (c.id === careerId ? { ...c, ...patch(c) } : c)));
+  const activateStreak = (careerId: string) => updateCareer(careerId, () => ({ streakDays: 0, streakDoneToday: false }));
+  // Simulado: resolver el micro examen suma el día y marca la palomita de hoy.
+  const solveToday = (careerId: string) => updateCareer(careerId, (c) => ({ streakDays: (c.streakDays ?? 0) + 1, streakDoneToday: true }));
 
   return (
     <>
@@ -70,7 +74,7 @@ function StudentHome() {
         <>
           <StudyPlanModule careers={careers} />
           <FreeExamModule careers={careers} />
-          <StreaksModule careers={careers} onActivate={activateStreak} />
+          <StreaksModule careers={careers} onActivate={activateStreak} onSolveToday={solveToday} />
         </>
       )}
     </>

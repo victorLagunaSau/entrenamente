@@ -22,6 +22,8 @@ export type HomeCareer = {
   planProgress: number | null;
   /** Días seguidos de la racha; null = racha sin activar. */
   streakDays: number | null;
+  /** Micro examen de hoy ya resuelto (se reinicia cada día). */
+  streakDoneToday: boolean;
   /** Exámenes libres presentados, del más antiguo al más reciente. */
   exams: PastExam[];
 };
@@ -53,6 +55,7 @@ export function getHomeCareers(goal: { universityId: string; careerId: string } 
         universityShort: university.short,
         planProgress: i === 0 ? 35 : null,
         streakDays: i === 0 ? 4 : null,
+        streakDoneToday: false,
         exams: i === 0 ? EXAMPLE_EXAMS : [],
       },
     ];

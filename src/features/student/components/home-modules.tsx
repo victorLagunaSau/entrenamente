@@ -7,6 +7,7 @@ import {
   BookOpen,
   CalendarCheck,
   ChevronRight,
+  CircleCheck,
   Flame,
   History,
   Library,
@@ -29,6 +30,7 @@ function HomeModule({
   icon: Icon,
   tone,
   action,
+  listClassName = "sm:grid-cols-2",
   children,
 }: {
   id: string;
@@ -36,6 +38,7 @@ function HomeModule({
   icon: LucideIcon;
   tone: "brand" | "secondary" | "energy";
   action?: React.ReactNode;
+  listClassName?: string;
   children: React.ReactNode;
 }) {
   const iconTone = {
@@ -55,7 +58,7 @@ function HomeModule({
         </h2>
         {action}
       </div>
-      <ul className="grid gap-3 sm:grid-cols-2">{children}</ul>
+      <ul className={cn("grid gap-3", listClassName)}>{children}</ul>
     </section>
   );
 }
@@ -231,32 +234,72 @@ export function FreeExamModule({ careers }: { careers: HomeCareer[] }) {
   );
 }
 
-/** Módulo 4 · Rachas (micro exámenes). Se activan por carrera; la lógica llega después. */
-export function StreaksModule({ careers, onActivate }: { careers: HomeCareer[]; onActivate: (careerId: string) => void }) {
+const weekdayFmt = new Intl.DateTimeFormat("es-MX", { weekday: "narrow" });
+
+/** Últimos 7 días (hoy al final): encendido si ese día se resolvió el micro examen. */
+function WeekFlames({ days, doneToday }: { days: number; doneToday: boolean }) {
+  const before = days - (doneToday ? 1 : 0);
+  const today = new Date();
+  const slots = Array.from({ length: 7 }, (_, i) => {
+    const offset = 6 - i;
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+    const lit = offset === 0 ? doneToday : offset <= before;
+    return { key: offset, lit, isToday: offset === 0, label: weekdayFmt.format(date).toUpperCase() };
+  });
+
   return (
-    <HomeModule id="rachas" title="Rachas" icon={Flame} tone="energy">
+    <ol className="grid grid-cols-7 gap-0.5" aria-label="Últimos 7 días">
+      {slots.map((s) => (
+        <li key={s.key} className="flex flex-col items-center gap-0.5">
+          <Flame className={cn("size-4 sm:size-5", s.lit ? "fill-energy/50 text-energy" : "text-muted-foreground/30")} aria-hidden />
+          <span className={cn("text-[10px]", s.isToday ? "font-bold text-foreground" : "text-muted-foreground")}>{s.label}</span>
+          <span className="sr-only">{s.lit ? "resuelto" : "sin resolver"}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Módulo 4 · Rachas (micro exámenes). Se activan por carrera; la lógica llega después. */
+export function StreaksModule({
+  careers,
+  onActivate,
+  onSolveToday,
+}: {
+  careers: HomeCareer[];
+  onActivate: (careerId: string) => void;
+  onSolveToday: (careerId: string) => void;
+}) {
+  return (
+    <HomeModule id="rachas" title="Rachas" icon={Flame} tone="energy" listClassName="grid-cols-2 lg:grid-cols-4">
       {careers.map((career) => {
-        const active = career.streakDays !== null;
+        const days = career.streakDays;
         return (
-          <li key={career.id} className={cn(card, active && "border-energy/40")}>
-            <CareerLabel career={career} />
-            {active ? (
-              <div className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2">
-                  <Flame className="size-7 fill-energy/40 text-energy" aria-hidden />
-                  <span>
-                    <span className="text-2xl font-bold text-energy">{career.streakDays}</span>
-                    <span className="ml-1 text-sm text-muted-foreground">{career.streakDays === 1 ? "día" : "días"}</span>
-                  </span>
-                </span>
-                <Button variant="energy" size="sm" disabled title="Próximamente">
-                  Micro examen de hoy
-                </Button>
-              </div>
-            ) : (
-              <Button variant="outline" className="w-full" onClick={() => onActivate(career.id)}>
+          <li key={career.id} className={cn(card, "gap-3 p-3 sm:p-5", days !== null && "border-energy/40")}>
+            <UniversityBadge id={career.universityId} label={career.universityShort} size="sm" className="self-start" />
+            <p className="line-clamp-2 min-h-10 text-sm leading-5 font-semibold">{career.name}</p>
+            {days === null ? (
+              <Button variant="outline" className="mt-auto w-full" onClick={() => onActivate(career.id)}>
                 <Flame className="text-energy" /> Activar racha
               </Button>
+            ) : (
+              <>
+                <p className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-bold text-energy">{days}</span>
+                  <span className="text-sm text-muted-foreground">{days === 1 ? "día de racha" : "días de racha"}</span>
+                </p>
+                <WeekFlames days={days} doneToday={career.streakDoneToday} />
+                {career.streakDoneToday ? (
+                  <p className="mt-auto flex h-10 items-center justify-center gap-2 rounded-md border border-secondary/40 bg-secondary/10 text-sm font-semibold text-secondary">
+                    <CircleCheck className="size-4" aria-hidden /> Hoy resuelto
+                  </p>
+                ) : (
+                  <Button variant="energy" className="mt-auto w-full" onClick={() => onSolveToday(career.id)}>
+                    <Flame /> Examen de hoy
+                  </Button>
+                )}
+              </>
             )}
           </li>
         );
