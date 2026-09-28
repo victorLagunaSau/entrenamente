@@ -121,7 +121,7 @@ export function StudyPlanModule({ careers }: { careers: HomeCareer[] }) {
         plans.map((career) => (
           <li key={career.id} className={card}>
             <CareerLabel career={career} />
-            <div className="flex flex-col gap-2">
+            <div className="mt-2 flex flex-col gap-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Avance del plan</span>
                 <span className="font-semibold">{career.planProgress}%</span>
@@ -288,26 +288,31 @@ export function StreaksModule({
       listClassName="grid-cols-2 lg:grid-cols-4"
       after={
         inactive.length > 0 && (
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" aria-label="Carreras sin racha">
-            {inactive.map((career) => (
-              <li key={career.id} className="min-w-0">
-                <button
-                  type="button"
-                  onClick={() => onActivate(career.id)}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-energy/25 bg-energy/5 p-2.5 pr-3 text-left transition-colors hover:border-energy/50 hover:bg-energy/10 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-                >
-                  <UniversityBadge id={career.universityId} label={career.universityShort} size="sm" />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm font-semibold">{career.name}</span>
-                    <span className="text-xs font-medium text-energy">Activar racha</span>
-                  </span>
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-energy/15 text-energy transition-colors group-hover:bg-energy/25">
-                    <Flame className="size-4" aria-hidden />
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-2 flex flex-col gap-2">
+            <h3 id="rachas-pendientes" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Pendientes por activar
+            </h3>
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" aria-labelledby="rachas-pendientes">
+              {inactive.map((career) => (
+                <li key={career.id} className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => onActivate(career.id)}
+                    className="group flex w-full items-center gap-3 rounded-xl border border-energy/25 bg-energy/5 p-2.5 pr-3 text-left transition-colors hover:border-energy/50 hover:bg-energy/10 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  >
+                    <UniversityBadge id={career.universityId} label={career.universityShort} size="sm" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-semibold">{career.name}</span>
+                      <span className="text-xs font-medium text-energy">Activar racha</span>
+                    </span>
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-energy/15 text-energy transition-colors group-hover:bg-energy/25">
+                      <Flame className="size-4" aria-hidden />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )
       }
     >

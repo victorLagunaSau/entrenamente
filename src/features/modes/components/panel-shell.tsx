@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 import { MODES } from "../modes";
 import { AccountMenu } from "./account-menu";
+import { HomeFooter } from "./home-footer";
 import { useMode } from "./mode-guard";
 
 /**
@@ -60,11 +61,12 @@ export function PanelShell({
 
       <main
         className={cn(
-          "mx-auto w-full max-w-6xl flex-1 p-4 md:p-8",
+          "mx-auto flex w-full max-w-6xl flex-1 flex-col p-4 md:p-8",
           footer ? "pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8" : "pb-[max(2rem,env(safe-area-inset-bottom))]"
         )}
       >
         {children}
+        <HomeFooter audience={audience} home={home} />
       </main>
       {footer}
     </div>
