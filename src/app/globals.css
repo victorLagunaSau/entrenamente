@@ -39,6 +39,8 @@
   --accent: #16305a;
   --accent-foreground: #e2e8f0;
   --destructive: #ef4444;
+  /* Respuesta correcta (en la marca es el turquesa; los temas institucionales del examen lo cambian). */
+  --success: #12c2a9;
 
   --border: #1c3760;
   --input: #1c3760;
@@ -81,6 +83,7 @@
   --color-brand-mid: var(--brand-mid);
   --color-energy: var(--energy);
   --color-gold: var(--gold);
+  --color-success: var(--success);
   --color-uni-unam: var(--uni-unam);
   --color-uni-ipn: var(--uni-ipn);
   --color-uni-poli: var(--uni-poli);
@@ -140,6 +143,18 @@
 @utility text-energy-glow {
   color: var(--energy);
   text-shadow: 0 0 18px rgb(255 94 26 / 0.65);
+}
+
+/* Tema institucional del examen (features/exam/lib/uni-theme): claro y sin los brillos de la marca. */
+html[data-uni-theme] {
+  color-scheme: light;
+}
+html[data-uni-theme] [class*="shadow-glow"] {
+  box-shadow: none !important;
+}
+/* Títulos en el color de la institución (el texto de lectura y preguntas sigue en negro). */
+html[data-uni-theme] :is(h1, h2, h3) {
+  color: var(--uni-accent);
 }
 
 html {

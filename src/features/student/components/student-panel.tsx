@@ -19,7 +19,7 @@ export function StudentPanel() {
           <HomeTools
             tone="energy"
             tools={[
-              { label: "Exámenes", description: "Simuladores de tu examen de admisión.", icon: NotebookPen },
+              { label: "Exámenes", description: "Simuladores de tu examen de admisión.", icon: NotebookPen, href: "/app/student/exam" },
               { label: "Rachas", description: "Tus días seguidos entrenando.", icon: Flame },
               { label: "Logros", description: "Medallas, XP y ranking.", icon: Trophy },
               { label: "Perfil", description: "Tus datos y metas.", icon: User },

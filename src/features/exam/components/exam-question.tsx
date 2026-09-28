@@ -1,41 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Check, CheckCircle2, CircleAlert, Lightbulb, ListOrdered, Stethoscope, Timer, XCircle } from "lucide-react";
+import { Timer } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-import { type AnswerResult, type Reactivo, type Respuesta, formatScore } from "../types";
-import { MathText } from "./math-text";
+import { shuffled } from "../lib/shuffle";
+import type { AnswerResult, Reactivo, Respuesta } from "../types";
+import { AnswerOptions, FeedbackDetails, letterAt, QuestionPrompt, ReadingBlock, ResultBanner } from "./question-parts";
 
-/** Tono por ponderación: correcta (turquesa), parcial (oro), error (rojo). */
-export const scoreTone = (p: number) =>
-  p >= 1
-    ? "border-secondary/50 bg-secondary/10 text-secondary"
-    : p > 0
-      ? "border-gold/50 bg-gold/10 text-gold"
-      : "border-destructive/50 bg-destructive/10 text-destructive";
-
-const resultOf = (p: number) =>
-  p >= 1
-    ? { title: "¡Correcta!", icon: CheckCircle2 }
-    : p > 0
-      ? { title: "Parcialmente correcta", icon: CircleAlert }
-      : { title: "Incorrecta", icon: XCircle };
-
-function shuffled<T>(items: T[]) {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
+export { scoreTone } from "./question-parts";
 
 /**
  * Reactivo de examen tal como lo ve el estudiante: lectura, temporizador, opciones y
  * retroalimentación (ponderación, diagnóstico y solución paso a paso).
- * Es el componente del examen oficial; la vista previa del admin lo reutiliza tal cual.
+ * Reactivo suelto con su propio temporizador (vista previa del admin, práctica de una pregunta).
+ * El examen completo (components/libre) arma sus reactivos con las mismas piezas de question-parts.
  * Para reiniciarlo (reintentar, otra pregunta) cambia su `key`.
  */
 export function ExamQuestion({
@@ -87,7 +67,8 @@ export function ExamQuestion({
     if (timedOut) onAnswerRef.current?.({ respuestaId: null, ponderacion: 0, elapsedSeconds: total });
   }, [timedOut, total]);
 
-  const pick = (r: Respuesta) => {
+  const pick = (id: number) => {
+    const r = respuestas.find((x) => x.id === id) as Respuesta;
     setPicked(r.id);
     onAnswer?.({ respuestaId: r.id, ponderacion: r.ponderacion, elapsedSeconds: total - seconds });
   };
@@ -95,9 +76,7 @@ export function ExamQuestion({
   const chosen = respuestas.find((r) => r.id === picked) ?? null;
   const correct = respuestas.find((r) => r.ponderacion === 1);
   const score = chosen?.ponderacion ?? 0;
-  const result = resultOf(score);
   const reveal = answered && showFeedback;
-  const letterOf = (r: Respuesta) => String.fromCharCode(65 + order.indexOf(r));
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
 
@@ -132,113 +111,35 @@ export function ExamQuestion({
           />
         </div>
 
-        {/* Lectura */}
-        {lecturaAsociada && (
-          <details open className="group mt-5 rounded-2xl border bg-background/40 p-4">
-            <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              <BookOpen className="size-4" /> Lectura
-            </summary>
-            <MathText text={lecturaAsociada} className="mt-3 block max-h-72 overflow-y-auto text-sm leading-relaxed text-cool" />
-          </details>
-        )}
-
-        {/* Pregunta */}
-        <div className="mt-5 rounded-2xl border bg-background/60 p-4">
-          <MathText text={pregunta} className="block font-display text-base font-semibold text-balance sm:text-lg" />
-        </div>
-
-        {/* Opciones */}
-        <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
-          {order.map((r) => {
-            const isPicked = picked === r.id;
-            const highlight = reveal ? isPicked || r.ponderacion === 1 : isPicked;
-            return (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  disabled={answered || paused}
-                  onClick={() => pick(r)}
-                  className={cn(
-                    "flex h-full w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                    !answered && "bg-background/40 hover:border-secondary/60 hover:bg-secondary/5",
-                    highlight && (reveal ? scoreTone(r.ponderacion) : "border-secondary bg-secondary/15"),
-                    reveal && highlight && r.ponderacion === 1 && "shadow-glow-secondary",
-                    answered && !highlight && "opacity-50"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid size-7 shrink-0 place-items-center rounded-md text-xs font-bold",
-                      highlight ? "bg-current/15" : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {reveal && r.ponderacion === 1 ? <Check className="size-4" /> : letterOf(r)}
-                  </span>
-                  <MathText text={r.texto} className="min-w-0 font-medium text-foreground" />
-                  {reveal && highlight && <span className="ml-auto shrink-0 font-mono text-xs">{formatScore(r.ponderacion)}</span>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        {lecturaAsociada && <ReadingBlock text={lecturaAsociada} className="mt-5" />}
+        <QuestionPrompt text={pregunta} className="mt-5" />
+        <AnswerOptions
+          className="mt-4"
+          options={order}
+          picked={picked}
+          onPick={pick}
+          disabled={answered || paused}
+          reveal={reveal}
+          dimOthers={answered}
+        />
       </div>
 
       {/* Retroalimentación */}
       {reveal && (
         <section className="flex flex-col gap-4 rounded-3xl border bg-card p-4 sm:p-5" aria-live="polite">
-          <div className={cn("flex items-center gap-3 rounded-2xl border p-3", scoreTone(score))}>
-            <result.icon className="size-6 shrink-0" />
-            <div className="min-w-0">
-              <p className="font-semibold">{timedOut ? "Tiempo agotado" : result.title}</p>
-              <p className="text-xs opacity-80">
-                Tiempo usado: {total - seconds} s de {total} s
-              </p>
-            </div>
-            <span className="ml-auto font-display text-2xl font-bold tabular-nums">
-              {formatScore(score)}
-              <span className="ml-1 text-sm font-medium">pts</span>
-            </span>
-          </div>
-
-          {chosen?.diagnosticoError && (
-            <Feedback icon={Stethoscope} title="Diagnóstico del error">
-              <MathText text={chosen.diagnosticoError} className="text-muted-foreground" />
-            </Feedback>
-          )}
-          {correct && (
-            <Feedback icon={Lightbulb} title="Respuesta correcta">
-              <span className="font-semibold text-secondary">{letterOf(correct)}) </span>
-              <MathText text={correct.texto} className="text-cool" />
-            </Feedback>
-          )}
-          {solucionPasoAPaso.length > 0 && (
-            <Feedback icon={ListOrdered} title="Solución paso a paso">
-              <ol className="mt-1 flex flex-col gap-1.5">
-                {solucionPasoAPaso.map((paso, i) => (
-                  <li key={i}>
-                    <MathText text={paso} className="text-muted-foreground" />
-                  </li>
-                ))}
-              </ol>
-            </Feedback>
-          )}
+          <ResultBanner
+            score={score}
+            title={timedOut ? "Tiempo agotado" : undefined}
+            detail={`Tiempo usado: ${total - seconds} s de ${total} s`}
+          />
+          <FeedbackDetails
+            diagnostico={chosen?.diagnosticoError}
+            correct={correct ? { letter: letterAt(order.indexOf(correct)), texto: correct.texto } : null}
+            steps={solucionPasoAPaso}
+          />
           {footer}
         </section>
       )}
-    </div>
-  );
-}
-
-function Feedback({ icon: Icon, title, children }: { icon: typeof Lightbulb; title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-brand-light">
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0 text-sm">
-        <p className="font-semibold">{title}</p>
-        {children}
-      </div>
     </div>
   );
 }
