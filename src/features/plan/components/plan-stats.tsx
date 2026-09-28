@@ -37,7 +37,7 @@ export function PlanStats({ plan }: { plan: StudentPlan }) {
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
       <div className={cn("flex flex-col gap-3 rounded-2xl border p-5", estado.bg)}>
         <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          Promedio de tus últimos {recent.exams.length === 1 ? "examen" : `${recent.exams.length} exámenes`}
+          {recent.exams.length === 1 ? "Promedio de tu último examen" : `Promedio de tus últimos ${recent.exams.length} exámenes`}
         </p>
         <p className="flex items-baseline gap-3">
           <span className={cn("font-display text-5xl font-bold", estado.text)}>{recent.avg}%</span>

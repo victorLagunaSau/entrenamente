@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, CircleAlert, Move, NotebookPen, Repeat, Trophy, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CircleAlert, Move, NotebookPen, Play, Repeat, Trophy, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -40,8 +40,8 @@ function addMonths(iso: string, n: number) {
  */
 export function PlanCalendar({ plan, onMove }: { plan: StudentPlan; onMove: (sessionId: number, date: string) => void }) {
   const today = todayISO();
-  const [view, setView] = React.useState<View>("mes");
-  const [cursor, setCursor] = React.useState(() => startOfMonth(today));
+  const [view, setView] = React.useState<View>("semana");
+  const [cursor, setCursor] = React.useState(() => startOfWeek(today));
   const [moving, setMoving] = React.useState<PlanSession | null>(null);
   const [dragOver, setDragOver] = React.useState<string | null>(null);
 
@@ -191,7 +191,7 @@ export function PlanCalendar({ plan, onMove }: { plan: StudentPlan; onMove: (ses
                   <Trophy className="size-3.5 shrink-0" aria-hidden /> <span className="hidden sm:inline">Examen oficial</span>
                 </span>
               )}
-              <div className={cn("flex flex-wrap gap-0.5", view === "semana" && "gap-1 sm:flex-col")}>
+              <div className={cn("flex w-full flex-col gap-0.5", view === "semana" && "gap-1")}>
                 {sessions.map((s) => (
                   <SessionChip
                     key={s.id}
@@ -235,10 +235,22 @@ function SessionChip({
   onDragStart: () => void;
   onDragEnd: () => void;
 }) {
+  // De lado a lado de la celda. En el mes, en celular solo cabe el ícono.
   const base = cn(
-    "inline-flex items-center justify-center gap-1 rounded-md text-[11px] font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-    wide ? "h-7 justify-start px-2 sm:w-full sm:px-1.5" : "size-6 sm:w-auto sm:min-w-6 sm:px-1"
+    "flex h-6 w-full min-w-0 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+    wide ? "h-auto min-h-8 justify-start px-2 py-1 text-left text-xs leading-tight" : "justify-center sm:justify-start"
   );
+  // Semana: texto completo; mes: corto para que no se corte.
+  const label = (full: string, short = full) => <span className={cn(wide ? "min-w-0" : "hidden truncate sm:inline")}>{wide ? full : short}</span>;
+  const drag = {
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(s.id));
+      onDragStart();
+    },
+    onDragEnd,
+  };
 
   if (s.exam) {
     const estado = ESTADOS[estadoDe(s.exam.score)];
@@ -246,55 +258,75 @@ function SessionChip({
       <Link
         href={`/app/student/exam/resultado?folio=${encodeURIComponent(s.exam.folio)}`}
         onClick={(e) => e.stopPropagation()}
-        className={cn(base, estado.bg, estado.text)}
-        title={`Presentado · ${s.exam.score} %`}
+        className={cn(base, estado.bg, estado.text, "hover:brightness-125")}
+        title={`Presentado · ${s.exam.score} % · ver reporte`}
         aria-label={`Examen presentado, ${s.exam.score} %. Ver reporte`}
       >
         <Check className="size-3.5 shrink-0" aria-hidden />
-        <span className={cn(!wide && "hidden sm:inline")}>{s.exam.score}</span>
-        {wide && <span className="font-normal opacity-80">%</span>}
+        {label(`${s.exam.score} % · Ver reporte`, `${s.exam.score} %`)}
       </Link>
     );
   }
 
-  const overdue = s.date < today;
-  const Icon = overdue ? CircleAlert : s.kind === "refuerzo" ? Repeat : NotebookPen;
-  const label = overdue ? "Atrasado" : s.kind === "refuerzo" ? "Refuerzo" : "Programado";
+  const refuerzo = s.kind === "refuerzo";
+
+  // Hoy o atrasado: botón directo al examen (se puede seguir arrastrando para moverlo).
+  if (s.date <= today) {
+    const overdue = s.date < today;
+    const text = overdue ? (refuerzo ? "Refuerzo atrasado" : "Examen atrasado") : refuerzo ? "Refuerzo de examen" : "Examen del día";
+    const short = overdue ? "Atrasado" : refuerzo ? "Refuerzo" : "Examen hoy";
+    const Icon = overdue ? CircleAlert : refuerzo ? Repeat : Play;
+    return (
+      <Link
+        href={`/app/student/plan/examen?sesion=${s.id}`}
+        onClick={(e) => e.stopPropagation()}
+        {...drag}
+        title={`${text} · presentar ahora`}
+        aria-label={`${text}. Presentar ahora`}
+        className={cn(
+          base,
+          "shadow-sm transition-[filter] hover:brightness-110",
+          overdue ? "bg-gold text-background" : refuerzo ? "bg-energy text-background" : "bg-brand-gradient text-white"
+        )}
+      >
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+        {label(text, short)}
+      </Link>
+    );
+  }
+
+  const text = refuerzo ? "Refuerzo de examen" : "Examen";
+  const Icon = refuerzo ? Repeat : NotebookPen;
   return (
     <button
       type="button"
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", String(s.id));
-        onDragStart();
-      }}
-      onDragEnd={onDragEnd}
+      {...drag}
       onClick={(e) => {
         e.stopPropagation();
         onPick();
       }}
       aria-pressed={selected}
-      title={`${label} · toca o arrastra para mover`}
-      aria-label={`${label}. Mover de fecha`}
+      title={`${text} · toca o arrastra para mover`}
+      aria-label={`${text} programado. Mover de fecha`}
       className={cn(
         base,
         "cursor-grab active:cursor-grabbing",
-        overdue ? "bg-gold/15 text-gold" : s.kind === "refuerzo" ? "bg-energy/15 text-energy" : "bg-primary/20 text-brand-light",
+        refuerzo ? "bg-energy/15 text-energy" : "bg-primary/20 text-brand-light",
         selected && "ring-2 ring-secondary"
       )}
     >
       <Icon className="size-3.5 shrink-0" aria-hidden />
-      {wide && <span className="truncate">{label}</span>}
+      {label(text, refuerzo ? "Refuerzo" : "Examen")}
     </button>
   );
 }
 
 function Legend() {
   const items = [
+    { icon: Play, cls: "bg-brand-gradient text-white", label: "Examen del día (toca para presentar)" },
     { icon: NotebookPen, cls: "bg-primary/20 text-brand-light", label: "Programado" },
     { icon: Repeat, cls: "bg-energy/15 text-energy", label: "Refuerzo" },
-    { icon: CircleAlert, cls: "bg-gold/15 text-gold", label: "Atrasado" },
+    { icon: CircleAlert, cls: "bg-gold text-background", label: "Atrasado (toca para presentar)" },
     { icon: Check, cls: "bg-secondary/15 text-secondary", label: "Presentado (calificación)" },
     { icon: Trophy, cls: "bg-gold/10 text-gold", label: "Examen oficial" },
   ];
@@ -309,7 +341,7 @@ function Legend() {
         </li>
       ))}
       <li className="flex items-center gap-1.5">
-        <Move className="size-3.5" aria-hidden /> Toca o arrastra un examen pendiente para moverlo
+        <Move className="size-3.5" aria-hidden /> Arrastra un examen para moverlo de día (los programados también se mueven tocándolos)
       </li>
     </ul>
   );
