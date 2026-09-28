@@ -288,18 +288,22 @@ export function StreaksModule({
       listClassName="grid-cols-2 lg:grid-cols-4"
       after={
         inactive.length > 0 && (
-          <ul className="flex flex-wrap gap-2" aria-label="Carreras sin racha">
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" aria-label="Carreras sin racha">
             {inactive.map((career) => (
-              <li key={career.id} className="max-w-full">
+              <li key={career.id} className="min-w-0">
                 <button
                   type="button"
                   onClick={() => onActivate(career.id)}
-                  className="inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border border-dashed bg-transparent pr-3 pl-2.5 text-xs font-medium text-cool transition-colors hover:border-energy/50 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="group flex w-full items-center gap-3 rounded-xl border border-energy/25 bg-energy/5 p-2.5 pr-3 text-left transition-colors hover:border-energy/50 hover:bg-energy/10 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
-                  <Flame className="size-3.5 shrink-0 text-energy" aria-hidden />
-                  <span className="shrink-0">Activar racha ·</span>
-                  <span className="shrink-0 font-bold">{career.universityShort}</span>
-                  <span className="min-w-0 truncate">{career.name}</span>
+                  <UniversityBadge id={career.universityId} label={career.universityShort} size="sm" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-semibold">{career.name}</span>
+                    <span className="text-xs font-medium text-energy">Activar racha</span>
+                  </span>
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-energy/15 text-energy transition-colors group-hover:bg-energy/25">
+                    <Flame className="size-4" aria-hidden />
+                  </span>
                 </button>
               </li>
             ))}
