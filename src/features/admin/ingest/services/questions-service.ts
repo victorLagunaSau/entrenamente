@@ -254,6 +254,24 @@ export async function registrarLote(lote: {
   if (error) fail(error);
 }
 
+/** % por materia del examen oficial para esas carreras; reemplaza la dosificación anterior (la última guía manda). */
+export async function guardarDosificacion(
+  carreras: string[],
+  d: { porClave: Record<string, number>; metodo: string; fuente: string; totalOficial: number | null; archivo: string }
+) {
+  const { error } = await supabase.rpc("guardar_dosificacion", {
+    p_carreras: carreras,
+    p_dosificacion: {
+      por_materia: d.porClave,
+      metodo: d.metodo,
+      fuente: d.fuente,
+      total_reactivos_oficial: d.totalOficial,
+      archivo: d.archivo,
+    },
+  });
+  if (error) fail(error);
+}
+
 /** Alta o cambio desde Captura / Edición: las carreras quedan exactamente como se marcaron. */
 export async function saveQuestion(draft: PreguntaDraft): Promise<Pregunta> {
   const { error } = await supabase.rpc("importar_reactivos", {
