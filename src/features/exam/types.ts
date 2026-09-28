@@ -5,6 +5,9 @@
 
 export type Dificultad = "facil" | "media" | "dificil";
 
+/** Segundos por reactivo según dificultad (temporizador del reactivo y tiempo total del examen). */
+export const SECONDS_BY_DIFICULTAD: Record<Dificultad, number> = { facil: 60, media: 90, dificil: 150 };
+
 /** 1.0 correcta · 0.75 / 0.5 / 0.25 parcial · 0.0 error grave. */
 export const PONDERACIONES = [1, 0.75, 0.5, 0.25, 0] as const;
 export type Ponderacion = (typeof PONDERACIONES)[number];

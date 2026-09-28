@@ -24,8 +24,7 @@ export const DIFICULTADES: { value: Dificultad; nombre: string; tone: string }[]
   { value: "dificil", nombre: "Difícil", tone: "bg-energy/15 text-energy" },
 ];
 
-/** Segundos del temporizador del reactivo según dificultad. */
-export const SECONDS_BY_DIFICULTAD: Record<Dificultad, number> = { facil: 60, media: 90, dificil: 150 };
+export { SECONDS_BY_DIFICULTAD } from "@/features/exam/types";
 
 export const dificultadOf = (value: Dificultad) => DIFICULTADES.find((d) => d.value === value);
 
