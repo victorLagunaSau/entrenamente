@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { CircleAlert, School } from "lucide-react";
 
 import { MenuItem } from "@/features/modes/components/account-menu";
@@ -8,7 +9,7 @@ import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 
-import { getFreeExamHistory } from "../services/exam-record-service";
+import { getFreeExamHistory, getRachaHistory } from "../services/exam-record-service";
 import { getStudentCareers } from "../services/student-careers-service";
 import { getHomeCareers, type HomeCareer } from "../services/student-home";
 import { getStudentSummary, type StudentSummary } from "../services/student-service";
@@ -31,6 +32,7 @@ export function StudentPanel() {
 }
 
 function StudentHome() {
+  const router = useRouter();
   const [summary, setSummary] = React.useState<StudentSummary | null | undefined>(undefined);
   const [careers, setCareers] = React.useState<HomeCareer[]>([]);
   const [failed, setFailed] = React.useState(false);
@@ -39,11 +41,15 @@ function StudentHome() {
     getStudentSummary()
       .then(async (s) => {
         // Si el récord falla, el home se muestra igual con las fichas sin historial.
-        const [list, history] = s
-          ? await Promise.all([getStudentCareers(s.id), getFreeExamHistory(s.id).catch(() => new Map())])
-          : [[], new Map()];
+        const [list, history, rachas] = s
+          ? await Promise.all([
+              getStudentCareers(s.id),
+              getFreeExamHistory(s.id).catch(() => new Map()),
+              getRachaHistory(s.id).catch(() => new Map()),
+            ])
+          : [[], new Map(), new Map()];
         setSummary(s);
-        setCareers(getHomeCareers(list, history));
+        setCareers(getHomeCareers(list, history, rachas));
       })
       .catch(() => setFailed(true));
   }, []);
@@ -67,11 +73,8 @@ function StudentHome() {
   const streaks = careers.flatMap((c) => (c.streakDays !== null ? [c.streakDays] : []));
   const bestStreak = streaks.length > 0 ? Math.max(...streaks) : null;
 
-  const updateCareer = (careerId: string, patch: (c: HomeCareer) => Partial<HomeCareer>) =>
-    setCareers((prev) => prev.map((c) => (c.id === careerId ? { ...c, ...patch(c) } : c)));
-  const activateStreak = (careerId: string) => updateCareer(careerId, () => ({ streakDays: 0, streakDoneToday: false }));
-  // Simulado: resolver el micro examen suma el día y marca la palomita de hoy.
-  const solveToday = (careerId: string) => updateCareer(careerId, (c) => ({ streakDays: (c.streakDays ?? 0) + 1, streakDoneToday: true }));
+  // Activar la racha es jugar la primera; el día cuenta al entregarla.
+  const playRacha = (careerId: string) => router.push(`/app/student/racha?carrera=${encodeURIComponent(careerId)}`);
 
   return (
     <>
@@ -80,7 +83,7 @@ function StudentHome() {
         <>
           <StudyPlanModule careers={careers} />
           <FreeExamModule careers={careers} />
-          <StreaksModule careers={careers} onActivate={activateStreak} onSolveToday={solveToday} />
+          <StreaksModule careers={careers} onActivate={playRacha} onSolveToday={playRacha} />
         </>
       )}
     </>

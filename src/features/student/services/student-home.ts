@@ -1,7 +1,9 @@
 /**
- * Datos del home del estudiante, solo lo que hay en Supabase: carreras y récord de exámenes libres.
- * Planes y rachas aún no tienen tablas, así que arrancan vacíos (sin plan, racha por activar).
+ * Datos del home del estudiante, solo lo que hay en Supabase: carreras, récord de exámenes libres y rachas.
+ * Los planes aún no tienen tablas, así que arrancan vacíos. La racha se activa al jugar la primera.
  */
+
+import { diasDeRacha } from "@/features/exam/lib/racha";
 
 import type { StudentCareer } from "./student-careers-service";
 
@@ -30,13 +32,17 @@ export type HomeCareer = {
   exams: PastExam[];
 };
 
-/** `history`: exámenes libres reales por id de carrera (ver exam-record-service). */
-export function getHomeCareers(careers: StudentCareer[], history: Map<string, PastExam[]>): HomeCareer[] {
-  return careers.map((career) => ({
-    ...career,
-    planProgress: null,
-    streakDays: null,
-    streakDoneToday: false,
-    exams: history.get(career.id) ?? [],
-  }));
+/** `history`: exámenes libres por id de carrera; `rachas`: fechas de las rachas jugadas (ver exam-record-service). */
+export function getHomeCareers(careers: StudentCareer[], history: Map<string, PastExam[]>, rachas: Map<string, string[]>): HomeCareer[] {
+  return careers.map((career) => {
+    const fechas = rachas.get(career.id);
+    const racha = fechas ? diasDeRacha(fechas) : null;
+    return {
+      ...career,
+      planProgress: null,
+      streakDays: racha ? racha.dias : null,
+      streakDoneToday: racha?.jugoHoy ?? false,
+      exams: history.get(career.id) ?? [],
+    };
+  });
 }

@@ -242,3 +242,114 @@ html {
     opacity: 0;
   }
 }
+
+/* Examen Racha (src/features/exam/components/racha): sensación de juego contrarreloj. */
+@keyframes racha-heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.12);
+  }
+  30% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.08);
+  }
+}
+@keyframes racha-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-2px, 1px, 0);
+  }
+  40% {
+    transform: translate3d(2px, -1px, 0);
+  }
+  60% {
+    transform: translate3d(-1px, -1px, 0);
+  }
+  80% {
+    transform: translate3d(1px, 1px, 0);
+  }
+}
+@keyframes racha-vignette {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes racha-spark {
+  0%,
+  100% {
+    transform: translate(50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(50%, -50%) scale(1.5);
+    opacity: 0.7;
+  }
+}
+@keyframes racha-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes racha-count {
+  0% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+.animate-racha-heartbeat {
+  animation: racha-heartbeat 1s ease-in-out infinite;
+}
+.animate-racha-shake {
+  animation: racha-shake 0.35s linear infinite;
+}
+.animate-racha-vignette {
+  animation: racha-vignette 1s ease-in-out infinite;
+}
+.animate-racha-spark {
+  animation: racha-spark 0.25s ease-in-out infinite;
+}
+.animate-racha-pop {
+  animation: racha-pop 0.35s ease-out;
+}
+.animate-racha-count {
+  animation: racha-count 0.9s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-racha-heartbeat,
+  .animate-racha-shake,
+  .animate-racha-vignette,
+  .animate-racha-spark,
+  .animate-racha-pop {
+    animation: none !important;
+  }
+}
