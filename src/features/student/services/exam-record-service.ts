@@ -89,3 +89,19 @@ export async function getStudyGuides(studentId: string): Promise<StudyGuide[]> {
     };
   });
 }
+
+/** Fechas de las rachas jugadas por carrera (para contar los días seguidos). */
+export async function getRachaHistory(studentId: string): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase
+    .from("exam_history")
+    .select("career_id, completed_at")
+    .eq("student_id", studentId)
+    .eq("exam_type", "racha");
+  if (error) throw error;
+
+  const byCareer = new Map<string, string[]>();
+  for (const r of data as { career_id: string | null; completed_at: string }[]) {
+    if (r.career_id) byCareer.set(r.career_id, [...(byCareer.get(r.career_id) ?? []), r.completed_at]);
+  }
+  return byCareer;
+}
