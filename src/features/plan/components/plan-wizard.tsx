@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Clock, Gauge, Info, Loader2, Repeat, School, Sparkles, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Clock, Gauge, Info, Loader2, Repeat, School, Sparkles, SlidersHorizontal, TriangleAlert } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
   type PlanDraft,
   PLAN_BAJO,
   practiceDates,
+  recomendacionPorDia,
   todayISO,
 } from "../lib/plan";
 import { crearPlan } from "../services/plan-service";
@@ -39,7 +40,7 @@ const STEPS = [
 ] as const;
 
 const PRESETS: { nombre: string; dias: DayKey[] }[] = [
-  { nombre: "L · M · V", dias: ["monday", "wednesday", "friday"] },
+  { nombre: "Lun · Mié · Vie", dias: ["monday", "wednesday", "friday"] },
   { nombre: "Entre semana", dias: ["monday", "tuesday", "wednesday", "thursday", "friday"] },
   { nombre: "Todos", dias: DIAS.map((d) => d.key) },
 ];
@@ -145,11 +146,21 @@ export function PlanWizard({
           {step === 0 && (
             <CareerStep careers={careers} disponibles={disponibles} value={draft.careerId} onChange={(v) => set("careerId", v)} />
           )}
-          {step === 1 && <DateStep today={today} value={draft.officialDate} onChange={(v) => set("officialDate", v)} />}
+          {step === 1 && (
+            <DateStep today={today} value={draft.officialDate} onChange={(v) =>
+                setDraft((d) => ({ ...d, officialDate: v, examsPerDay: v > today ? recomendacionPorDia(daysBetween(today, v)).porDia : d.examsPerDay }))
+              }
+            />
+          )}
           {step === 2 && (
             <DaysStep value={draft.practiceDays} onChange={(v) => set("practiceDays", v)} count={dates.length} officialDate={draft.officialDate} />
           )}
-          {step === 3 && <PerDayStep value={draft.examsPerDay} onChange={(v) => set("examsPerDay", v)} total={totalExams} />}
+          {step === 3 && <PerDayStep
+              value={draft.examsPerDay}
+              onChange={(v) => set("examsPerDay", v)}
+              total={totalExams}
+              daysLeft={draft.officialDate ? daysBetween(today, draft.officialDate) : 0}
+            />}
           {step === 4 && (
             <DifficultyStep
               mode={draft.difficultyMode}
@@ -250,32 +261,25 @@ function DateStep({ today, value, onChange }: { today: string; value: string; on
           className="h-12 rounded-lg border border-input bg-background px-3 text-base [color-scheme:dark] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         />
       </label>
-      {days !== null && days > 0 && !tooFar && (
-        <div className="grid grid-cols-2 gap-2 text-center">
-          <Big value={days} label={days === 1 ? "día disponible" : "días disponibles"} />
-          <Big value={Math.floor(days / 7)} label={Math.floor(days / 7) === 1 ? "semana" : "semanas"} />
-          <p className="col-span-2 text-xs text-muted-foreground">Examen oficial: {formatLong(value)} de {value.slice(0, 4)}.</p>
-        </div>
-      )}
       {days !== null && days <= 0 && <Hint icon={CircleAlert}>Elige una fecha posterior a hoy.</Hint>}
       {tooFar && <Hint icon={CircleAlert}>El plan puede cubrir hasta 18 meses. Elige una fecha más cercana.</Hint>}
     </div>
   );
 }
 
-function Big({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border bg-background/40 p-3">
-      <p className="font-display text-3xl font-bold text-secondary">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
 function DaysStep({ value, onChange, count, officialDate }: { value: DayKey[]; onChange: (v: DayKey[]) => void; count: number; officialDate: string }) {
   const toggle = (k: DayKey) => onChange(value.includes(k) ? value.filter((d) => d !== k) : [...value, k]);
+  const days = officialDate ? daysBetween(todayISO(), officialDate) : 0;
   return (
     <div className="flex flex-col gap-4">
+      {days > 0 && (
+        <div className="flex flex-col gap-0.5">
+          <p className="text-sm font-semibold text-secondary">Examen día: {formatFull(officialDate)}</p>
+          <p className="text-xs text-muted-foreground">
+            Faltan {days} {days === 1 ? "día" : "días"}
+          </p>
+        </div>
+      )}
       <p className="text-sm text-muted-foreground">Toca los días de la semana en que vas a practicar.</p>
       <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Días de práctica">
         {DIAS.map((d) => {
@@ -288,11 +292,12 @@ function DaysStep({ value, onChange, count, officialDate }: { value: DayKey[]; o
               aria-label={d.nombre}
               onClick={() => toggle(d.key)}
               className={cn(
-                "grid aspect-square place-items-center rounded-xl border font-display text-lg font-bold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                "flex aspect-square flex-col items-center justify-center rounded-xl border transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                 on ? "border-secondary bg-secondary text-secondary-foreground" : "bg-background/40 text-muted-foreground hover:border-foreground/30"
               )}
             >
-              {d.corto}
+              <span className="font-display text-lg leading-none font-bold">{d.corto}</span>
+              <span className="mt-1 text-[10px] leading-none font-medium opacity-80">{d.abrev}</span>
             </button>
           );
         })}
@@ -319,17 +324,79 @@ function DaysStep({ value, onChange, count, officialDate }: { value: DayKey[]; o
   );
 }
 
-function PerDayStep({ value, onChange, total }: { value: number; onChange: (v: number) => void; total: number }) {
+const URGENCIA = {
+  tranquilo: {
+    text: "text-secondary",
+    border: "border-secondary",
+    bg: "bg-secondary/15",
+    card: "border-secondary bg-secondary/15 text-secondary aria-checked:border-secondary aria-checked:bg-secondary/15",
+    badge: "bg-secondary text-secondary-foreground",
+  },
+  apurado: {
+    text: "text-gold",
+    border: "border-gold",
+    bg: "bg-gold/15",
+    card: "border-gold bg-gold/15 text-gold aria-checked:border-gold aria-checked:bg-gold/15",
+    badge: "bg-gold text-background",
+  },
+  urgente: {
+    text: "text-destructive",
+    border: "border-destructive",
+    bg: "bg-destructive/20",
+    card: "border-destructive bg-destructive/20 text-destructive aria-checked:border-destructive aria-checked:bg-destructive/20",
+    badge: "bg-destructive text-white",
+  },
+} as const;
+
+function PerDayStep({ value, onChange, total, daysLeft }: { value: number; onChange: (v: number) => void; total: number; daysLeft: number }) {
+  const { porDia, urgencia } = recomendacionPorDia(daysLeft);
+  const tone = URGENCIA[urgencia];
+  const dias = `${daysLeft} ${daysLeft === 1 ? "día" : "días"}`;
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">¿Cuántos exámenes harás cada día de práctica?</p>
-      <div role="radiogroup" aria-label="Exámenes por día" className="grid grid-cols-3 gap-2">
-        {Array.from({ length: MAX_POR_DIA }, (_, i) => i + 1).map((n) => (
-          <button key={n} type="button" role="radio" aria-checked={value === n} onClick={() => onChange(n)} className={cn(optionCard, "flex-col gap-0.5 text-center")}>
-            <span className="font-display text-2xl font-bold">{n}</span>
-            <span className="text-xs text-muted-foreground">{n === 1 ? "Recomendado" : "por día"}</span>
-          </button>
+      {daysLeft > 0 &&
+        (urgencia === "tranquilo" ? (
+          <p className={cn("text-sm font-semibold", tone.text)}>Faltan {dias}</p>
+        ) : (
+          <p role="alert" className={cn("flex items-start gap-2 rounded-xl border p-3 text-sm", tone.border, tone.bg)}>
+            <TriangleAlert className={cn("mt-0.5 size-5 shrink-0", tone.text, urgencia === "urgente" && "animate-pulse motion-reduce:animate-none")} aria-hidden />
+            <span>
+              <strong className={cn("block text-base", tone.text)}>{urgencia === "urgente" ? `¡Solo faltan ${dias}!` : `Faltan solo ${dias}`}</strong>
+              {urgencia === "urgente"
+                ? "Tu examen está encima: necesitas practicar fuerte. Te recomendamos 3 exámenes por día."
+                : "El tiempo es corto: sube el ritmo. Te recomendamos 2 exámenes por día."}
+            </span>
+          </p>
         ))}
+      <p className="text-sm text-muted-foreground">¿Cuántos exámenes harás cada día de práctica?</p>
+      <div role="radiogroup" aria-label="Exámenes por día" className="grid grid-cols-3 gap-2 pt-3">
+        {Array.from({ length: MAX_POR_DIA }, (_, i) => i + 1).map((n) => {
+          const recommended = n === porDia;
+          return (
+            <div key={n} className="relative">
+              {recommended && (
+                <span className={cn("absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap uppercase", tone.badge)}>
+                  Recomendado
+                </span>
+              )}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={value === n}
+                aria-label={`${n} por día${recommended ? ", recomendado" : ""}`}
+                onClick={() => onChange(n)}
+                className={cn(
+                  optionCard,
+                  "flex-col gap-0.5 text-center aria-checked:ring-2 aria-checked:ring-foreground/60",
+                  recommended && tone.card
+                )}
+              >
+                <span className="font-display text-2xl font-bold">{n}</span>
+                <span className="text-xs text-muted-foreground">por día</span>
+              </button>
+            </div>
+          );
+        })}
       </div>
       <p className="text-sm">
         Total del plan: <strong className="text-secondary">{total} exámenes</strong>

@@ -11,14 +11,14 @@ import type { Nivel } from "@/features/exam/lib/libre";
 export type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 
 /** Lunes primero (como en crear_plan: isodow 1 = lunes). */
-export const DIAS: { key: DayKey; corto: string; nombre: string }[] = [
-  { key: "monday", corto: "L", nombre: "Lunes" },
-  { key: "tuesday", corto: "M", nombre: "Martes" },
-  { key: "wednesday", corto: "X", nombre: "Miércoles" },
-  { key: "thursday", corto: "J", nombre: "Jueves" },
-  { key: "friday", corto: "V", nombre: "Viernes" },
-  { key: "saturday", corto: "S", nombre: "Sábado" },
-  { key: "sunday", corto: "D", nombre: "Domingo" },
+export const DIAS: { key: DayKey; corto: string; abrev: string; nombre: string }[] = [
+  { key: "monday", corto: "L", abrev: "Lun", nombre: "Lunes" },
+  { key: "tuesday", corto: "M", abrev: "Mar", nombre: "Martes" },
+  { key: "wednesday", corto: "X", abrev: "Mié", nombre: "Miércoles" },
+  { key: "thursday", corto: "J", abrev: "Jue", nombre: "Jueves" },
+  { key: "friday", corto: "V", abrev: "Vie", nombre: "Viernes" },
+  { key: "saturday", corto: "S", abrev: "Sáb", nombre: "Sábado" },
+  { key: "sunday", corto: "D", abrev: "Dom", nombre: "Domingo" },
 ];
 
 export const MAX_POR_DIA = 3;
@@ -43,6 +43,18 @@ export type PlanDraft = {
   fixedLevel: Nivel | null;
   timeWindow: string;
 };
+
+/**
+ * Exámenes por día recomendados según los días que faltan para el examen oficial:
+ * 30 o más → 1 (tranquilo), 15 a 29 → 2 (apúrate), menos de 15 → 3 (urgente).
+ */
+export type Urgencia = "tranquilo" | "apurado" | "urgente";
+
+export function recomendacionPorDia(diasRestantes: number): { porDia: number; urgencia: Urgencia } {
+  if (diasRestantes < 15) return { porDia: 3, urgencia: "urgente" };
+  if (diasRestantes < 30) return { porDia: 2, urgencia: "apurado" };
+  return { porDia: 1, urgencia: "tranquilo" };
+}
 
 /* ─────────────────────────── Plan guardado ─────────────────────────── */
 
