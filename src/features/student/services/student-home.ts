@@ -1,6 +1,6 @@
 /**
  * Datos del home del estudiante, solo lo que hay en Supabase: carreras, récord de exámenes libres y rachas.
- * Los planes aún no tienen tablas, así que arrancan vacíos. La racha se activa al jugar la primera.
+ * Los planes se leen aparte (features/plan). La racha se activa al jugar la primera.
  */
 
 import { diasDeRacha } from "@/features/exam/lib/racha";
@@ -22,8 +22,6 @@ export type HomeCareer = {
   name: string;
   universityId: string;
   universityShort: string;
-  /** Avance del plan de estudios (0–100); null = aún no lo crea. */
-  planProgress: number | null;
   /** Días seguidos de la racha; null = racha sin activar. */
   streakDays: number | null;
   /** Micro examen de hoy ya resuelto (se reinicia cada día). */
@@ -39,7 +37,6 @@ export function getHomeCareers(careers: StudentCareer[], history: Map<string, Pa
     const racha = fechas ? diasDeRacha(fechas) : null;
     return {
       ...career,
-      planProgress: null,
       streakDays: racha ? racha.dias : null,
       streakDoneToday: racha?.jugoHoy ?? false,
       exams: history.get(career.id) ?? [],
