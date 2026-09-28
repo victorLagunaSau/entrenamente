@@ -19,7 +19,7 @@ function fail(error: PostgrestError): never {
   throw new ExamenError(error.message);
 }
 
-/** Preguntas distintas por carrera y dificultad (solo conteos). */
+/** Preguntas por carrera y dificultad, cada variante cuenta (solo conteos). */
 export type Disponibles = Map<string, Record<Dificultad, number>>;
 
 export async function getDisponibles(): Promise<Disponibles> {

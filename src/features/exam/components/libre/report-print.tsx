@@ -44,11 +44,13 @@ export function usePrint() {
   return { kind, print: setKind };
 }
 
+const TIPOS: Record<ExamRecord["examType"], string> = { libre: "libre", plan: "del plan", racha: "racha" };
+
 /** Resumen corto en texto para compartir (WhatsApp, correo…). */
 export function shareText(r: ExamRecord) {
   const correctas = r.questions.filter((q) => q.ponderacion_obtenida >= 1).length;
   const lines = [
-    `${BRAND.name} · Examen ${r.examType === "libre" ? "libre" : r.examType}`,
+    `${BRAND.name} · Examen ${TIPOS[r.examType]}`,
     ...(r.folio ? [`Folio: ${r.folio}`] : []),
     `${r.universityName} · ${r.careerName}`,
     `${dateFmt.format(new Date(r.completedAt))} · Nivel ${nivelDe(r)}`,
@@ -88,7 +90,7 @@ export function PrintSheet({ record, kind }: { record: ExamRecord; kind: PrintKi
               Folio <strong>{record.folio}</strong> ·{" "}
             </>
           )}
-          {dateFmt.format(new Date(record.completedAt))} · Examen libre · Nivel {nivelDe(record)}
+          {dateFmt.format(new Date(record.completedAt))} · Examen {TIPOS[record.examType]} · Nivel {nivelDe(record)}
         </p>
         <p className="text-[10pt]">
           Calificación {formatScore(record.score)} / {formatScore(record.maxScore)} · Aciertos {correctas} de {record.totalQuestions} (

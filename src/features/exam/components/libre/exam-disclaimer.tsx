@@ -19,8 +19,13 @@ export function ExamDisclaimer({
   onAccept,
   onBack,
   onRetry,
+  kicker = "Examen libre",
+  backLabel = "Cambiar examen",
 }: {
   config: ExamConfig;
+  /** Tipo de examen sobre el título (el nivel se agrega solo). */
+  kicker?: string;
+  backLabel?: string;
   summary: { preguntas: number; segundos: number } | null;
   error: string | null;
   onAccept: () => void;
@@ -36,7 +41,7 @@ export function ExamDisclaimer({
       <UniBar target={config} />
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-4 p-4 md:p-8">
         <div className="flex flex-col items-center gap-1 text-center">
-          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">Examen libre · {nivel}</p>
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">{kicker} · {nivel}</p>
           <h1 className="text-2xl font-bold">Antes de comenzar</h1>
           <p className="flex min-h-5 items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
             {error ? (
@@ -94,7 +99,7 @@ export function ExamDisclaimer({
             </Button>
           )}
           <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft /> Cambiar examen
+            <ArrowLeft /> {backLabel}
           </Button>
         </div>
       </main>

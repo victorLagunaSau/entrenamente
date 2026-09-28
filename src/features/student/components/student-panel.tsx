@@ -9,8 +9,12 @@ import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 
+import { PlanWizard } from "@/features/plan/components/plan-wizard";
+import type { StudentPlan } from "@/features/plan/lib/plan";
+import { getMyPlans } from "@/features/plan/services/plan-service";
+
 import { getFreeExamHistory, getRachaHistory } from "../services/exam-record-service";
-import { getStudentCareers } from "../services/student-careers-service";
+import { getStudentCareers, type StudentCareer } from "../services/student-careers-service";
 import { getHomeCareers, type HomeCareer } from "../services/student-home";
 import { getStudentSummary, type StudentSummary } from "../services/student-service";
 import { FreeExamModule, StreaksModule, StudyPlanModule } from "./home-modules";
@@ -35,7 +39,17 @@ function StudentHome() {
   const router = useRouter();
   const [summary, setSummary] = React.useState<StudentSummary | null | undefined>(undefined);
   const [careers, setCareers] = React.useState<HomeCareer[]>([]);
+  const [profileCareers, setProfileCareers] = React.useState<StudentCareer[]>([]);
+  const [plans, setPlans] = React.useState<StudentPlan[] | null>(null);
+  const [wizardOpen, setWizardOpen] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
+
+  // Sin las tablas del plan (migración pendiente) el módulo se muestra vacío.
+  const loadPlans = React.useCallback(() => {
+    getMyPlans()
+      .then(setPlans)
+      .catch(() => setPlans([]));
+  }, []);
 
   React.useEffect(() => {
     getStudentSummary()
@@ -49,10 +63,18 @@ function StudentHome() {
             ])
           : [[], new Map(), new Map()];
         setSummary(s);
+        setProfileCareers(list);
         setCareers(getHomeCareers(list, history, rachas));
       })
       .catch(() => setFailed(true));
-  }, []);
+    loadPlans();
+  }, [loadPlans]);
+
+  // Carreras del perfil sin plan activo: las únicas que ofrece el wizard.
+  const planCareers = React.useMemo(
+    () => profileCareers.filter((c) => !plans?.some((p) => p.careerId === c.id)),
+    [profileCareers, plans]
+  );
 
   if (failed) {
     return (
@@ -81,7 +103,8 @@ function StudentHome() {
       <StudentWelcome summary={summary} streakDays={bestStreak} />
       {careers.length > 0 && (
         <>
-          <StudyPlanModule careers={careers} />
+          <StudyPlanModule plans={plans} canCreate={planCareers.length > 0} onCreate={() => setWizardOpen(true)} />
+          <PlanWizard open={wizardOpen} onOpenChange={setWizardOpen} careers={planCareers} onCreated={loadPlans} />
           <FreeExamModule careers={careers} />
           <StreaksModule careers={careers} onActivate={playRacha} onSolveToday={playRacha} />
         </>

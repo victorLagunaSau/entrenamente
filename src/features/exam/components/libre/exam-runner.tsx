@@ -19,7 +19,7 @@ import {
   type ViewMode,
 } from "../../lib/libre";
 import { shuffled } from "../../lib/shuffle";
-import { guardarExamen } from "../../services/libre-service";
+import { type AnswerSheet, guardarExamen } from "../../services/libre-service";
 import { AnswerOptions, QuestionPrompt, ReadingBlock } from "../question-parts";
 import { UniBar } from "./uni-bar";
 
@@ -38,7 +38,18 @@ function readMode(): ViewMode {
  * (se acumula en la pregunta activa: la que está a la vista en scroll/paginado, la única en "pregunta a pregunta").
  * Las respuestas se pueden cambiar hasta entregar; antes de entregar se muestra el resumen de contestadas y pendientes.
  */
-export function ExamRunner({ config, items, onFinished }: { config: ExamConfig; items: ExamItem[]; onFinished: (id: number) => void }) {
+export function ExamRunner({
+  config,
+  items,
+  onFinished,
+  save = guardarExamen,
+}: {
+  config: ExamConfig;
+  items: ExamItem[];
+  onFinished: (id: number) => void;
+  /** Califica y congela; por defecto el Examen Libre (el plan usa guardar_examen_plan). */
+  save?: (sheet: AnswerSheet) => Promise<number>;
+}) {
   const total = items.length;
   const limit = React.useMemo(() => timeLimitOf(items), [items]);
   // Orden de opciones barajado una sola vez: se guarda para que el visor histórico muestre las mismas letras.
@@ -92,7 +103,7 @@ export function ExamRunner({ config, items, onFinished }: { config: ExamConfig; 
       setSaving({ timedOut, error: null });
       const { answers: a, spent: s, remaining: r } = latest.current;
       try {
-        const id = await guardarExamen({
+        const id = await save({
           carreraId: config.carrera.id,
           nivel: config.nivel,
           respuestas: items.map((q, i) => ({ codigo: q.codigo, respuestaId: a[i], segundos: s[i], orden: orders[i].map((o) => o.id) })),
@@ -105,7 +116,7 @@ export function ExamRunner({ config, items, onFinished }: { config: ExamConfig; 
         setSaving({ timedOut, error: e instanceof Error ? e.message : "No pudimos guardar tu examen." });
       }
     },
-    [config, items, orders, limit, onFinished]
+    [config, items, orders, limit, onFinished, save]
   );
 
   // Tiempo agotado: se califica con lo respondido.

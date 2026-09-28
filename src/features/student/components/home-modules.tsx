@@ -4,13 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
-  BarChart3,
   BookOpen,
   CalendarCheck,
   ChevronRight,
   CircleCheck,
   Flame,
-  History,
   Library,
   NotebookPen,
   Plus,
@@ -20,6 +18,8 @@ import {
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
+import { PlanHomeCard } from "@/features/plan/components/plan-cards";
+import type { StudentPlan } from "@/features/plan/lib/plan";
 import { cn } from "@/lib/utils";
 
 import type { HomeCareer, PastExam } from "../services/student-home";
@@ -77,27 +77,10 @@ function CareerLabel({ career }: { career: HomeCareer }) {
   );
 }
 
-function ProgressBar({ value, label }: { value: number; label: string }) {
-  return (
-    <div
-      className="h-2 overflow-hidden rounded-full bg-muted"
-      role="progressbar"
-      aria-valuenow={value}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={label}
-    >
-      <div className="h-full rounded-full bg-brand-gradient" style={{ width: `${value}%` }} />
-    </div>
-  );
-}
-
 const card = "flex h-full flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5";
 
-/** Módulo 2 · Un plan de estudios por carrera: avance, examen del día, estadísticas y exámenes. */
-export function StudyPlanModule({ careers }: { careers: HomeCareer[] }) {
-  const plans = careers.filter((c) => c.planProgress !== null);
-
+/** Módulo 2 · Plan de estudios: un plan por carrera (examen de hoy, semana, últimos 3) y "+ Plan" abre el wizard. */
+export function StudyPlanModule({ plans, canCreate, onCreate }: { plans: StudentPlan[] | null; canCreate: boolean; onCreate: () => void }) {
   return (
     <HomeModule
       id="plan"
@@ -105,44 +88,35 @@ export function StudyPlanModule({ careers }: { careers: HomeCareer[] }) {
       icon={BookOpen}
       tone="brand"
       action={
-        <Button variant="outline" size="sm" disabled title="Próximamente">
-          <Plus /> <span className="sr-only sm:not-sr-only">Plan de estudios</span>
-          <span className="sm:hidden" aria-hidden>
-            Plan
-          </span>
-        </Button>
+        plans !== null &&
+        plans.length > 0 &&
+        canCreate && (
+          <Button variant="outline" size="sm" onClick={onCreate}>
+            <Plus /> <span className="sr-only sm:not-sr-only">Plan de estudios</span>
+            <span className="sm:hidden" aria-hidden>
+              Plan
+            </span>
+          </Button>
+        )
       }
     >
-      {plans.length === 0 ? (
-        <li className={cn(card, "items-center justify-center border-dashed text-center text-sm text-muted-foreground sm:col-span-2")}>
-          Aún no tienes un plan de estudios. Crea uno para entrenar día a día.
+      {plans === null ? (
+        <li className={cn(card, "h-40 animate-pulse sm:col-span-2 motion-reduce:animate-none")} aria-label="Cargando tu plan" />
+      ) : plans.length === 0 ? (
+        <li className={cn(card, "items-center justify-center gap-3 border-dashed py-8 text-center sm:col-span-2")}>
+          <span className="grid size-12 place-items-center rounded-full bg-primary/15 text-brand-light">
+            <CalendarCheck className="size-6" aria-hidden />
+          </span>
+          <p className="max-w-md text-sm text-muted-foreground text-pretty">
+            Dinos cuándo es tu examen de admisión y qué días puedes practicar: armamos tu calendario de exámenes, ajustamos la dificultad y
+            seguimos tu rendimiento.
+          </p>
+          <Button variant="brand" size="lg" onClick={onCreate} disabled={!canCreate}>
+            <Plus /> Crear plan personalizado
+          </Button>
         </li>
       ) : (
-        plans.map((career) => (
-          <li key={career.id} className={card}>
-            <CareerLabel career={career} />
-            <div className="mt-2 flex flex-col gap-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Avance del plan</span>
-                <span className="font-semibold">{career.planProgress}%</span>
-              </div>
-              <ProgressBar value={career.planProgress ?? 0} label={`Avance del plan de ${career.name}`} />
-            </div>
-            <div className="mt-auto flex flex-col gap-2">
-              <Button variant="brand" className="w-full" disabled title="Próximamente">
-                <CalendarCheck /> Examen del día
-              </Button>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" disabled title="Próximamente">
-                  <BarChart3 /> Estadísticas
-                </Button>
-                <Button variant="outline" size="sm" disabled title="Próximamente">
-                  <History /> Ver exámenes
-                </Button>
-              </div>
-            </div>
-          </li>
-        ))
+        plans.map((plan) => <PlanHomeCard key={plan.id} plan={plan} />)
       )}
     </HomeModule>
   );
