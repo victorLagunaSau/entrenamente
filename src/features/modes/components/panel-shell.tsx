@@ -11,8 +11,8 @@ import { signOut } from "@/features/auth/services/auth-service";
 import { MODES } from "../modes";
 import { useMode } from "./mode-guard";
 
-/** Estructura de todos los homes: sin barra lateral ni barra inferior; las herramientas viven en el home. */
-export function PanelShell({ children }: { children: React.ReactNode }) {
+/** Estructura de todos los homes: sin barra lateral. `footer` = menú inferior fijo (p. ej. el del estudiante). */
+export function PanelShell({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
   const { viewer, mode } = useMode();
   const router = useRouter();
   const [leaving, setLeaving] = React.useState(false);
@@ -43,10 +43,13 @@ export function PanelShell({ children }: { children: React.ReactNode }) {
 
       <main
         className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-8"
-        style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+        style={{
+          paddingBottom: footer ? "calc(6rem + env(safe-area-inset-bottom))" : "max(2rem, env(safe-area-inset-bottom))",
+        }}
       >
         {children}
       </main>
+      {footer}
     </div>
   );
 }

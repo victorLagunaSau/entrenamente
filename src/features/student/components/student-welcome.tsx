@@ -1,56 +1,52 @@
 "use client";
 
-import * as React from "react";
-import { CircleAlert, Power, Sparkles, Zap } from "lucide-react";
+import { Flame, GraduationCap, Power, Sparkles, Zap } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
+import { Button } from "@/components/ui/button";
 import { findCareer, findUniversity } from "@/features/registro/data/catalog";
 import { cn } from "@/lib/utils";
 
-import { getStudentSummary, type StudentSummary } from "../services/student-service";
+import type { StudentSummary } from "../services/student-service";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" });
 
-/** Saludo con datos reales: apodo, meta inicial y el "interruptor" de acceso. */
-export function StudentWelcome() {
-  const [summary, setSummary] = React.useState<StudentSummary | null | undefined>(undefined);
-  const [failed, setFailed] = React.useState(false);
-
-  React.useEffect(() => {
-    getStudentSummary()
-      .then(setSummary)
-      .catch(() => setFailed(true));
-  }, []);
-
-  if (failed) {
-    return (
-      <p role="alert" className="flex items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        <CircleAlert className="size-4 shrink-0" /> No pudimos cargar tu perfil. Recarga la página.
-      </p>
-    );
-  }
-
-  if (summary === undefined) {
-    return <div className="h-40 animate-pulse rounded-2xl bg-card motion-reduce:animate-none" aria-label="Cargando tu perfil" />;
-  }
-  if (!summary) return null;
-
+/** Módulo 1 · Saludo: apodo (con fuego si hay rachas activas), plan y acceso a sus carreras. */
+export function StudentWelcome({ summary, streakDays }: { summary: StudentSummary; streakDays: number | null }) {
   const university = findUniversity(summary.goal?.universityId ?? null);
   const career = findCareer(summary.goal?.universityId ?? null, summary.goal?.careerId ?? null);
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:p-6">
-      <h1 className="text-2xl font-bold sm:text-3xl">¡Hola, {summary.alias}!</h1>
-      <AccessChip access={summary.access} />
-      {university && career && (
-        <div className="flex min-w-0 items-center gap-3">
-          <UniversityBadge id={university.id} label={university.short} size="sm" />
-          <span className="min-w-0 truncate text-sm text-cool">
-            <span className="text-muted-foreground">Meta inicial · </span>
-            {career.name}
+    <section id="saludo" className="flex scroll-mt-20 flex-col gap-3 rounded-2xl border bg-card p-5 sm:p-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold sm:text-3xl">¡Hola, {summary.alias}!</h1>
+        {streakDays !== null && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-energy/15 px-2.5 py-1 text-sm font-bold text-energy"
+            title={`Racha de ${streakDays} ${streakDays === 1 ? "día" : "días"}`}
+          >
+            <Flame className="size-5 fill-energy/40" aria-hidden />
+            {streakDays}
+            <span className="sr-only"> días de racha</span>
           </span>
-        </div>
-      )}
+        )}
+      </div>
+      <AccessChip access={summary.access} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {university && career && (
+          <div className="flex min-w-0 items-center gap-3">
+            <UniversityBadge id={university.id} label={university.short} size="sm" />
+            <span className="min-w-0 truncate text-sm text-cool">
+              <span className="text-muted-foreground">Meta inicial · </span>
+              {career.name}
+            </span>
+          </div>
+        )}
+        {/* Pendiente: la vista de carreras aún no existe. */}
+        <Button variant="outline" size="sm" disabled title="Próximamente">
+          <GraduationCap /> Ir a carreras
+        </Button>
+      </div>
     </section>
   );
 }
