@@ -2,10 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { CircleAlert, School, Sparkles } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { CircleAlert, School } from "lucide-react";
 
 import { MenuItem } from "@/features/modes/components/account-menu";
 import { ModeGuard } from "@/features/modes/components/mode-guard";
@@ -22,27 +19,29 @@ import { getStudentCareers, type StudentCareer } from "../services/student-caree
 import { getHomeCareers, type HomeCareer } from "../services/student-home";
 import { getStudentSummary, type StudentSummary } from "../services/student-service";
 import { FreeExamModule, StreaksModule, StudyPlanModule } from "./home-modules";
-import { StudentNav, StudentTopNav } from "./student-nav";
+import { DemoHome } from "./demo/demo-home";
+import { DEMO_NAV, PRO_NAV, StudentNav, StudentTopNav } from "./student-nav";
 import { StudentWelcome } from "./student-welcome";
 import { TierGuard } from "./tier-guard";
 
 /**
- * Home del estudiante: módulos apilados (Saludo → Plan → Examen libre → Rachas) y menú inferior.
- * `pro` = suscripción activa (/app/student/home); `demo` = prueba gratuita (/app/student/home-demo).
+ * Home del estudiante con menú inferior. `pro` = suscripción activa (/app/student/home): Saludo → Plan →
+ * Examen libre → Rachas. `demo` = prueba gratuita (/app/student/home-demo): ver DemoHome.
  */
 export function StudentPanel({ tier }: { tier: StudentTier }) {
+  const nav = tier === "demo" ? DEMO_NAV : PRO_NAV;
   return (
     <ModeGuard mode="student">
       <TierGuard tier={tier}>
         <PanelShell
           home={STUDENT_HOMES[tier]}
-          footer={<StudentNav />}
-          topNav={<StudentTopNav />}
+          footer={<StudentNav items={nav} />}
+          topNav={<StudentTopNav items={nav} />}
           accountExtra={<MenuItem icon={School} label="Agregar escuela" />}
         >
           <div className="flex flex-col gap-8">
             <ModeSwitcher />
-            <StudentHome tier={tier} />
+            {tier === "demo" ? <DemoHome /> : <StudentHome />}
           </div>
         </PanelShell>
       </TierGuard>
@@ -50,7 +49,7 @@ export function StudentPanel({ tier }: { tier: StudentTier }) {
   );
 }
 
-function StudentHome({ tier }: { tier: StudentTier }) {
+function StudentHome() {
   const router = useRouter();
   const [summary, setSummary] = React.useState<StudentSummary | null | undefined>(undefined);
   const [careers, setCareers] = React.useState<HomeCareer[]>([]);
@@ -116,7 +115,6 @@ function StudentHome({ tier }: { tier: StudentTier }) {
   return (
     <>
       <StudentWelcome summary={summary} streakDays={bestStreak} />
-      {tier === "demo" && <DemoBanner />}
       {careers.length > 0 && (
         <>
           <StudyPlanModule plans={plans} canCreate={planCareers.length > 0} onCreate={() => setWizardOpen(true)} />
@@ -126,20 +124,5 @@ function StudentHome({ tier }: { tier: StudentTier }) {
         </>
       )}
     </>
-  );
-}
-
-/** Solo en el Demo: invita a desbloquear el acceso ilimitado. */
-function DemoBanner() {
-  return (
-    <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-light/40 bg-primary/10 p-4 sm:p-5">
-      <p className="flex items-center gap-2 text-sm text-pretty">
-        <Sparkles className="size-4 shrink-0 text-brand-light" aria-hidden />
-        Estás en la prueba gratuita. Desbloquea exámenes, rachas y planes sin límite.
-      </p>
-      <Button asChild variant="brand" size="sm">
-        <Link href="/acceso-ilimitado">Desbloquear acceso ilimitado</Link>
-      </Button>
-    </section>
   );
 }

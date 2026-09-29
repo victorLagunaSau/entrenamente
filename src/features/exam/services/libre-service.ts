@@ -90,6 +90,8 @@ type HistoryRow = {
   id: number;
   folio: string;
   exam_type: ExamRecord["examType"];
+  /** Sin la migración del Home Demo, no viene. */
+  prueba_numero?: number | null;
   university_key: string;
   university_name: string;
   career_name: string;
@@ -127,6 +129,7 @@ export async function getExamRecord(key: { id: number } | { folio: string }): Pr
     id: r.id,
     folio: r.folio,
     examType: r.exam_type,
+    pruebaNumero: r.prueba_numero ?? null,
     universityKey: r.university_key,
     universityName: r.university_name,
     careerName: r.career_name,

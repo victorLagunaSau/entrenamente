@@ -1,6 +1,6 @@
 "use client";
 
-import { FileJson, School, Users } from "lucide-react";
+import { FileJson, School, Sparkles, Users } from "lucide-react";
 
 import { HomeTools } from "@/features/modes/components/home-tools";
 import { useMode } from "@/features/modes/components/mode-guard";
@@ -36,6 +36,12 @@ export function AdminHome() {
             description: "Universidades, exámenes especiales, áreas y carreras.",
             icon: School,
             href: "/admin/escuelas",
+          },
+          {
+            label: "Campaña Demo",
+            description: "Textos, precio y exámenes gratis del Home Demo.",
+            icon: Sparkles,
+            href: "/admin/demo",
           },
         ]}
       />

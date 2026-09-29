@@ -12,6 +12,7 @@ import {
   Copy,
   Download,
   FileText,
+  Gift,
   Home,
   Hourglass,
   LogOut,
@@ -130,7 +131,14 @@ function Ficha({
     <section className="flex flex-col gap-5 rounded-3xl border bg-card p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">Ficha del examen</p>
+          <p className="flex flex-wrap items-center gap-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+            Ficha del examen
+            {record.pruebaNumero !== null && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-brand-light/40 bg-primary/10 px-2 py-0.5 tracking-normal text-brand-light normal-case">
+                <Gift className="size-3" aria-hidden /> Prueba gratuita {record.pruebaNumero}
+              </span>
+            )}
+          </p>
           <h1 className="mt-1 text-2xl font-bold text-balance">
             {record.universityKey} · {record.careerName}
           </h1>
@@ -362,7 +370,7 @@ function Aciertos({ aciertos, materias, total }: { aciertos: Numbered[]; materia
 }
 
 /** Materia plegable: el encabezado (nombre, conteo, resumen) siempre a la vista; sin preguntas no se abre. */
-function MateriaGroup({ name, count, summary, children }: { name: string; count: number; summary: React.ReactNode; children: React.ReactNode }) {
+export function MateriaGroup({ name, count, summary, children }: { name: string; count: number; summary: React.ReactNode; children: React.ReactNode }) {
   const header = (
     <>
       <span className="h-6 w-1 shrink-0 rounded-full" style={{ backgroundColor: UNI_ACCENT }} />
@@ -385,7 +393,8 @@ function MateriaGroup({ name, count, summary, children }: { name: string; count:
   );
 }
 
-function QuestionAccordion({ q, n, total }: { q: SnapshotQuestion; n: number; total: number }) {
+/** Pregunta plegable con diagnóstico y solución. `source` antepone su origen (p. ej. "Examen 2") cuando se mezclan exámenes. */
+export function QuestionAccordion({ q, n, total, source }: { q: SnapshotQuestion; n: number; total: number; source?: string }) {
   return (
     <details className="group rounded-2xl border bg-card open:shadow-sm">
       <summary className="flex cursor-pointer list-none items-start gap-3 p-3 sm:p-4 [&::-webkit-details-marker]:hidden">
@@ -394,7 +403,7 @@ function QuestionAccordion({ q, n, total }: { q: SnapshotQuestion; n: number; to
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-xs text-muted-foreground">
-            Pregunta {n} · {q.materia} · {q.tiempo_respuesta_segundos} s
+            {source && `${source} · `}Pregunta {n} · {q.materia} · {q.tiempo_respuesta_segundos} s
           </span>
           <MathText text={q.pregunta} className="line-clamp-2 text-sm font-medium group-open:line-clamp-none" />
         </span>

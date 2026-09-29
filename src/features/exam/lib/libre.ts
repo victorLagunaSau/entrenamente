@@ -103,6 +103,8 @@ export type ExamRecord = {
   /** Identificador para compartir y consultar (EM-7F3K-9Q2D). */
   folio: string;
   examType: "libre" | "plan" | "racha";
+  /** Número de prueba gratuita (Examen Libre del periodo de prueba); null si no lo es. */
+  pruebaNumero: number | null;
   universityKey: string;
   universityName: string;
   careerName: string;
