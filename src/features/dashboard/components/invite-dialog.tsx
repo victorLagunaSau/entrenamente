@@ -13,11 +13,11 @@ import { errorMessage, getInviteLink } from "../services/tutor-service";
 import { useTutor } from "./tutor-context";
 
 /** "+ Invitar Estudiante": el enlace único de la licencia, para copiarlo a WhatsApp o correo. */
-export function InviteButton({ disabled }: { disabled?: boolean }) {
+export function InviteButton({ disabled, variant = "brand" }: { disabled?: boolean; variant?: "brand" | "outline" }) {
   const [open, setOpen] = React.useState(false);
   return (
     <>
-      <Button variant="brand" onClick={() => setOpen(true)} disabled={disabled}>
+      <Button variant={variant} onClick={() => setOpen(true)} disabled={disabled}>
         <UserPlus /> Invitar Estudiante
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -32,14 +32,14 @@ function InviteBody() {
   const [link, setLink] = React.useState<{ code: string; url: string } | null>(null);
   const [status, setStatus] = React.useState<"loading" | "ready" | "renewing" | "error">("loading");
   const [error, setError] = React.useState("");
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = React.useState<"message" | "link" | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const license = panel?.license;
   const free = license ? Math.max(license.seats - license.used, 0) : 0;
 
   const load = React.useCallback(async (renew: boolean) => {
     setStatus(renew ? "renewing" : "loading");
-    setCopied(false);
+    setCopied(null);
     try {
       setLink(await getInviteLink(renew));
       setStatus("ready");
@@ -58,11 +58,12 @@ function InviteBody() {
     ? `¡Hola! Te invito a entrenar para tu examen de admisión en ${BRAND.name}. Crea tu cuenta con este enlace: ${link.url}`
     : "";
 
-  const copy = async () => {
+  // "message" = texto listo para WhatsApp/email; "link" = solo la URL.
+  const copy = async (what: "message" | "link") => {
     try {
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      await navigator.clipboard.writeText(what === "message" ? message : (link?.url ?? ""));
+      setCopied(what);
+      setTimeout(() => setCopied((c) => (c === what ? null : c)), 2500);
     } catch {
       inputRef.current?.select();
     }
@@ -104,19 +105,32 @@ function InviteBody() {
           <label htmlFor="tutor-invite-url" className="flex items-center gap-2 text-sm font-medium text-cool">
             <Link2 className="size-4 text-brand-light" aria-hidden /> Enlace de invitación
           </label>
-          <div className="relative">
-            <Input
-              ref={inputRef}
-              id="tutor-invite-url"
-              readOnly
-              value={link?.url ?? ""}
-              placeholder="Generando enlace…"
-              onFocus={(e) => e.currentTarget.select()}
-              className="font-mono text-xs md:text-xs"
-            />
-            {status !== "ready" && (
-              <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none" />
-            )}
+          <div className="flex gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Input
+                ref={inputRef}
+                id="tutor-invite-url"
+                readOnly
+                value={link?.url ?? ""}
+                placeholder="Generando enlace…"
+                onFocus={(e) => e.currentTarget.select()}
+                className="font-mono text-xs md:text-xs"
+              />
+              {status !== "ready" && (
+                <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none" />
+              )}
+            </div>
+            <Button
+              type="button"
+              variant={copied === "link" ? "secondary" : "outline"}
+              onClick={() => copy("link")}
+              disabled={status !== "ready"}
+              className="h-11 shrink-0"
+              aria-live="polite"
+            >
+              {copied === "link" ? <Check /> : <Copy />}
+              {copied === "link" ? "¡Copiado!" : "Copiar enlace"}
+            </Button>
           </div>
           {link && (
             <p className="text-xs text-muted-foreground">
@@ -127,9 +141,9 @@ function InviteBody() {
       )}
 
       <div className="flex flex-col gap-2">
-        <Button size="lg" variant={copied ? "secondary" : "default"} onClick={copy} disabled={status !== "ready"} aria-live="polite">
-          {copied ? <Check /> : <Copy />}
-          {copied ? "¡Mensaje copiado!" : "Copiar Enlace para WhatsApp/Email"}
+        <Button size="lg" variant={copied === "message" ? "secondary" : "default"} onClick={() => copy("message")} disabled={status !== "ready"} aria-live="polite">
+          {copied === "message" ? <Check /> : <Copy />}
+          {copied === "message" ? "¡Mensaje copiado!" : "Copiar Enlace para WhatsApp/Email"}
         </Button>
         {link && (
           <Button asChild variant="outline">

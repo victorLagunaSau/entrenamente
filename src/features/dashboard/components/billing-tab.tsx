@@ -24,6 +24,7 @@ import {
   type TutorPlan,
 } from "../lib/tutor-plans";
 import type { TutorLicense } from "../services/tutor-service";
+import { NoPlanHero } from "./no-plan-hero";
 import { useTutor } from "./tutor-context";
 
 const SOURCE: Record<TutorLicense["source"], string> = {
@@ -56,6 +57,9 @@ export function BillingTab() {
         </p>
       )}
 
+      {!license ? (
+        <NoPlanHero scroll />
+      ) : (
       <section aria-labelledby="plan-title" className="flex flex-col gap-4 rounded-2xl border bg-card p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-brand-light">
@@ -106,6 +110,7 @@ export function BillingTab() {
           </div>
         )}
       </section>
+      )}
 
       <section aria-labelledby="plans-title" className="flex flex-col gap-3">
         <div>

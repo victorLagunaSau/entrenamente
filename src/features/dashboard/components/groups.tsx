@@ -227,7 +227,7 @@ export function GroupSelect({ studentId, groupId, label }: { studentId: string; 
           error && "border-destructive"
         )}
       >
-        <option value="">{groups.length ? "Sin grupo" : "Crea un grupo primero"}</option>
+        <option value="">{groups.length ? "Sin grupo" : "Sin grupos"}</option>
         {groups.map((g) => (
           <option key={g.id} value={g.id}>
             {g.name}

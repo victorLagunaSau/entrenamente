@@ -117,8 +117,12 @@ export async function getExamRecord(key: { id: number } | { folio: string }): Pr
   const q = supabase.from("exam_history").select("*");
   const { data, error } = await ("id" in key ? q.eq("id", key.id) : q.eq("folio", key.folio.trim().toUpperCase())).maybeSingle();
   if (error) fail(error);
-  if (!data) return null;
-  const r = data as HistoryRow;
+  return data ? toExamRecord(data) : null;
+}
+
+/** Fila de exam_history (tal como la guarda la base) → reporte. También la usa el panel del tutor. */
+export function toExamRecord(row: unknown): ExamRecord {
+  const r = row as HistoryRow;
   const f = r.frozen_exam_data;
   const target: ExamTarget = {
     institucion: { id: f.institucion.clave.toLowerCase(), clave: f.institucion.clave, nombre: f.institucion.nombre, colorId: f.institucion.color_id },
