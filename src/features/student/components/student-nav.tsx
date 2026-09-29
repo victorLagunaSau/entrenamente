@@ -2,27 +2,36 @@
 
 import * as React from "react";
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, Flame, NotebookPen } from "lucide-react";
+import { BookOpen, BookOpenCheck, CreditCard, Flame, NotebookPen, Rocket, Route } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type NavItem = { label: string; icon: LucideIcon; target: string };
+export type NavItem = { label: string; icon: LucideIcon; target: string };
 
-const ITEMS: NavItem[] = [
+/** Home Pro. */
+export const PRO_NAV: NavItem[] = [
   { label: "Plan", icon: BookOpen, target: "plan" },
   { label: "Examen", icon: NotebookPen, target: "examen-libre" },
   { label: "Rachas", icon: Flame, target: "rachas" },
 ];
 
+/** Home Demo: su camino de exámenes gratis, su guía y lo que desbloquea el plan. */
+export const DEMO_NAV: NavItem[] = [
+  { label: "Ruta", icon: Route, target: "ruta" },
+  { label: "Guía", icon: BookOpenCheck, target: "guia" },
+  { label: "Ilimitado", icon: Rocket, target: "ilimitado" },
+  { label: "Planes", icon: CreditCard, target: "planes" },
+];
+
 /** Sección visible + salto suave. Tras tocar una opción, el scroll no cambia la marca hasta que termine. */
-function useSectionNav() {
+function useSectionNav(items: NavItem[]) {
   const [current, setCurrent] = React.useState("");
   const lockedUntil = React.useRef(0);
 
   React.useEffect(() => {
     // Activa la última sección cuyo inicio ya pasó el 40 % de la pantalla; al fondo, la última; arriba (saludo), ninguna.
     const update = () => {
-      const sections = ITEMS.map((i) => document.getElementById(i.target)).filter((el): el is HTMLElement => el !== null);
+      const sections = items.map((i) => document.getElementById(i.target)).filter((el): el is HTMLElement => el !== null);
       if (sections.length === 0 || Date.now() < lockedUntil.current) return;
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
       const passed = sections.filter((el) => el.getBoundingClientRect().top <= window.innerHeight * 0.4);
@@ -36,7 +45,7 @@ function useSectionNav() {
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, []);
+  }, [items]);
 
   const go = (target: string) => {
     setCurrent(target);
@@ -52,8 +61,8 @@ function useSectionNav() {
 }
 
 /** Celular y tablet: pie fijo como menú de app (estilo banca). */
-export function StudentNav() {
-  const { current, go } = useSectionNav();
+export function StudentNav({ items = PRO_NAV }: { items?: NavItem[] }) {
+  const { current, go } = useSectionNav(items);
 
   return (
     <nav
@@ -61,8 +70,8 @@ export function StudentNav() {
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/90 backdrop-blur lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="mx-auto grid h-16 max-w-md grid-cols-3">
-        {ITEMS.map((item) => {
+      <ul className="mx-auto grid h-16 max-w-md" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        {items.map((item) => {
           const active = item.target === current;
           return (
             <li key={item.label}>
@@ -89,13 +98,13 @@ export function StudentNav() {
 }
 
 /** Computadora: los mismos accesos en la barra superior. */
-export function StudentTopNav() {
-  const { current, go } = useSectionNav();
+export function StudentTopNav({ items = PRO_NAV }: { items?: NavItem[] }) {
+  const { current, go } = useSectionNav(items);
 
   return (
     <nav aria-label="Secciones del home" className="hidden lg:block">
       <ul className="flex items-center gap-1">
-        {ITEMS.map((item) => {
+        {items.map((item) => {
           const active = item.target === current;
           return (
             <li key={item.label}>
