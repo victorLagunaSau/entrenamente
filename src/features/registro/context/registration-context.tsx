@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { FLOW_STEPS, SUBMIT_STEP } from "../lib/steps";
+import { FLOW_STEPS, INVITED_OPEN_STEPS, SUBMIT_STEP } from "../lib/steps";
 import { validateAccount, validateGoal, type FieldErrors } from "../lib/validation";
 import * as service from "../services/registration-service";
 import type { AccountData, ExtraData, Flow, GoalData, Invite, PlanId, StepId } from "../types";
@@ -101,7 +101,7 @@ function reducer(state: State, action: Action): State {
       };
     case "invite": {
       const invite = action.invite;
-      // Con invitación válida la meta viene definida por el padre.
+      // Con invitación válida la meta viene definida por el padre (la de licencia no trae meta: queda vacía).
       if (invite.status === "valid") return { ...state, invite, flow: "invited", goal: invite.invite.goal };
       return { ...state, invite };
     }
@@ -158,7 +158,8 @@ export function RegistrationProvider({
     };
   }, [inviteCode]);
 
-  const steps = FLOW_STEPS[state.flow ?? "student"];
+  const openInvite = state.invite.status === "valid" && !state.invite.invite.goal.careerId;
+  const steps = state.flow === "invited" && openInvite ? INVITED_OPEN_STEPS : FLOW_STEPS[state.flow ?? "student"];
   const step = steps[Math.min(state.stepIndex, steps.length - 1)];
   const progressSteps = steps.filter((s): s is StepId => s !== "profile");
   const flow = state.flow ?? "student";
