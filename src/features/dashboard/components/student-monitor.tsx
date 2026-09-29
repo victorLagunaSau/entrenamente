@@ -47,12 +47,13 @@ import {
 import { cn } from "@/lib/utils";
 
 import { formatDate, formatMxn, planName, TUTOR_COPY, upgradeOffers } from "../lib/tutor-plans";
-import { SAMPLE_IDS, sampleGoals, samplePlans, type StudentGoal } from "../lib/tutor-sample";
 import { computeStats, formatHours, type TutorStats } from "../lib/tutor-stats";
 import {
   activateSeat,
   errorMessage,
   type ExamType,
+  getStudentPlans,
+  getTutorExams,
   releaseSeat,
   studentLimit,
   unlinkStudent,
@@ -77,12 +78,11 @@ type Insight = {
   racha: { days: number; playedToday: boolean; best: number; level: string | null; last14: { date: string; played: boolean }[] };
   week: { exams: number; seconds: number; byType: Record<ExamType, number> };
   todayExams: TutorExam[];
-  plans: StudentPlan[];
 };
 
 const DAY = 86_400_000;
 
-function buildInsight(list: TutorExam[], plans: StudentPlan[]): Insight {
+function buildInsight(list: TutorExam[]): Insight {
   const stats = computeStats(list);
   const serious = list.filter((e) => e.type !== "racha");
   const last3 = serious.slice(-3);
@@ -119,7 +119,6 @@ function buildInsight(list: TutorExam[], plans: StudentPlan[]): Insight {
     racha: { days: dias, playedToday: jugoHoy, best, level: lastRacha ? NIVEL_JUEGO[lastRacha.level].nombre : null, last14 },
     week: { exams: thisWeek.length, seconds: thisWeek.reduce((n, e) => n + e.timeSpentSeconds, 0), byType },
     todayExams: list.filter((e) => toISODate(new Date(e.completedAt)) === todayIso),
-    plans,
   };
 }
 
@@ -130,7 +129,7 @@ function buildInsight(list: TutorExam[], plans: StudentPlan[]): Insight {
  * (metas, planes, racha diaria, exámenes libres y materias). Estadísticas queda para los reportes.
  */
 export function StudentMonitor() {
-  const { panel, loadExams, simulatedPaid, goalsOf, extraPlans } = useTutor();
+  const { panel } = useTutor();
   const students = panel!.students;
   const [filter, setFilter] = React.useState<GroupFilter>("all");
   const activeFilter = typeof filter === "number" && !panel!.groups.some((g) => g.id === filter) ? "all" : filter;
@@ -143,26 +142,22 @@ export function StudentMonitor() {
   React.useEffect(() => {
     let active = true;
     setExams(null);
-    loadExams(ids ? ids.split(",") : [])
+    getTutorExams(ids ? ids.split(",") : [])
       .then((data) => active && setExams(data))
       .catch(() => active && setExams("error"));
     return () => {
       active = false;
     };
-    // `ids` y el switch resumen lo que cambia; loadExams cambia de identidad en cada render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ids, simulatedPaid]);
+  }, [ids]);
 
   const insights = React.useMemo(() => {
     if (!Array.isArray(exams)) return null;
     const map = new Map<string, Insight>();
     for (const s of students) {
-      const own = exams.filter((e) => e.studentId === s.id);
-      const plans = [...(simulatedPaid ? samplePlans(s, sampleGoals(s), own) : []), ...extraPlans(s.id)];
-      map.set(s.id, buildInsight(own, plans));
+      map.set(s.id, buildInsight(exams.filter((e) => e.studentId === s.id)));
     }
     return map;
-  }, [exams, students, simulatedPaid, extraPlans]);
+  }, [exams, students]);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const selected = visible.find((s) => s.id === selectedId) ?? visible[0] ?? null;
@@ -179,11 +174,6 @@ export function StudentMonitor() {
             </h2>
             <p className="text-sm text-muted-foreground">Elige a quién quieres ver: todo su entrenamiento, en una sola vista.</p>
           </div>
-          {simulatedPaid && (
-            <span className="rounded-full border border-dashed border-gold/50 bg-gold/5 px-3 py-1 text-xs text-gold">
-              Datos de ejemplo para aprobar el diseño
-            </span>
-          )}
         </div>
         <GroupChips value={activeFilter} onChange={setFilter} />
         {students.length === 0 ? (
@@ -203,7 +193,7 @@ export function StudentMonitor() {
 
       {selected &&
         (insights ? (
-          <StudentProfile key={selected.id} student={selected} goals={goalsOf(selected)} insight={insights.get(selected.id)!} />
+          <StudentProfile key={selected.id} student={selected} insight={insights.get(selected.id)!} />
         ) : (
           exams !== "error" && (
             <div className="grid min-h-60 place-items-center" role="status" aria-label="Cargando su entrenamiento">
@@ -479,16 +469,29 @@ function ScoreRing({ value, color, children }: { value: number | null; color?: s
 
 /* ─────────────────────────── Ficha de monitoreo ─────────────────────────── */
 
-function StudentProfile({ student, goals, insight }: { student: TutorStudent; goals: StudentGoal[]; insight: Insight }) {
-  const { kind, simulatedPaid } = useTutor();
+/** Planes activos del estudiante (null = cargando). */
+function useStudentPlans(studentId: string) {
+  const [plans, setPlans] = React.useState<StudentPlan[] | "error" | null>(null);
+  const load = React.useCallback(() => {
+    getStudentPlans(studentId)
+      .then(setPlans)
+      .catch(() => setPlans("error"));
+  }, [studentId]);
+  React.useEffect(load, [load]);
+  return { plans: Array.isArray(plans) ? plans : [], loading: plans === null, failed: plans === "error", reload: load };
+}
+
+function StudentProfile({ student, insight }: { student: TutorStudent; insight: Insight }) {
+  const { kind } = useTutor();
+  const goals = student.goals;
+  const { plans, loading: plansLoading, failed: plansFailed, reload: reloadPlans } = useStudentPlans(student.id);
   const [addGoal, setAddGoal] = React.useState(false);
   const [newPlan, setNewPlan] = React.useState(false);
   const [openExam, setOpenExam] = React.useState<TutorExam | null>(null);
   const name = student.fullName || student.alias;
   const main = goals[0] ?? null;
   const today = todayISO();
-  const nextExam = insight.plans.filter((p) => p.officialDate > today).sort((a, b) => a.officialDate.localeCompare(b.officialDate))[0];
-  const sample = SAMPLE_IDS.has(student.id);
+  const nextExam = plans.filter((p) => p.officialDate > today).sort((a, b) => a.officialDate.localeCompare(b.officialDate))[0];
 
   return (
     <article aria-label={`Entrenamiento de ${student.alias}`} className="overflow-hidden rounded-3xl border bg-card">
@@ -587,7 +590,7 @@ function StudentProfile({ student, goals, insight }: { student: TutorStudent; go
 
       <div className="flex flex-col gap-5 border-t p-5 sm:p-7">
         <div className="grid gap-3 md:grid-cols-2">
-          <TodayCard student={student} insight={insight} />
+          <TodayCard student={student} insight={insight} plans={plans} />
           {insight.recent !== null ? (
             <PerformanceAlert alias={student.alias} accuracy={insight.recent} />
           ) : (
@@ -608,7 +611,15 @@ function StudentProfile({ student, goals, insight }: { student: TutorStudent; go
               </Button>
             }
           >
-            {insight.plans.length === 0 ? (
+            {plansLoading ? (
+              <div className="grid min-h-32 place-items-center" role="status" aria-label="Cargando planes">
+                <Loader2 className="size-5 animate-spin text-brand-light motion-reduce:animate-none" />
+              </div>
+            ) : plansFailed ? (
+              <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
+                <CircleAlert className="size-4 shrink-0" /> No pudimos cargar sus planes.
+              </p>
+            ) : plans.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center">
                 <p className="font-semibold">{student.alias} aún no tiene plan de estudio</p>
                 <p className="max-w-sm text-sm text-muted-foreground text-pretty">
@@ -617,7 +628,7 @@ function StudentProfile({ student, goals, insight }: { student: TutorStudent; go
               </div>
             ) : (
               <ul className="flex flex-col gap-3">
-                {insight.plans.map((p) => (
+                {plans.map((p) => (
                   <PlanPreview key={p.id} plan={p} />
                 ))}
               </ul>
@@ -633,25 +644,21 @@ function StudentProfile({ student, goals, insight }: { student: TutorStudent; go
       </div>
 
       <footer className="flex flex-col gap-3 border-t bg-muted/20 px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-7">
-        {sample ? (
-          <span className="text-xs text-muted-foreground">Estudiante de ejemplo: las acciones de gestión están desactivadas.</span>
-        ) : (
-          <div className="w-full sm:w-56">
-            <GroupSelect studentId={student.id} groupId={student.groupId} label={`Grupo de ${student.alias}`} />
-          </div>
-        )}
+        <div className="w-full sm:w-56">
+          <GroupSelect studentId={student.id} groupId={student.groupId} label={`Grupo de ${student.alias}`} />
+        </div>
         <div className="flex flex-wrap gap-1.5 sm:ml-auto">
           <Button asChild variant="outline" size="sm">
             <Link href={`/app/dashboard/analytics?alumno=${student.id}`}>
               <BarChart3 /> Reporte completo
             </Link>
           </Button>
-          {!simulatedPaid && <SeatActions student={student} />}
+          <SeatActions student={student} />
         </div>
       </footer>
 
       <AddGoalDialog student={student} goals={goals} open={addGoal} onOpenChange={setAddGoal} />
-      <CreatePlanDialog student={student} goals={goals} open={newPlan} onOpenChange={setNewPlan} />
+      <CreatePlanDialog student={student} goals={goals} open={newPlan} onOpenChange={setNewPlan} onCreated={reloadPlans} />
       <ExamResultsDialog exam={openExam} onOpenChange={(o) => !o && setOpenExam(null)} />
     </article>
   );
@@ -710,9 +717,9 @@ function Panel({
 }
 
 /** Qué pasa hoy: examen del plan pendiente, lo que ya entrenó o descanso. */
-function TodayCard({ student, insight }: { student: TutorStudent; insight: Insight }) {
+function TodayCard({ student, insight, plans }: { student: TutorStudent; insight: Insight; plans: StudentPlan[] }) {
   const today = todayISO();
-  const due = insight.plans.flatMap((p) => dueSessions(p, today).map((s) => ({ s, p })));
+  const due = plans.flatMap((p) => dueSessions(p, today).map((s) => ({ s, p })));
   const dueToday = due.filter((d) => d.s.date === today);
   const late = due.length - dueToday.length;
   const done = insight.todayExams;

@@ -3,7 +3,8 @@
  * que cada estudiante esté vinculado al tutor en sesión. El cliente nunca escribe tablas directo.
  */
 
-import type { ExamRecord } from "@/features/exam/lib/libre";
+import type { ExamRecord, Nivel } from "@/features/exam/lib/libre";
+import type { PlanDraft, PlanSession, StudentPlan } from "@/features/plan/lib/plan";
 import { toExamRecord } from "@/features/exam/services/libre-service";
 import { findCareer, findUniversity } from "@/features/registro/data/catalog";
 import { supabase } from "@/lib/supabase/client";
@@ -40,7 +41,12 @@ export type TutorStudent = {
   registeredAt: string | null;
   /** Periodo de prueba del estudiante (15 días desde su registro y exámenes gratis). */
   trial: { endsAt: string; granted: number; used: number } | null;
+  /** Sus metas (la del registro primero). */
+  goals: StudentGoal[];
 };
+
+/** Una meta del estudiante: carrera + universidad (student_goals). */
+export type StudentGoal = { careerId: string; career: string; universityId: string; university: string; main: boolean };
 
 export type StudentAccess = "tutor" | "otra" | "prueba" | "inactivo";
 
@@ -97,6 +103,8 @@ type PanelRow = {
     acceso?: StudentAccess;
     registrado?: string;
     prueba?: { termina: string; otorgadas: number; usadas: number } | null;
+    // Desde 20260929030000_tutor_pruebas_reales.sql.
+    metas?: { carrera_id: string; universidad_id: string; carrera: string | null; universidad: string | null; inicial: boolean }[];
   }[];
 };
 
@@ -132,6 +140,13 @@ export async function getTutorPanel(): Promise<TutorPanel> {
       access: s.acceso ?? (s.activo ? "tutor" : "inactivo"),
       registeredAt: s.registrado ?? null,
       trial: s.prueba ? { endsAt: s.prueba.termina, granted: s.prueba.otorgadas, used: s.prueba.usadas } : null,
+      goals: (s.metas ?? (s.carrera_id ? [{ carrera_id: s.carrera_id, universidad_id: s.universidad_id ?? "", carrera: s.carrera, universidad: s.universidad, inicial: true }] : [])).map((m) => ({
+        careerId: m.carrera_id,
+        career: m.carrera ?? findCareer(m.universidad_id, m.carrera_id)?.name ?? m.carrera_id,
+        universityId: m.universidad_id,
+        university: m.universidad ?? findUniversity(m.universidad_id)?.short ?? m.universidad_id.toUpperCase(),
+        main: m.inicial,
+      })),
     })),
   };
 }
@@ -237,8 +252,92 @@ export async function unlinkStudent(studentId: string) {
   if (error) throw error;
 }
 
+/**
+ * TEMPORAL (pruebas con grupo de enfoque, sin procesador de pagos): true = Plan Familiar de prueba real
+ * (5 lugares, 30 días; sus estudiantes quedan con acceso ilimitado); false = vuelve a modo demo.
+ */
+export async function setTrialPlan(active: boolean) {
+  const { error } = await supabase.rpc("plan_prueba_tutor", { p_activar: active });
+  if (error) throw error;
+}
+
+/** Agrega otra carrera/escuela (del catálogo oficial) a las metas del estudiante. Requiere plan. */
+export async function addStudentGoal(studentId: string, careerId: string) {
+  const { error } = await supabase.rpc("agregar_meta_tutor", { p_estudiante: studentId, p_carrera: careerId });
+  if (error) throw error;
+}
+
+type PlanRow = {
+  id: number;
+  career_id: string;
+  university_key: string;
+  career_name: string;
+  official_exam_date: string;
+  practice_days: StudentPlan["practiceDays"];
+  exams_per_day: number;
+  difficulty_mode: StudentPlan["difficultyMode"];
+  fixed_difficulty_level: Nivel | null;
+  preferred_time_window: string;
+  created_at: string;
+  plan_sessions: {
+    id: number;
+    scheduled_date: string;
+    kind: PlanSession["kind"];
+    status: PlanSession["status"];
+    exam: { id: number; folio: string; level: Nivel; score_achieved: number | string; max_score: number | string; completed_at: string } | null;
+  }[];
+};
+
+const pct = (score: number | string, max: number | string) => (Number(max) > 0 ? Math.round((Number(score) / Number(max)) * 100) : 0);
+
+/** Planes de estudio activos del estudiante con su calendario (mismo formato que ve el alumno). */
+export async function getStudentPlans(studentId: string): Promise<StudentPlan[]> {
+  const { data, error } = await supabase.rpc("planes_tutor", { p_estudiante: studentId });
+  if (error) throw error;
+  return (data as PlanRow[]).map((p) => ({
+    id: p.id,
+    careerId: p.career_id,
+    universityKey: p.university_key,
+    careerName: p.career_name,
+    officialDate: p.official_exam_date,
+    practiceDays: p.practice_days,
+    examsPerDay: p.exams_per_day,
+    difficultyMode: p.difficulty_mode,
+    fixedLevel: p.fixed_difficulty_level,
+    timeWindow: p.preferred_time_window,
+    createdAt: p.created_at,
+    sessions: p.plan_sessions.map((s) => ({
+      id: s.id,
+      date: s.scheduled_date,
+      kind: s.kind,
+      status: s.status,
+      exam: s.exam
+        ? { id: s.exam.id, folio: s.exam.folio, level: s.exam.level, score: pct(s.exam.score_achieved, s.exam.max_score), completedAt: s.exam.completed_at }
+        : null,
+    })),
+  }));
+}
+
+/** Programa el plan de estudio del estudiante (mismas reglas que cuando lo crea él). Requiere plan. */
+export async function createStudentPlan(studentId: string, draft: PlanDraft): Promise<number> {
+  const { data, error } = await supabase.rpc("crear_plan_tutor", {
+    p_estudiante: studentId,
+    p_carrera: draft.careerId,
+    p_fecha_examen: draft.officialDate,
+    p_dias: draft.practiceDays,
+    p_por_dia: draft.examsPerDay,
+    p_modo: draft.difficultyMode,
+    p_nivel: draft.fixedLevel,
+    p_horario: draft.timeWindow,
+  });
+  if (error) throw error;
+  return Number(data);
+}
+
 /** Los mensajes de las funciones ya vienen en español para el usuario. */
 export function errorMessage(e: unknown, fallback = "Algo salió mal. Intenta de nuevo.") {
+  if (e && typeof e === "object" && "code" in e && e.code === "PGRST202")
+    return "Falta correr en Supabase la migración 20260929030000_tutor_pruebas_reales.sql.";
   return e && typeof e === "object" && "message" in e && typeof e.message === "string" && e.message
     ? e.message
     : fallback;

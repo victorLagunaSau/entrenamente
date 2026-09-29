@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarCheck, Check, FlaskConical, GraduationCap, Plus } from "lucide-react";
+import { CalendarCheck, Check, CircleAlert, GraduationCap, Loader2, Plus } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
@@ -19,26 +19,31 @@ import {
   recomendacionPorDia,
   todayISO,
 } from "@/features/plan/lib/plan";
-import { UNIVERSITIES } from "@/features/registro/data/catalog";
+import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
+import type { Institucion } from "@/features/escuelas/types";
 import { cn } from "@/lib/utils";
 
-import { buildPlan, type StudentGoal } from "../lib/tutor-sample";
-import type { TutorExam, TutorStudent } from "../services/tutor-service";
+import {
+  addStudentGoal,
+  createStudentPlan,
+  errorMessage,
+  type StudentGoal,
+  type TutorExam,
+  type TutorStudent,
+} from "../services/tutor-service";
 import { ExamSummary } from "./free-exams";
-import { examAccuracy, wrongOf } from "./student-bits";
 import { useTutor } from "./tutor-context";
 
-/** Aviso del prototipo: lo que se hace en estos diálogos se ve en el panel, pero aún no se guarda. */
-function PrototypeNote({ children }: { children: React.ReactNode }) {
+function FormError({ text }: { text: string }) {
+  if (!text) return null;
   return (
-    <p className="flex gap-2 rounded-lg border border-dashed border-gold/50 bg-gold/5 px-3 py-2 text-xs text-cool">
-      <FlaskConical className="mt-0.5 size-3.5 shrink-0 text-gold" aria-hidden />
-      <span>{children}</span>
+    <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
+      <CircleAlert className="size-4 shrink-0" /> {text}
     </p>
   );
 }
 
-/** "Agregar otra carrera/escuela": universidad y carrera del catálogo. */
+/** "Agregar otra carrera/escuela": universidad y carrera del catálogo oficial; se guarda en sus metas. */
 export function AddGoalDialog({
   student,
   goals,
@@ -50,21 +55,43 @@ export function AddGoalDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { addGoal } = useTutor();
-  const [uni, setUni] = React.useState(UNIVERSITIES[0].id);
+  const { reload } = useTutor();
+  const [catalog, setCatalog] = React.useState<Institucion[] | null>(null);
+  const [uni, setUni] = React.useState<string | null>(null);
   const [career, setCareer] = React.useState<string | null>(null);
-  const university = UNIVERSITIES.find((u) => u.id === uni)!;
-  const taken = new Set(goals.map((g) => `${g.university}|${g.career}`));
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   React.useEffect(() => {
-    if (open) setCareer(null);
-  }, [open]);
+    if (!open) return;
+    setCareer(null);
+    setError("");
+    if (catalog) return;
+    getCatalogo()
+      .then((c) => {
+        const active = c.filter((i) => i.activo && i.carreras.some((x) => x.activo));
+        setCatalog(active);
+        setUni((u) => u ?? goals[0]?.universityId ?? active[0]?.id ?? null);
+      })
+      .catch(() => setError("No pudimos cargar el catálogo de carreras."));
+  }, [open, catalog, goals]);
 
-  const save = () => {
-    const c = university.careers.find((x) => x.id === career);
-    if (!c) return;
-    addGoal(student.id, { careerId: c.id, career: c.name, universityId: university.id, university: university.short, main: false });
-    onOpenChange(false);
+  const university = catalog?.find((u) => u.id === uni) ?? null;
+  const taken = new Set(goals.map((g) => g.careerId));
+
+  const save = async () => {
+    if (!career) return;
+    setSaving(true);
+    setError("");
+    try {
+      await addStudentGoal(student.id, career);
+      await reload();
+      onOpenChange(false);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -73,74 +100,90 @@ export function AddGoalDialog({
         <DialogHeader>
           <DialogTitle>Agregar otra carrera o escuela</DialogTitle>
           <DialogDescription>
-            ¿A qué otra opción aspira {student.alias}? Sus planes y estadísticas podrán separarse por cada meta.
+            ¿A qué otra opción aspira {student.alias}? Se agrega a sus metas y podrás programarle un plan para ella.
           </DialogDescription>
         </DialogHeader>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-semibold">Universidad</legend>
-          <div className="flex flex-wrap gap-2">
-            {UNIVERSITIES.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                aria-pressed={u.id === uni}
-                onClick={() => {
-                  setUni(u.id);
-                  setCareer(null);
-                }}
-                className={cn(
-                  "rounded-xl p-1 ring-2 transition-all focus-visible:ring-ring/60 focus-visible:outline-none",
-                  u.id === uni ? "ring-secondary" : "ring-transparent opacity-70 hover:opacity-100"
-                )}
-              >
-                <UniversityBadge id={u.id} label={u.short} size="sm" />
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">{university.name}</p>
-        </fieldset>
-
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-semibold">Carrera</legend>
-          <ul className="flex max-h-60 flex-col gap-1.5 overflow-y-auto">
-            {university.careers.map((c) => {
-              const already = taken.has(`${university.short}|${c.name}`);
-              const active = career === c.id;
-              return (
-                <li key={c.id}>
+        {!catalog ? (
+          error ? (
+            <FormError text={error} />
+          ) : (
+            <div className="grid min-h-40 place-items-center" role="status" aria-label="Cargando catálogo">
+              <Loader2 className="size-6 animate-spin text-brand-light motion-reduce:animate-none" />
+            </div>
+          )
+        ) : (
+          <>
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-sm font-semibold">Universidad</legend>
+              <div className="flex flex-wrap gap-2">
+                {catalog.map((u) => (
                   <button
+                    key={u.id}
                     type="button"
-                    disabled={already}
-                    aria-pressed={active}
-                    onClick={() => setCareer(c.id)}
+                    aria-pressed={u.id === uni}
+                    aria-label={u.nombre}
+                    onClick={() => {
+                      setUni(u.id);
+                      setCareer(null);
+                    }}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50",
-                      active ? "border-secondary/60 bg-secondary/10" : "hover:bg-accent"
+                      "rounded-xl p-1 ring-2 transition-all focus-visible:ring-ring/60 focus-visible:outline-none",
+                      u.id === uni ? "ring-secondary" : "ring-transparent opacity-70 hover:opacity-100"
                     )}
                   >
-                    <GraduationCap className="size-4 shrink-0 text-brand-light" aria-hidden />
-                    <span className="flex-1">{c.name}</span>
-                    {already ? (
-                      <span className="text-xs text-muted-foreground">Ya es su meta</span>
-                    ) : (
-                      active && <Check className="size-4 text-secondary" aria-hidden />
-                    )}
+                    <UniversityBadge id={u.colorId ?? u.id} label={u.clave} size="sm" />
                   </button>
-                </li>
-              );
-            })}
-          </ul>
-        </fieldset>
+                ))}
+              </div>
+              {university && <p className="text-xs text-muted-foreground">{university.nombre}</p>}
+            </fieldset>
 
-        <PrototypeNote>Vista previa: la meta aparece en su ficha, pero todavía no se guarda en su perfil.</PrototypeNote>
+            {university && (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-sm font-semibold">Carrera</legend>
+                <ul className="flex max-h-60 flex-col gap-1.5 overflow-y-auto">
+                  {university.carreras
+                    .filter((c) => c.activo)
+                    .map((c) => {
+                      const already = taken.has(c.id);
+                      const active = career === c.id;
+                      return (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            disabled={already}
+                            aria-pressed={active}
+                            onClick={() => setCareer(c.id)}
+                            className={cn(
+                              "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50",
+                              active ? "border-secondary/60 bg-secondary/10" : "hover:bg-accent"
+                            )}
+                          >
+                            <GraduationCap className="size-4 shrink-0 text-brand-light" aria-hidden />
+                            <span className="flex-1">{c.nombre}</span>
+                            {already ? (
+                              <span className="text-xs text-muted-foreground">Ya es su meta</span>
+                            ) : (
+                              active && <Check className="size-4 text-secondary" aria-hidden />
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                </ul>
+              </fieldset>
+            )}
+            <FormError text={error} />
+          </>
+        )}
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button variant="brand" disabled={!career} onClick={save}>
-            <Plus /> Agregar meta
+          <Button variant="brand" disabled={!career || saving} onClick={save}>
+            {saving ? <Loader2 className="animate-spin" /> : <Plus />} Agregar meta
           </Button>
         </div>
       </DialogContent>
@@ -154,24 +197,28 @@ export function CreatePlanDialog({
   goals,
   open,
   onOpenChange,
+  onCreated,
 }: {
   student: TutorStudent;
   goals: StudentGoal[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated: () => void;
 }) {
-  const { addPlan } = useTutor();
   const today = todayISO();
   const [goal, setGoal] = React.useState(0);
   const [official, setOfficial] = React.useState(addDays(today, 60));
   const [days, setDays] = React.useState<DayKey[]>(["monday", "wednesday", "friday"]);
   const [perDay, setPerDay] = React.useState(1);
   const [slot, setSlot] = React.useState("16:00-18:00");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     if (!open) return;
     setGoal(0);
     setOfficial(addDays(todayISO(), 60));
+    setError("");
   }, [open]);
 
   const left = daysBetween(today, official);
@@ -181,13 +228,27 @@ export function CreatePlanDialog({
 
   const toggleDay = (d: DayKey) => setDays((xs) => (xs.includes(d) ? xs.filter((x) => x !== d) : [...xs, d]));
 
-  const save = () => {
+  const save = async () => {
     if (!valid) return;
-    addPlan(
-      student.id,
-      buildPlan({ id: -(Date.now() % 1_000_000), goal: goals[goal], created: today, official, days, perDay, window: slot })
-    );
-    onOpenChange(false);
+    setSaving(true);
+    setError("");
+    try {
+      await createStudentPlan(student.id, {
+        careerId: goals[goal].careerId,
+        officialDate: official,
+        practiceDays: DIAS.filter((d) => days.includes(d.key)).map((d) => d.key),
+        examsPerDay: perDay,
+        difficultyMode: "automatic",
+        fixedLevel: null,
+        timeWindow: slot,
+      });
+      onCreated();
+      onOpenChange(false);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -195,7 +256,9 @@ export function CreatePlanDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Programar plan de {student.alias}</DialogTitle>
-          <DialogDescription>Le armamos su calendario de exámenes hasta el día de su examen de admisión.</DialogDescription>
+          <DialogDescription>
+            Le armamos su calendario de exámenes hasta el día de su examen de admisión; {student.alias} lo verá en su app.
+          </DialogDescription>
         </DialogHeader>
 
         <fieldset className="flex flex-col gap-2">
@@ -305,14 +368,14 @@ export function CreatePlanDialog({
           </p>
         </div>
 
-        <PrototypeNote>Vista previa: el plan aparece en tu panel, pero todavía no se envía a {student.alias}.</PrototypeNote>
+        <FormError text={error} />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button variant="brand" disabled={!valid} onClick={save}>
-            <CalendarCheck /> Programar plan
+          <Button variant="brand" disabled={!valid || saving} onClick={save}>
+            {saving ? <Loader2 className="animate-spin" /> : <CalendarCheck />} Programar plan
           </Button>
         </div>
       </DialogContent>
@@ -320,9 +383,7 @@ export function CreatePlanDialog({
   );
 }
 
-const dateFmt = new Intl.DateTimeFormat("es-MX", { dateStyle: "long", timeStyle: "short" });
-
-/** Resultados de un examen: el reporte completo con su guía (exámenes reales) o el resumen por materia (ejemplo). */
+/** Resultados de un examen: resumen, guía de errores y el acceso al examen completo. */
 export function ExamResultsDialog({ exam, onOpenChange }: { exam: TutorExam | null; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={!!exam} onOpenChange={onOpenChange}>
@@ -335,36 +396,7 @@ export function ExamResultsDialog({ exam, onOpenChange }: { exam: TutorExam | nu
                 {exam.universityKey} · {exam.careerName}
               </DialogDescription>
             </DialogHeader>
-            {exam.id > 0 ? (
-              <ExamSummary examId={exam.id} demo={false} />
-            ) : (
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <p className="text-sm text-muted-foreground">{dateFmt.format(new Date(exam.completedAt))}</p>
-                  <p className="font-display text-4xl font-bold tabular-nums">
-                    {examAccuracy(exam)}%<span className="ml-2 text-sm font-medium text-muted-foreground">de aciertos</span>
-                  </p>
-                </div>
-                <p className="text-sm text-cool">
-                  {exam.totalQuestions} preguntas · <strong className="text-foreground">{wrongOf(exam)}</strong> mal contestadas
-                </p>
-                <ul className="flex flex-col gap-2">
-                  {exam.materias.map((m) => {
-                    const pct = m.total ? Math.round((100 * m.correctas) / m.total) : 0;
-                    return (
-                      <li key={m.materia} className="grid grid-cols-[8rem_1fr_3rem] items-center gap-3 text-sm">
-                        <span className="truncate">{m.materia}</span>
-                        <span className="h-2 overflow-hidden rounded-full bg-muted">
-                          <span className="block h-full rounded-full bg-secondary" style={{ width: `${pct}%` }} />
-                        </span>
-                        <span className="text-right font-semibold tabular-nums">{pct}%</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <PrototypeNote>Examen de ejemplo: en uno real aquí aparece su guía de errores con cada pregunta.</PrototypeNote>
-              </div>
-            )}
+            <ExamSummary examId={exam.id} demo={false} />
           </>
         )}
       </DialogContent>

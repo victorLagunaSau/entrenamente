@@ -12,7 +12,8 @@ import { PanelShell } from "@/features/modes/components/panel-shell";
 import { cn } from "@/lib/utils";
 
 import { TUTOR_COPY } from "../lib/tutor-plans";
-import { SIM_PLANS, TutorProvider, useTutor } from "./tutor-context";
+import { errorMessage, setTrialPlan } from "../services/tutor-service";
+import { TutorProvider, useTutor } from "./tutor-context";
 
 export const TUTOR_TABS = [
   { href: "/app/dashboard", label: "Estudiantes", icon: Users },
@@ -50,38 +51,76 @@ function TutorHeader() {
         <h1 className="text-2xl font-bold text-balance sm:text-3xl">{copy.title}</h1>
         <p className="text-sm text-muted-foreground text-pretty">{copy.subtitle}</p>
       </div>
-      <PlanSimulator />
+      <TrialPlanSelect />
     </header>
   );
 }
 
-/** TEMPORAL (prototipo): ver el panel con cada plan (Free = la cuenta tal cual). Solo cambia lo que se ve. */
-function PlanSimulator() {
-  const { simPlan, setSimPlan } = useTutor();
+type TrialMode = "demo" | "familiar";
+
+/**
+ * TEMPORAL (pruebas con grupo de enfoque, sin procesador de pagos): cambia la cuenta entre Modo demo y un
+ * Plan Familiar de prueba REAL en la base (5 lugares, 30 días). Se quita cuando se conecten los pagos.
+ */
+function TrialPlanSelect() {
+  const { panel, reload } = useTutor();
+  const [busy, setBusy] = React.useState<TrialMode | null>(null);
+  const [error, setError] = React.useState("");
+  const current: TrialMode = panel?.license?.active ? "familiar" : "demo";
+
+  const change = async (mode: TrialMode) => {
+    if (mode === current || busy) return;
+    setBusy(mode);
+    setError("");
+    try {
+      await setTrialPlan(mode === "familiar");
+      await reload();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!panel) return null;
   return (
-    <div
-      role="radiogroup"
-      aria-label="Prototipo: ver el panel con el plan"
-      className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-dashed border-gold/50 bg-gold/5 py-1 pr-1 pl-3 text-xs print:hidden"
-    >
-      <span className="font-semibold text-gold">Prototipo</span>
-      <span className="flex rounded-full bg-muted p-0.5">
-        {SIM_PLANS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="radio"
-            aria-checked={simPlan === p.id}
-            onClick={() => setSimPlan(p.id)}
-            className={cn(
-              "rounded-full px-2.5 py-1 font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-              simPlan === p.id ? "bg-secondary text-secondary-foreground" : "text-cool hover:text-foreground"
-            )}
-          >
-            {p.label}
-          </button>
-        ))}
-      </span>
+    <div className="flex flex-col items-start gap-1 sm:items-end print:hidden">
+      <div
+        role="radiogroup"
+        aria-label="Pruebas: modo de la cuenta"
+        className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-dashed border-gold/50 bg-gold/5 py-1 pr-1 pl-3 text-xs"
+      >
+        <span className="font-semibold text-gold">Pruebas</span>
+        <span className="flex rounded-full bg-muted p-0.5">
+          {(
+            [
+              ["demo", "Modo demo"],
+              ["familiar", "Plan Familiar"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={current === id}
+              disabled={!!busy}
+              onClick={() => change(id)}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                current === id ? "bg-secondary text-secondary-foreground" : "text-cool hover:text-foreground"
+              )}
+            >
+              {busy === id && <Loader2 className="size-3 animate-spin" />}
+              {label}
+            </button>
+          ))}
+        </span>
+      </div>
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

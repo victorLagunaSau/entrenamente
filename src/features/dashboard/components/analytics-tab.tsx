@@ -28,7 +28,7 @@ import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 import { computeStats, EXAM_TYPES, formatHours, whatsappSummary, type TutorStats } from "../lib/tutor-stats";
-import { type ExamType, type TutorExam, type TutorStudent } from "../services/tutor-service";
+import { getTutorExams, type ExamType, type TutorExam, type TutorStudent } from "../services/tutor-service";
 import { MateriaHeatmap, WeeklyScoreChart } from "./charts";
 import { FreeExams } from "./free-exams";
 import { NoPlanHero } from "./no-plan-hero";
@@ -90,7 +90,7 @@ function useSubject(): [Subject, (s: Subject) => void] {
 }
 
 function Analytics({ demo }: { demo: boolean }) {
-  const { kind, panel, loadExams, simulatedPaid } = useTutor();
+  const { kind, panel } = useTutor();
   const { students, groups } = panel!;
   const [urlSubject, setSubject] = useSubject();
   // Sin plan solo se da seguimiento a un estudiante: el primero.
@@ -114,12 +114,12 @@ function Analytics({ demo }: { demo: boolean }) {
   }, [subject, students, groups, kind]);
 
   const ids = React.useMemo(() => info.students.map((s) => s.id), [info.students]);
-  const key = `${simulatedPaid}:${ids.join(",")}`;
+  const key = ids.join(",");
   const [exams, setExams] = React.useState<{ key: string; data: TutorExam[] } | "error" | undefined>(undefined);
 
   React.useEffect(() => {
     let active = true;
-    loadExams(ids)
+    getTutorExams(ids)
       .then((data) => active && setExams({ key, data }))
       .catch(() => active && setExams("error"));
     return () => {
