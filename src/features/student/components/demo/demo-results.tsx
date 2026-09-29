@@ -55,7 +55,7 @@ function Tile({
 type Falla = { q: SnapshotQuestion; n: number; exam: number; total: number };
 
 /**
- * Guía de estudio quirúrgica: solo lo que contestó mal en sus pruebas gratis, por materia (la más débil
+ * Guía de errores: solo lo que contestó mal en sus pruebas gratis, por materia (la más débil
  * primero), con el diagnóstico de su error y la solución paso a paso.
  */
 export function DemoGuide({ exams }: { exams: FreeExam[] }) {
@@ -74,7 +74,7 @@ export function DemoGuide({ exams }: { exams: FreeExam[] }) {
       id="guia"
       icon={BookOpenCheck}
       tone="brand"
-      title="Guía de estudio quirúrgica"
+      title="Guía de errores"
       subtitle={
         count === 0
           ? "¡Sin fallas en tus exámenes gratis! Respondiste todo correctamente."
@@ -95,7 +95,7 @@ export function DemoGuide({ exams }: { exams: FreeExam[] }) {
 /** Antes del primer examen: el lugar donde aparecerán sus métricas y su guía. */
 export function DemoGuidePlaceholder() {
   return (
-    <DemoSection id="guia" icon={BookOpenCheck} tone="brand" title="Métricas y guía de estudio">
+    <DemoSection id="guia" icon={BookOpenCheck} tone="brand" title="Métricas y guía de errores">
       <p className="rounded-2xl border border-dashed p-5 text-sm text-muted-foreground text-pretty">
         Al terminar tu Examen 1 verás aquí tu calificación más alta, tu promedio y la guía con cada pregunta que falles: por qué estuvo mal y
         la solución paso a paso.

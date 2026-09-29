@@ -75,7 +75,7 @@ export function PrintSheet({ record, kind }: { record: ExamRecord; kind: PrintKi
     <div className="hidden bg-white text-[11pt] leading-snug text-black print:block">
       <header className="mb-4 border-b-2 border-black pb-3">
         <p className="text-[9pt] tracking-widest uppercase">
-          {BRAND.name} · {kind === "guia" ? "Guía de estudio" : "Resumen del examen"}
+          {BRAND.name} · {kind === "guia" ? "Guía de errores" : "Resumen del examen"}
         </p>
         <h1 className="text-[18pt] font-bold" style={{ color: "black" }}>
           {record.universityName}

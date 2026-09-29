@@ -6,12 +6,13 @@ import { usePathname } from "next/navigation";
 import { BarChart3, CircleAlert, CreditCard, Loader2, TriangleAlert, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ModeGuard } from "@/features/modes/components/mode-guard";
+import { ModeGuard, useMode } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 import { cn } from "@/lib/utils";
 
 import { TUTOR_COPY } from "../lib/tutor-plans";
+import { errorMessage, setTrialPlan } from "../services/tutor-service";
 import { TutorProvider, useTutor } from "./tutor-context";
 
 export const TUTOR_TABS = [
@@ -27,7 +28,7 @@ export const TUTOR_TABS = [
 export function TutorDashboard({ children }: { children: React.ReactNode }) {
   return (
     <ModeGuard mode="parent">
-      <PanelShell>
+      <PanelShell footer={<TutorBottomNav />}>
         <TutorProvider>
           <div className="flex flex-col gap-6">
             <ModeSwitcher />
@@ -50,60 +51,144 @@ function TutorHeader() {
         <h1 className="text-2xl font-bold text-balance sm:text-3xl">{copy.title}</h1>
         <p className="text-sm text-muted-foreground text-pretty">{copy.subtitle}</p>
       </div>
-      <PaidSwitch />
+      <TrialPlanSelect />
     </header>
   );
 }
 
-/** TEMPORAL (prototipo): alterna la vista entre cuenta sin plan y cuenta pagada. Solo cambia lo que se ve. */
-function PaidSwitch() {
-  const { simulatedPaid, setSimulatedPaid } = useTutor();
+type TrialMode = "demo" | "familiar";
+
+/**
+ * TEMPORAL (pruebas con grupo de enfoque, sin procesador de pagos), solo administradores: cambia su cuenta entre
+ * Modo demo y un Plan Familiar de prueba REAL en la base (5 lugares, 30 días). Se quita cuando se conecten los pagos.
+ */
+function TrialPlanSelect() {
+  const { viewer } = useMode();
+  const { panel, reload } = useTutor();
+  const [busy, setBusy] = React.useState<TrialMode | null>(null);
+  const [error, setError] = React.useState("");
+  const current: TrialMode = panel?.license?.active ? "familiar" : "demo";
+
+  const change = async (mode: TrialMode) => {
+    if (mode === current || busy) return;
+    setBusy(mode);
+    setError("");
+    try {
+      await setTrialPlan(mode === "familiar");
+      await reload();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // Solo administradores (la función también lo exige en la base).
+  if (!panel || viewer.userType !== "admin") return null;
   return (
-    <label className="flex w-fit shrink-0 cursor-pointer items-center gap-3 rounded-full border border-dashed border-gold/50 bg-gold/5 py-1.5 pr-1.5 pl-3 text-xs text-cool print:hidden">
-      <span className="flex flex-col leading-tight">
-        <span className="font-semibold text-gold">Prototipo</span>
-        <span>Simular cuenta pagada</span>
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={simulatedPaid}
-        onClick={() => setSimulatedPaid(!simulatedPaid)}
-        className={cn(
-          "relative h-6 w-11 rounded-full transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-          simulatedPaid ? "bg-secondary" : "bg-muted"
-        )}
+    <div className="flex flex-col items-start gap-1 sm:items-end print:hidden">
+      <div
+        role="radiogroup"
+        aria-label="Pruebas: modo de la cuenta"
+        className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-dashed border-gold/50 bg-gold/5 py-1 pr-1 pl-3 text-xs"
       >
-        <span
-          className={cn(
-            "absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform",
-            simulatedPaid && "translate-x-5"
-          )}
-        />
-      </button>
-    </label>
+        <span className="font-semibold text-gold">Pruebas</span>
+        <span className="flex rounded-full bg-muted p-0.5">
+          {(
+            [
+              ["demo", "Modo demo"],
+              ["familiar", "Plan Familiar"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={current === id}
+              disabled={!!busy}
+              onClick={() => change(id)}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                current === id ? "bg-secondary text-secondary-foreground" : "text-cool hover:text-foreground"
+              )}
+            >
+              {busy === id && <Loader2 className="size-3 animate-spin" />}
+              {label}
+            </button>
+          ))}
+        </span>
+      </div>
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
+/** PC y iPad horizontal: las tres secciones arriba. En celular y iPad vertical van abajo (TutorBottomNav). */
 function TutorTabs() {
   const pathname = usePathname().replace(/\/$/, "") || "/";
   return (
-    <nav aria-label="Secciones del panel" className="print:hidden">
-      <ul className="inline-flex h-11 w-full items-center rounded-lg bg-muted p-1 text-muted-foreground sm:w-auto">
+    <nav aria-label="Secciones del panel" className="hidden lg:block print:hidden">
+      <ul className="grid h-16 w-full grid-cols-3 gap-1 rounded-2xl border bg-muted/60 p-1.5">
         {TUTOR_TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
-            <li key={tab.href} className="h-full flex-1 sm:flex-none">
+            <li key={tab.href} className="h-full">
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-full w-full items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-all outline-none sm:px-4",
-                  "hover:text-cool focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  active && "bg-background text-brand-light shadow-sm"
+                  "flex h-full w-full items-center justify-center gap-2 rounded-xl px-2 text-lg font-semibold whitespace-nowrap transition-all outline-none",
+                  "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                  active
+                    ? "bg-brand-gradient text-white shadow-glow-secondary"
+                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
                 )}
               >
-                <tab.icon className="size-4 max-[380px]:hidden" aria-hidden />
+                <tab.icon className="size-5" aria-hidden />
+                {tab.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/** Celular y iPad vertical: menú de app fijo abajo con las tres secciones. */
+function TutorBottomNav() {
+  const pathname = usePathname().replace(/\/$/, "") || "/";
+  return (
+    <nav
+      aria-label="Secciones del panel"
+      className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/90 backdrop-blur lg:hidden print:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <ul className="mx-auto grid h-16 max-w-xl grid-cols-3">
+        {TUTOR_TABS.map((tab) => {
+          const active = pathname === tab.href;
+          return (
+            <li key={tab.href}>
+              <Link
+                href={tab.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex h-full w-full flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                  active ? "text-secondary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid h-8 w-14 place-items-center rounded-full transition-colors",
+                    active && "bg-brand-gradient text-white shadow-glow-secondary"
+                  )}
+                >
+                  <tab.icon className="size-5" aria-hidden />
+                </span>
                 {tab.label}
               </Link>
             </li>

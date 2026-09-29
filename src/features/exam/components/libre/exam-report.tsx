@@ -43,7 +43,9 @@ type Numbered = { q: SnapshotQuestion; n: number };
  * diagnóstico y solución paso a paso), aciertos por materia, visor completo, PDF y compartir.
  * La experiencia termina aquí: se sale al home; otro examen se inicia desde fuera.
  */
-export function ExamReport({ record }: { record: ExamRecord }) {
+export function ExamReport({ record, tutor = false }: { record: ExamRecord; tutor?: boolean }) {
+  // El padre o maestro lo ve desde su panel: sale a su panel y el texto habla del estudiante.
+  const home = tutor ? "/app/dashboard" : "/app/student";
   const [view, setView] = React.useState<"resumen" | "completo">("resumen");
   const { kind: printing, print } = usePrint();
   const numbered: Numbered[] = record.questions.map((q, i) => ({ q, n: i + 1 }));
@@ -64,8 +66,8 @@ export function ExamReport({ record }: { record: ExamRecord }) {
               <span className="hidden rounded-full bg-white/15 px-3 py-1 font-mono text-xs font-semibold sm:inline">{record.folio}</span>
             )}
             <Button asChild size="sm" className="bg-white font-bold text-black hover:bg-white/90">
-              <Link href="/app/student">
-                <LogOut /> Salir
+              <Link href={home}>
+                <LogOut /> {tutor ? "Volver al panel" : "Salir"}
               </Link>
             </Button>
           </UniBar>
@@ -81,7 +83,7 @@ export function ExamReport({ record }: { record: ExamRecord }) {
                 </Button>
               </div>
               <p className="-mt-3 text-sm text-muted-foreground">
-                {record.folio && `Folio ${record.folio} · `}Tal como lo presentaste: {dateFmt.format(new Date(record.completedAt))}
+                {record.folio && `Folio ${record.folio} · `}Tal como lo {tutor ? "presentó" : "presentaste"}: {dateFmt.format(new Date(record.completedAt))}
               </p>
               {numbered.map(({ q, n }, k) => (
                 <React.Fragment key={q.id_original}>
@@ -98,11 +100,11 @@ export function ExamReport({ record }: { record: ExamRecord }) {
           ) : (
             <>
               <Ficha record={record} aciertos={aciertos.length} onPrint={print} onVerCompleto={() => show("completo")} />
-              <StudyPriority fallas={fallas} total={record.totalQuestions} onPrintGuide={() => print("guia")} />
+              <StudyPriority fallas={fallas} total={record.totalQuestions} tutor={tutor} onPrintGuide={() => print("guia")} />
               <Aciertos aciertos={aciertos} materias={record.materias} total={record.totalQuestions} />
               <Button asChild variant="outline" className="w-fit self-center">
-                <Link href="/app/student">
-                  <Home /> Ir a mi home
+                <Link href={home}>
+                  <Home /> {tutor ? "Volver al panel" : "Ir a mi home"}
                 </Link>
               </Button>
             </>
@@ -292,15 +294,25 @@ function Module({
   );
 }
 
-/** Fallas: la guía de estudio al frente y, por materia, el resumen visible con sus preguntas plegables. */
-function StudyPriority({ fallas, total, onPrintGuide }: { fallas: Numbered[]; total: number; onPrintGuide: () => void }) {
+/** Fallas: la guía de errores al frente y, por materia, el resumen visible con sus preguntas plegables. */
+function StudyPriority({
+  fallas,
+  total,
+  tutor,
+  onPrintGuide,
+}: {
+  fallas: Numbered[];
+  total: number;
+  tutor: boolean;
+  onPrintGuide: () => void;
+}) {
   return (
     <Module
       icon={BookOpenCheck}
       title="Prioridad de estudio"
       subtitle={
         fallas.length === 0
-          ? "¡Sin fallas! Respondiste todo correctamente."
+          ? `¡Sin fallas! ${tutor ? "Respondió" : "Respondiste"} todo correctamente.`
           : `${fallas.length} ${fallas.length === 1 ? "pregunta" : "preguntas"} para repasar: diagnóstico y cómo resolverla paso a paso.`
       }
     >
@@ -310,14 +322,14 @@ function StudyPriority({ fallas, total, onPrintGuide }: { fallas: Numbered[]; to
             <FileText className="size-6" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-lg font-bold text-primary">Tu guía de estudio</p>
+            <p className="font-display text-lg font-bold text-primary">Guía de errores</p>
             <p className="text-sm text-muted-foreground text-pretty">
-              Descárgala o imprímela: cada pregunta con su diagnóstico y la solución paso a paso, por materia. Úsala para practicar antes de tu
-              siguiente examen.
+              Descárgala o imprímela: cada pregunta que salió mal con su diagnóstico y la solución paso a paso, por materia. Úsala para
+              practicar antes de{tutor ? " su" : " tu"} siguiente examen.
             </p>
           </div>
           <Button size="lg" onClick={onPrintGuide} className="w-full shrink-0 sm:w-auto">
-            <Download /> Descargar guía (PDF)
+            <Download /> Descargar guía de errores (PDF)
           </Button>
         </div>
       )}

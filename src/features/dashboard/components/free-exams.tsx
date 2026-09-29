@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { BookOpenCheck, CalendarClock, CircleAlert, ClipboardList, Download, Gift, Loader2, Lock, Target, Timer } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { ArrowRight, BookOpenCheck, CalendarClock, CircleAlert, ClipboardList, Download, FileSearch, Gift, Loader2, Lock, Target, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { MateriaGroup, QuestionAccordion } from "@/features/exam/components/libre/exam-report";
@@ -20,7 +22,7 @@ const accuracyOf = (e: TutorExam) => {
 
 /**
  * Exámenes de prueba gratuita del estudiante (padre sin plan): un botón por prueba permitida; al elegir una se
- * ve su resumen final y la guía de estudio (lo que no contestó bien, con diagnóstico y solución).
+ * ve su resumen final y la guía de errores (lo que no contestó bien, con diagnóstico y solución).
  */
 export function FreeExams({ student, exams }: { student: TutorStudent; exams: TutorExam[] }) {
   // Las pruebas numeradas; si no hay numeración (exámenes viejos), los primeros exámenes en orden.
@@ -29,10 +31,17 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
     .map((e, i) => ({ exam: e, n: e.pruebaNumero ?? i + 1 }))
     .sort((a, b) => a.n - b.n);
   const slots = Math.max(student.trial?.granted ?? 3, done.length ? done[done.length - 1].n : 0);
-  const [selected, setSelected] = React.useState<number | null>(done.at(-1)?.exam.id ?? null);
+  // "Ver resultados" desde la ficha llega con ?examen=ID: abre esa prueba.
+  const requested = Number(useSearchParams().get("examen"));
+  const initial = done.find((d) => d.exam.id === requested)?.exam.id ?? done.at(-1)?.exam.id ?? null;
+  const [selected, setSelected] = React.useState<number | null>(initial);
+  const sectionRef = React.useRef<HTMLElement>(null);
+  React.useEffect(() => {
+    if (requested && initial === requested) sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [requested, initial]);
 
   return (
-    <section aria-labelledby="free-exams-title" className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
+    <section ref={sectionRef} aria-labelledby="free-exams-title" className="flex scroll-mt-20 flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
           <Gift className="size-5" aria-hidden />
@@ -43,7 +52,7 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
           </h2>
           <p className="text-sm text-muted-foreground text-pretty">
             {done.length === 0
-              ? `${student.alias} aún no presenta su primera prueba. Aquí verás el resumen y su guía de estudio.`
+              ? `${student.alias} aún no presenta su primera prueba. Aquí verás el resumen y su guía de errores.`
               : `Elige una prueba para ver cómo le fue y qué preguntas debe repasar ${student.alias}.`}
           </p>
         </div>
@@ -80,6 +89,10 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
                   {new Date(item.exam.completedAt).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} ·{" "}
                   {item.exam.universityKey}
                 </span>
+                <span className="text-xs text-cool tabular-nums">
+                  {item.exam.totalQuestions} preguntas ·{" "}
+                  {item.exam.materias.reduce((n, m) => n + m.total - m.correctas, 0)} mal contestadas
+                </span>
               </button>
             </li>
           );
@@ -91,8 +104,8 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
   );
 }
 
-/** Resumen final de un examen congelado + guía de estudio (fallas). Descargar: no disponible sin plan. */
-function ExamSummary({ examId }: { examId: number }) {
+/** Resumen final de un examen congelado + guía de errores (fallas). Descargar: no disponible sin plan (`demo`). */
+export function ExamSummary({ examId, demo = true }: { examId: number; demo?: boolean }) {
   const [record, setRecord] = React.useState<ExamRecord | null | "error">(null);
 
   React.useEffect(() => {
@@ -152,6 +165,15 @@ function ExamSummary({ examId }: { examId: number }) {
         </div>
       </div>
 
+      {!demo && (
+        <Button asChild variant="brand" size="lg" className="group w-full sm:w-fit">
+          <Link href={`/app/examen-estudiante?id=${examId}`}>
+            <FileSearch /> Ver examen completo y guía de errores
+            <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </Button>
+      )}
+
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Stat icon={Target} label="Aciertos" value={`${aciertos} de ${record.totalQuestions} (${pct} %)`} />
         <Stat icon={ClipboardList} label="Respondidas" value={`${record.answeredQuestions} de ${record.totalQuestions}`} />
@@ -184,14 +206,16 @@ function ExamSummary({ examId }: { examId: number }) {
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h4 className="flex items-center gap-2 font-bold">
-            <BookOpenCheck className="size-5 text-brand-light" aria-hidden /> Guía de estudio
+            <BookOpenCheck className="size-5 text-brand-light" aria-hidden /> Guía de errores
             <span className="text-sm font-normal text-muted-foreground">
               {fallas.length === 0 ? "· ¡sin fallas!" : `· ${fallas.length} por repasar`}
             </span>
           </h4>
-          <Button variant="outline" size="sm" disabled title="Disponible con tu plan">
-            <Download /> Descargar <span className="text-xs font-normal">(no disponible)</span> <Lock className="size-3.5" />
-          </Button>
+          {demo && (
+            <Button variant="outline" size="sm" disabled title="Disponible con tu plan">
+              <Download /> Descargar <span className="text-xs font-normal">(no disponible)</span> <Lock className="size-3.5" />
+            </Button>
+          )}
         </div>
         {groups.map(([materia, list]) => (
           <MateriaGroup key={materia} name={materia} count={list.length} summary={`${list.length} por repasar`}>

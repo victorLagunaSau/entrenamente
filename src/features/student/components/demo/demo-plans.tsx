@@ -16,7 +16,7 @@ const INCLUDED = [
   "Exámenes ilimitados en todas tus carreras",
   "Modo Racha: mini-exámenes diarios de 10 minutos",
   "Plan de estudio con la fecha real de tu examen",
-  "Guías de estudio de las materias que se te dificultan",
+  "Guía de errores: cómo resolver cada pregunta que fallaste",
   "Agrega más de una carrera o universidad",
   "Estadísticas por examen y de tu avance general",
   "Reporte de cada examen con solución paso a paso, en PDF",

@@ -104,7 +104,7 @@ export function DemoPath({
             <span className="font-semibold">
               {finished ? `¡Completaste tus ${total} exámenes gratis!` : "Tu periodo de prueba terminó."}
             </span>{" "}
-            {done > 0 ? "Tu diagnóstico y tu guía de estudio están abajo. " : ""}Sigue entrenando sin límites con el Plan Estudiante.
+            {done > 0 ? "Tu diagnóstico y tu guía de errores están abajo. " : ""}Sigue entrenando sin límites con el Plan Estudiante.
           </p>
           <Button variant="energy" onClick={onUnlock} className="w-full sm:w-auto">
             Entrena sin límites

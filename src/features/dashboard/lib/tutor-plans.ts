@@ -161,3 +161,20 @@ export const formatMxn = (n: number) =>
 
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+
+/** Una forma de ampliar el plan actual: cuántos estudiantes suma y cuánto más paga al mes. */
+export type UpgradeOffer = { choice: PlanChoice; added: number; extra: number };
+
+/**
+ * Ofertas para sumar estudiantes a lo que ya paga (regla del usuario): Tutor → Dúo o Familia (3);
+ * Dúo → solo Familia (3); Familia → ninguna (solo se ven sus fechas). Maestros: el siguiente plan más grande.
+ */
+export function upgradeOffers(kind: TutorKind, license: TutorLicense | null): UpgradeOffer[] {
+  const current = currentChoice(kind, license);
+  if (!current || current.plan.perStudent) return [];
+  const base = priceOf(current);
+  const choices = TUTOR_PLANS[kind]
+    .filter((p) => p.perStudent || p.seats > current.seats)
+    .map((p): PlanChoice => ({ plan: p, seats: p.perStudent ? Math.max(p.seats, current.seats + 1) : p.seats }));
+  return choices.map((choice) => ({ choice, added: choice.seats - current.seats, extra: priceOf(choice) - base }));
+}
