@@ -243,7 +243,7 @@ function StudentSpotlight({ student, pulse, locked }: { student: TutorStudent; p
               {[
                 "Miles de preguntas tipo examen de admisión",
                 "Simulacros ilimitados y su plan de práctica",
-                "Guías con la solución de cada error",
+                "Guía de errores: cómo resolver cada pregunta que falló",
               ].map((t) => (
                 <li key={t} className="flex gap-2">
                   <CircleCheck className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden /> {t}
@@ -276,7 +276,7 @@ const UNLOCKS = [
   {
     icon: FileText,
     title: "Reportes detallados",
-    text: "Obtén reportes y guías de retroalimentación con las preguntas en las que se equivocó.",
+    text: "Obtén reportes y su guía de errores: cada pregunta que falló y cómo resolverla.",
   },
 ];
 

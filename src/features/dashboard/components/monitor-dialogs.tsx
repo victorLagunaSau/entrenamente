@@ -362,7 +362,7 @@ export function ExamResultsDialog({ exam, onOpenChange }: { exam: TutorExam | nu
                     );
                   })}
                 </ul>
-                <PrototypeNote>Examen de ejemplo: en uno real aquí aparece su guía de estudio con cada pregunta.</PrototypeNote>
+                <PrototypeNote>Examen de ejemplo: en uno real aquí aparece su guía de errores con cada pregunta.</PrototypeNote>
               </div>
             )}
           </>

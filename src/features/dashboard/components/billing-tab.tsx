@@ -115,6 +115,8 @@ export function BillingTab() {
 
       {license?.active && <UpgradeOffers />}
 
+      {/* Con plan activo no se muestra el catálogo: solo sus datos y la oferta para sumar estudiantes. */}
+      {(!license || lapsed) && (
       <section aria-labelledby="plans-title" className="flex flex-col gap-3">
         <div>
           <h2 id="plans-title" className="text-lg font-bold">
@@ -136,6 +138,7 @@ export function BillingTab() {
           ))}
         </ul>
       </section>
+      )}
     </div>
   );
 }

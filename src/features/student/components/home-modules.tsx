@@ -205,7 +205,7 @@ export function FreeExamModule({ careers }: { careers: HomeCareer[] }) {
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link href={`/app/student/guias?carrera=${encodeURIComponent(career.id)}`}>
-                <Library /> Guías de estudio
+                <Library /> Guías de errores
               </Link>
             </Button>
           </div>

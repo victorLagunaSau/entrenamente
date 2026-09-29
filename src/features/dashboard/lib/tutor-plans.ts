@@ -166,25 +166,15 @@ export const formatDate = (iso: string) =>
 export type UpgradeOffer = { choice: PlanChoice; added: number; extra: number };
 
 /**
- * Ofertas para sumar estudiantes a lo que ya paga: Tutor → Dúo (+1) y Familia de 3 (+2); Dúo → Familia de 3 y 4;
- * Familia de N → N+1 y N+2. Maestros: el siguiente plan más grande.
+ * Ofertas para sumar estudiantes a lo que ya paga (regla del usuario): Tutor → Dúo o Familia (3);
+ * Dúo → solo Familia (3); Familia → ninguna (solo se ven sus fechas). Maestros: el siguiente plan más grande.
  */
 export function upgradeOffers(kind: TutorKind, license: TutorLicense | null): UpgradeOffer[] {
   const current = currentChoice(kind, license);
-  if (!current) return [];
+  if (!current || current.plan.perStudent) return [];
   const base = priceOf(current);
-  const plans = TUTOR_PLANS[kind];
-  const perStudent = plans.find((p) => p.perStudent);
-  const choices: PlanChoice[] = [];
-  for (const add of [1, 2]) {
-    const seats = current.seats + add;
-    const fixed = plans.find((p) => !p.perStudent && p.seats === seats);
-    if (fixed) choices.push({ plan: fixed, seats });
-    else if (perStudent && seats >= perStudent.seats) choices.push({ plan: perStudent, seats });
-  }
-  if (choices.length === 0) {
-    const bigger = plans.find((p) => !p.perStudent && p.seats > current.seats);
-    if (bigger) choices.push({ plan: bigger, seats: bigger.seats });
-  }
+  const choices = TUTOR_PLANS[kind]
+    .filter((p) => p.perStudent || p.seats > current.seats)
+    .map((p): PlanChoice => ({ plan: p, seats: p.perStudent ? Math.max(p.seats, current.seats + 1) : p.seats }));
   return choices.map((choice) => ({ choice, added: choice.seats - current.seats, extra: priceOf(choice) - base }));
 }

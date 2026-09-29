@@ -45,7 +45,7 @@ export function PerformanceAlert({ alias, accuracy, className }: { alias: string
   const level = toneOf(accuracy);
   const a = ALERT_TONE[level];
   const detail = {
-    low: `${alias} lleva ${accuracy}% de aciertos. Con práctica diaria y su guía de estudio sube rápido.`,
+    low: `${alias} lleva ${accuracy}% de aciertos. Con práctica diaria y su guía de errores sube rápido.`,
     mid: `${alias} lleva ${accuracy}% de aciertos. Va por buen camino: repasar sus fallas lo acerca a su meta.`,
     high: `${alias} lleva ${accuracy}% de aciertos. Está listo para subir de nivel.`,
   }[level];

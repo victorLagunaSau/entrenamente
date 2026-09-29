@@ -26,6 +26,19 @@ export const SAMPLE_STUDENT: TutorStudent = {
   trial: null,
 };
 
+export const SAMPLE_STUDENT_2: TutorStudent = {
+  ...SAMPLE_STUDENT,
+  id: "muestra-emiliano",
+  alias: "Emiliano",
+  fullName: "Emiliano Laguna",
+  career: "Ingeniería en Sistemas Computacionales",
+  university: "IPN",
+  linkedAt: new Date(Date.now() - 20 * 86_400_000).toISOString(),
+  registeredAt: new Date(Date.now() - 21 * 86_400_000).toISOString(),
+};
+
+export const SAMPLE_IDS = new Set([SAMPLE_STUDENT.id, SAMPLE_STUDENT_2.id]);
+
 const MATERIAS = ["Matemáticas", "Física", "Química", "Biología", "Español", "Historia", "Geografía", "Literatura", "Filosofía"];
 
 /** Perfil de cada estudiante de ejemplo: de dónde arranca, cuánto mejora y qué materias le cuestan. */
@@ -35,6 +48,9 @@ function profileOf(student: TutorStudent): Profile {
   const r = rng(student.id);
   if (student.id === SAMPLE_STUDENT.id) {
     return { start: 64, gain: 20, streak: 12, playedToday: true, skill: { Matemáticas: 12, Física: 6, Historia: -14, Química: -6 } };
+  }
+  if (student.id === SAMPLE_STUDENT_2.id) {
+    return { start: 55, gain: 12, streak: 2, playedToday: false, skill: { Matemáticas: 10, Física: 8, Español: -12, Literatura: -10 } };
   }
   return {
     start: 42 + Math.round(r() * 6),

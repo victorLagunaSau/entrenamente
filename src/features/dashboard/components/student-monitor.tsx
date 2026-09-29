@@ -47,7 +47,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { formatDate, formatMxn, planName, TUTOR_COPY, upgradeOffers } from "../lib/tutor-plans";
-import { SAMPLE_STUDENT, sampleGoals, samplePlans, type StudentGoal } from "../lib/tutor-sample";
+import { SAMPLE_IDS, sampleGoals, samplePlans, type StudentGoal } from "../lib/tutor-sample";
 import { computeStats, formatHours, type TutorStats } from "../lib/tutor-stats";
 import {
   activateSeat,
@@ -325,11 +325,15 @@ function FamilyStat({
 }
 
 /** Con lugar libre: invitar. Plan lleno: agregar un estudiante más por lo que cuesta de diferencia. */
-function AddStudentAction({ compact }: { compact?: boolean }) {
+function useCanAddStudent() {
   const { kind, panel } = useTutor();
   const hasRoom = panel!.students.length < studentLimit(panel!);
+  return { hasRoom, offer: hasRoom ? null : (upgradeOffers(kind, panel!.license)[0] ?? null) };
+}
+
+function AddStudentAction({ compact }: { compact?: boolean }) {
+  const { hasRoom, offer } = useCanAddStudent();
   if (hasRoom) return <InviteButton />;
-  const offer = upgradeOffers(kind, panel!.license)[0];
   if (!offer) return null;
   return (
     <Link
@@ -367,6 +371,7 @@ function StudentSwitcher({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const { hasRoom, offer } = useCanAddStudent();
   return (
     <ul className="grid auto-cols-[minmax(15.5rem,1fr)] grid-flow-col gap-3 overflow-x-auto pb-1 [scrollbar-width:thin] sm:auto-cols-[minmax(17rem,20rem)]">
       {students.map((s) => {
@@ -426,11 +431,13 @@ function StudentSwitcher({
           </li>
         );
       })}
-      <li className="rounded-2xl border border-dashed">
-        <div className="flex h-full min-h-40 items-center justify-center p-3">
-          <AddStudentAction compact />
-        </div>
-      </li>
+      {(hasRoom || offer) && (
+        <li className="rounded-2xl border border-dashed">
+          <div className="flex h-full min-h-40 items-center justify-center p-3">
+            <AddStudentAction compact />
+          </div>
+        </li>
+      )}
     </ul>
   );
 }
@@ -481,7 +488,7 @@ function StudentProfile({ student, goals, insight }: { student: TutorStudent; go
   const main = goals[0] ?? null;
   const today = todayISO();
   const nextExam = insight.plans.filter((p) => p.officialDate > today).sort((a, b) => a.officialDate.localeCompare(b.officialDate))[0];
-  const sample = student.id === SAMPLE_STUDENT.id;
+  const sample = SAMPLE_IDS.has(student.id);
 
   return (
     <article aria-label={`Entrenamiento de ${student.alias}`} className="overflow-hidden rounded-3xl border bg-card">

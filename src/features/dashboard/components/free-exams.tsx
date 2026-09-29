@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { BookOpenCheck, CalendarClock, CircleAlert, ClipboardList, Download, Gift, Loader2, Lock, Target, Timer } from "lucide-react";
+import { ArrowRight, BookOpenCheck, CalendarClock, CircleAlert, ClipboardList, Download, FileSearch, Gift, Loader2, Lock, Target, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { MateriaGroup, QuestionAccordion } from "@/features/exam/components/libre/exam-report";
@@ -21,7 +22,7 @@ const accuracyOf = (e: TutorExam) => {
 
 /**
  * Exámenes de prueba gratuita del estudiante (padre sin plan): un botón por prueba permitida; al elegir una se
- * ve su resumen final y la guía de estudio (lo que no contestó bien, con diagnóstico y solución).
+ * ve su resumen final y la guía de errores (lo que no contestó bien, con diagnóstico y solución).
  */
 export function FreeExams({ student, exams }: { student: TutorStudent; exams: TutorExam[] }) {
   // Las pruebas numeradas; si no hay numeración (exámenes viejos), los primeros exámenes en orden.
@@ -51,7 +52,7 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
           </h2>
           <p className="text-sm text-muted-foreground text-pretty">
             {done.length === 0
-              ? `${student.alias} aún no presenta su primera prueba. Aquí verás el resumen y su guía de estudio.`
+              ? `${student.alias} aún no presenta su primera prueba. Aquí verás el resumen y su guía de errores.`
               : `Elige una prueba para ver cómo le fue y qué preguntas debe repasar ${student.alias}.`}
           </p>
         </div>
@@ -103,7 +104,7 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
   );
 }
 
-/** Resumen final de un examen congelado + guía de estudio (fallas). Descargar: no disponible sin plan (`demo`). */
+/** Resumen final de un examen congelado + guía de errores (fallas). Descargar: no disponible sin plan (`demo`). */
 export function ExamSummary({ examId, demo = true }: { examId: number; demo?: boolean }) {
   const [record, setRecord] = React.useState<ExamRecord | null | "error">(null);
 
@@ -164,6 +165,15 @@ export function ExamSummary({ examId, demo = true }: { examId: number; demo?: bo
         </div>
       </div>
 
+      {!demo && (
+        <Button asChild variant="brand" size="lg" className="group w-full sm:w-fit">
+          <Link href={`/app/examen-estudiante?id=${examId}`}>
+            <FileSearch /> Ver examen completo y guía de errores
+            <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </Button>
+      )}
+
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Stat icon={Target} label="Aciertos" value={`${aciertos} de ${record.totalQuestions} (${pct} %)`} />
         <Stat icon={ClipboardList} label="Respondidas" value={`${record.answeredQuestions} de ${record.totalQuestions}`} />
@@ -196,7 +206,7 @@ export function ExamSummary({ examId, demo = true }: { examId: number; demo?: bo
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h4 className="flex items-center gap-2 font-bold">
-            <BookOpenCheck className="size-5 text-brand-light" aria-hidden /> Guía de estudio
+            <BookOpenCheck className="size-5 text-brand-light" aria-hidden /> Guía de errores
             <span className="text-sm font-normal text-muted-foreground">
               {fallas.length === 0 ? "· ¡sin fallas!" : `· ${fallas.length} por repasar`}
             </span>
