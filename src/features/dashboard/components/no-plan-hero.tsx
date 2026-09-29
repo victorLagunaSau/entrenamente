@@ -13,9 +13,10 @@ const STEPS = ["Elige tu plan", "Paga seguro", "¡Listo! Acceso ilimitado"];
 
 /**
  * Anuncio de "sin plan" (padre o maestro que aún no paga). Se repite arriba de Estudiantes, Estadísticas y
- * Suscripción. `scroll`: en Suscripción el botón baja a los planes en vez de navegar.
+ * Suscripción. `scroll`: en Suscripción el botón baja a los planes en vez de navegar. `compact`: franja delgada
+ * (Estudiantes), para que el protagonista sea la ficha del estudiante.
  */
-export function NoPlanHero({ scroll }: { scroll?: boolean }) {
+export function NoPlanHero({ scroll, compact }: { scroll?: boolean; compact?: boolean }) {
   const { kind, panel } = useTutor();
   const plans = TUTOR_PLANS[kind];
   // El plan más barato completo (el Familia es por estudiante y pide 3: no es "desde").
@@ -29,6 +30,39 @@ export function NoPlanHero({ scroll }: { scroll?: boolean }) {
       <Sparkles /> Activar mi plan <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
     </span>
   );
+
+  if (compact) {
+    return (
+      <section
+        aria-labelledby="no-plan-title"
+        className="rounded-2xl bg-[linear-gradient(135deg,var(--gold),var(--secondary)_45%,var(--primary))] p-px"
+      >
+        <div className="relative flex flex-col gap-3 overflow-hidden rounded-[calc(1rem-1px)] bg-card px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
+          <div aria-hidden className="pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-gold/10 blur-3xl" />
+          <span className="relative hidden size-9 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold sm:grid">
+            <Sparkles className="size-4" aria-hidden />
+          </span>
+          <p id="no-plan-title" className="relative min-w-0 flex-1 text-sm text-cool text-pretty">
+            <strong className="text-foreground">De momento no tienes un plan…</strong>{" "}
+            <strong className="text-brand-gradient">¡pero es muy fácil de solucionarlo!</strong>
+            {days !== null && trialStudent && (
+              <span className="text-muted-foreground">
+                {" "}
+                · A {trialStudent.alias} le {days === 1 ? "queda" : "quedan"}{" "}
+                <strong className="text-gold tabular-nums">
+                  {days} {days === 1 ? "día" : "días"}
+                </strong>{" "}
+                de prueba.
+              </span>
+            )}
+          </p>
+          <Button asChild variant="brand" className="group relative shrink-0">
+            <Link href="/app/dashboard/billing">{cta}</Link>
+          </Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

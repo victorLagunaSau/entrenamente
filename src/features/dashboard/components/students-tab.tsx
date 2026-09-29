@@ -53,7 +53,7 @@ export function StudentsTab() {
   const demo = !panel!.license;
   return (
     <div className="flex flex-col gap-6">
-      {demo ? <NoPlanHero /> : <LicenseBar />}
+      {demo ? <NoPlanHero compact /> : <LicenseBar />}
       <StudentsList demo={demo} />
     </div>
   );
