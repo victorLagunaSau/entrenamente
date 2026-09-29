@@ -45,10 +45,43 @@ function TutorHeader() {
   const { kind } = useTutor();
   const copy = TUTOR_COPY[kind];
   return (
-    <header className="flex flex-col gap-1">
-      <h1 className="text-2xl font-bold text-balance sm:text-3xl">{copy.title}</h1>
-      <p className="text-sm text-muted-foreground text-pretty">{copy.subtitle}</p>
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-balance sm:text-3xl">{copy.title}</h1>
+        <p className="text-sm text-muted-foreground text-pretty">{copy.subtitle}</p>
+      </div>
+      <PaidSwitch />
     </header>
+  );
+}
+
+/** TEMPORAL (prototipo): alterna la vista entre cuenta sin plan y cuenta pagada. Solo cambia lo que se ve. */
+function PaidSwitch() {
+  const { simulatedPaid, setSimulatedPaid } = useTutor();
+  return (
+    <label className="flex w-fit shrink-0 cursor-pointer items-center gap-3 rounded-full border border-dashed border-gold/50 bg-gold/5 py-1.5 pr-1.5 pl-3 text-xs text-cool print:hidden">
+      <span className="flex flex-col leading-tight">
+        <span className="font-semibold text-gold">Prototipo</span>
+        <span>Simular cuenta pagada</span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={simulatedPaid}
+        onClick={() => setSimulatedPaid(!simulatedPaid)}
+        className={cn(
+          "relative h-6 w-11 rounded-full transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+          simulatedPaid ? "bg-secondary" : "bg-muted"
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform",
+            simulatedPaid && "translate-x-5"
+          )}
+        />
+      </button>
+    </label>
   );
 }
 

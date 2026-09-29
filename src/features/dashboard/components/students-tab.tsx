@@ -2,7 +2,25 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BarChart3, CalendarDays, CircleAlert, GraduationCap, Loader2, Lock, Power, PowerOff, Tags, UserMinus, Users, FileDown } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  CalendarDays,
+  CircleAlert,
+  CircleCheck,
+  CircleDashed,
+  FileText,
+  Flame,
+  Loader2,
+  Lock,
+  Power,
+  PowerOff,
+  Sparkles,
+  ThumbsUp,
+  TriangleAlert,
+  UserMinus,
+  Users,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -100,7 +118,7 @@ function InviteGate({ variant }: { variant?: "brand" | "outline" }) {
   );
 }
 
-type Pulse = { exams: number; accuracy: number | null; hours: number; last: TutorExam | null };
+type Pulse = { exams: number; accuracy: number | null; hours: number; last: TutorExam | null; list: TutorExam[] };
 
 /** Resumen del entrenamiento de cada estudiante (exámenes, promedio, último examen). */
 function usePulses(students: TutorStudent[]) {
@@ -115,7 +133,7 @@ function usePulses(students: TutorStudent[]) {
         for (const id of ids.split(",")) {
           const own = exams.filter((e) => e.studentId === id);
           const st = computeStats(own);
-          map.set(id, { exams: st.exams, accuracy: st.accuracy, hours: st.hours, last: own.at(-1) ?? null });
+          map.set(id, { exams: st.exams, accuracy: st.accuracy, hours: st.hours, last: own.at(-1) ?? null, list: own });
         }
         setPulses(map);
       })
@@ -198,6 +216,7 @@ function StudentsList({ demo }: { demo: boolean }) {
         {students.map((s, i) => (
           <StudentSpotlight key={s.id} student={s} pulse={pulses?.get(s.id)} locked={i >= limit} />
         ))}
+        <UnlockCards />
       </section>
     );
   }
@@ -385,125 +404,236 @@ function StudentActions({ student }: { student: TutorStudent }) {
   );
 }
 
-/** Zona que se ve pero no se usa sin plan: atenuada, sin clics, con su candado. */
-function LockedArea({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+const ALERT_TONE = {
+  low: {
+    icon: TriangleAlert,
+    tone: "border-energy/40 bg-energy/10",
+    iconTone: "text-energy",
+    title: "Le falta mucha práctica",
+  },
+  mid: { icon: ThumbsUp, tone: "border-gold/40 bg-gold/10", iconTone: "text-gold", title: "Muy bien, pero necesita reforzar" },
+  high: { icon: Flame, tone: "border-success/40 bg-success/10", iconTone: "text-success", title: "¡Excelente! Que mantenga este ritmo" },
+} as const;
+
+/** Alerta según el % de aciertos promedio: <50 le falta práctica, 50–75 reforzar, >75 excelente. */
+function PerformanceAlert({ alias, accuracy }: { alias: string; accuracy: number }) {
+  const level = accuracy > 75 ? "high" : accuracy >= 50 ? "mid" : "low";
+  const a = ALERT_TONE[level];
+  const detail = {
+    low: `${alias} lleva ${accuracy}% de aciertos. Con práctica diaria y su guía de estudio sube rápido.`,
+    mid: `${alias} lleva ${accuracy}% de aciertos. Va por buen camino: repasar sus fallas lo acerca a su meta.`,
+    high: `${alias} lleva ${accuracy}% de aciertos. Está listo para subir de nivel.`,
+  }[level];
   return (
-    <div className={cn("relative", className)}>
-      <div aria-disabled className="pointer-events-none opacity-45 select-none">
-        {children}
+    <div role="status" className={cn("flex gap-3 rounded-xl border p-3", a.tone)}>
+      <a.icon className={cn("mt-0.5 size-5 shrink-0", a.iconTone)} aria-hidden />
+      <div className="min-w-0 text-sm">
+        <p className="font-bold">{a.title}</p>
+        <p className="text-cool text-pretty">{detail}</p>
       </div>
-      <Link
-        href="/app/dashboard/billing"
-        className="absolute top-1/2 left-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-gold/50 bg-background/90 px-3 py-1 text-xs font-semibold whitespace-nowrap text-gold shadow-lg backdrop-blur hover:bg-gold/10"
-      >
-        <Lock className="size-3" aria-hidden /> {label}
-      </Link>
     </div>
   );
 }
 
-const dateLong = (iso: string) => new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+const examAccuracy = (e: TutorExam) => {
+  const total = e.materias.reduce((n, m) => n + m.total, 0);
+  return total ? Math.round((100 * e.materias.reduce((n, m) => n + m.correctas, 0)) / total) : 0;
+};
 
-/** Ficha completa del estudiante del padre sin plan: datos, prueba gratis, avance y lo que desbloquea el plan. */
+/** "Examen 1: Listo · Examen 2: No realizado…" — una línea por prueba permitida. */
+function ExamStatus({ student, pulse }: { student: TutorStudent; pulse: Pulse | undefined }) {
+  if (!pulse) return <p className="text-sm text-muted-foreground">Cargando sus exámenes…</p>;
+  const numbered = pulse.list.filter((e) => e.pruebaNumero !== null);
+  const done = (numbered.length ? numbered : pulse.list).map((e, i) => ({ exam: e, n: e.pruebaNumero ?? i + 1 }));
+  const slots = Math.max(student.trial?.granted ?? 3, done.at(-1)?.n ?? 0);
+
+  return (
+    <ol className="flex flex-col gap-2">
+      {Array.from({ length: slots }, (_, i) => {
+        const item = done.find((d) => d.n === i + 1);
+        return (
+          <li
+            key={i}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border px-3 py-2.5",
+              item ? "border-secondary/40 bg-secondary/10" : "border-dashed"
+            )}
+          >
+            {item ? (
+              <CircleCheck className="size-5 shrink-0 text-secondary" aria-hidden />
+            ) : (
+              <CircleDashed className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+            )}
+            <span className="flex-1 font-semibold">Examen {i + 1}</span>
+            {item ? (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(item.exam.completedAt).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
+                </span>
+                <span className="rounded-full bg-secondary/20 px-2.5 py-0.5 text-xs font-bold text-secondary">
+                  Listo · {examAccuracy(item.exam)}%
+                </span>
+              </>
+            ) : (
+              <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">No realizado</span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+const articleFor = (u: string) => (/^(IPN|POLI|TEC)$/i.test(u) ? "el" : "la");
+
+/**
+ * Ficha del estudiante del padre sin plan: aspiracional (quién es y a qué universidad aspira), el estatus de sus
+ * evaluaciones con una alerta de desempeño y, como protagonista, "Activar tu plan".
+ */
 function StudentSpotlight({ student, pulse, locked }: { student: TutorStudent; pulse: Pulse | undefined; locked: boolean }) {
+  const { kind } = useTutor();
+  const name = student.fullName || student.alias;
+
   if (locked) {
     return (
-      <LockedArea label="Amplía tu plan para verlo">
-        <div className="flex items-center gap-3 rounded-2xl border bg-card p-5">
-          <Avatar name={student.alias} />
-          <StudentName student={student} />
-        </div>
-      </LockedArea>
+      <div className="flex items-center gap-3 rounded-2xl border border-dashed bg-card/60 p-5 opacity-70">
+        <Avatar name={name} />
+        <p className="min-w-0 flex-1 font-semibold">{name}</p>
+        <ActivateWithPlan label="Amplía tu plan para verlo" />
+      </div>
     );
   }
 
   return (
-    <article className="grid gap-5 rounded-2xl border bg-card p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={student.alias} />
-            <StudentName student={student} />
-          </div>
-          <AccessBadge access={student.access} />
+    <article className="overflow-hidden rounded-3xl border bg-card">
+      {/* Identidad y aspiración: lo primero que ve el papá, justo debajo del anuncio. */}
+      <div className="relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-primary/15 blur-3xl" />
+        <Avatar name={name} large />
+        <div className="relative min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-2 text-xs font-semibold tracking-wide text-secondary uppercase">
+            Tu {TUTOR_COPY[kind].student}
+            <AccessBadge access={student.access} />
+          </p>
+          <h3 className="font-display text-2xl leading-tight font-bold text-balance sm:text-3xl">{name}</h3>
+          <p className="mt-1 text-base text-cool text-pretty sm:text-lg">
+            {student.career ? (
+              <>
+                Aspirante a <strong className="text-foreground">{student.career}</strong>
+                {student.university && (
+                  <>
+                    {" "}
+                    en {articleFor(student.university)} <strong className="text-foreground">{student.university}</strong>
+                  </>
+                )}
+              </>
+            ) : (
+              "Aún no elige carrera"
+            )}
+          </p>
         </div>
-
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <Datum icon={GraduationCap} label="Meta">
-            {student.career ? `${student.university ? `${student.university} · ` : ""}${student.career}` : "Sin carrera elegida"}
-          </Datum>
-          <Datum icon={CalendarDays} label="Se registró">
-            {student.registeredAt ? dateLong(student.registeredAt) : "—"}
-          </Datum>
-        </dl>
-
-        <TrialMeter student={student} />
-        <StudentPulse pulse={pulse} />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/app/dashboard/analytics?alumno=${student.id}`}>
-              <BarChart3 /> Ver sus exámenes
-            </Link>
-          </Button>
-          <ActivateWithPlan label="Activar su acceso ilimitado" />
+        <div className="relative sm:w-56">
+          <TrialMeter student={student} compact />
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-gold/40 bg-gold/5 p-4">
-          <div className="flex items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
-              <CalendarDays className="size-5" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <h3 className="font-bold">Programa su plan de exámenes</h3>
-              <p className="text-sm text-muted-foreground text-pretty">
-                Elige la fecha de su examen de admisión, los días de práctica y el nivel: le armamos su calendario y tú
-                ves si cumple cada día.
-              </p>
-            </div>
+      <div className="grid gap-5 border-t p-5 sm:p-7 lg:grid-cols-[1.1fr_1fr]">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="font-bold">Estatus de sus evaluaciones</h4>
+            <Link
+              href={`/app/dashboard/analytics?alumno=${student.id}`}
+              className="inline-flex items-center gap-1 text-sm text-brand-light underline-offset-4 hover:underline"
+            >
+              <BarChart3 className="size-4" aria-hidden /> Ver resultados
+            </Link>
           </div>
-          <Button variant="outline" disabled className="w-full">
-            <Lock /> Programar plan
-          </Button>
-          <ActivateWithPlan className="w-full" label="Actívalo con tu plan" />
+          <ExamStatus student={student} pulse={pulse} />
+          {pulse && pulse.exams > 0 && pulse.accuracy !== null && <PerformanceAlert alias={student.alias} accuracy={pulse.accuracy} />}
         </div>
 
-        <LockedArea label="Grupos · Activa con tu plan">
-          <div className="flex items-center gap-2 rounded-xl border p-3 text-sm">
-            <Tags className="size-4 text-muted-foreground" aria-hidden />
-            <span className="flex-1 text-muted-foreground">Grupo</span>
-            <span className="rounded-md border px-3 py-1.5 text-muted-foreground">Sin grupo</span>
+        {/* El protagonista: activar el plan. */}
+        <div className="relative flex flex-col justify-center gap-4 overflow-hidden rounded-2xl bg-[linear-gradient(135deg,var(--gold),var(--secondary)_50%,var(--primary))] p-px">
+          <div className="flex h-full flex-col items-center justify-center gap-3 rounded-[calc(1rem-1px)] bg-card/95 p-5 text-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-brand-gradient text-white shadow-glow-secondary">
+              <Sparkles className="size-6" aria-hidden />
+            </span>
+            <p className="font-display text-lg font-bold text-balance">
+              Asegura su lugar en {student.university ? `${articleFor(student.university)} ${student.university}` : "la universidad"}
+            </p>
+            <p className="text-sm text-muted-foreground text-pretty">
+              Con tu plan, {student.alias} entrena sin límites y tú sigues cada examen, cada materia y su avance diario.
+            </p>
+            <Button asChild variant="brand" size="lg" className="group w-full text-base">
+              <Link href="/app/dashboard/billing">
+                Activar tu plan <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </Button>
           </div>
-        </LockedArea>
-        <LockedArea label="Reportes PDF · Activa con tu plan">
-          <div className="flex items-center gap-2 rounded-xl border p-3 text-sm">
-            <FileDown className="size-4 text-muted-foreground" aria-hidden />
-            <span className="flex-1 text-muted-foreground">Reporte en PDF para compartir</span>
-          </div>
-        </LockedArea>
+        </div>
       </div>
     </article>
   );
 }
 
-function Avatar({ name }: { name: string }) {
+const UNLOCKS = [
+  {
+    icon: CalendarDays,
+    title: "Programa su plan de exámenes",
+    text: "Elige la fecha de su examen de admisión, los días de práctica y el nivel. Le armamos su calendario y tú ves si cumple cada día.",
+  },
+  {
+    icon: Users,
+    title: "Gestión de estudiantes y grupos",
+    text: "Agrega a más de un estudiante y clasifícalos por grupo para seguirlos a todos desde aquí.",
+  },
+  {
+    icon: FileText,
+    title: "Reportes detallados",
+    text: "Obtén reportes y guías de retroalimentación con las preguntas en las que se equivocó.",
+  },
+];
+
+/** Lo que desbloquea el plan: tres tarjetas con su "Activar ahora". */
+function UnlockCards() {
   return (
-    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand-gradient font-display text-lg font-bold text-white">
-      {name.trim().charAt(0).toUpperCase() || "?"}
-    </span>
+    <ul className="grid gap-3 md:grid-cols-3">
+      {UNLOCKS.map((u) => (
+        <li
+          key={u.title}
+          className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border bg-card p-5 transition-colors hover:border-secondary/50"
+        >
+          <div aria-hidden className="pointer-events-none absolute -top-12 -right-12 size-32 rounded-full bg-secondary/10 blur-2xl transition-opacity group-hover:opacity-100" />
+          <div className="relative flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/15 text-brand-light">
+              <u.icon className="size-5" aria-hidden />
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold">
+              <Lock className="size-3" aria-hidden /> Con tu plan
+            </span>
+          </div>
+          <h4 className="relative font-bold">{u.title}</h4>
+          <p className="relative flex-1 text-sm text-muted-foreground text-pretty">{u.text}</p>
+          <Button asChild variant="brand" size="sm" className="relative">
+            <Link href="/app/dashboard/billing">
+              Activar ahora <ArrowRight />
+            </Link>
+          </Button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function Datum({ icon: Icon, label, children }: { icon: typeof Users; label: string; children: React.ReactNode }) {
+function Avatar({ name, large }: { name: string; large?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-lg bg-muted/50 px-3 py-2">
-      <Icon className="size-4 shrink-0 text-brand-light" aria-hidden />
-      <div className="min-w-0">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="truncate font-medium">{children}</dd>
-      </div>
-    </div>
+    <span
+      className={cn(
+        "relative grid shrink-0 place-items-center rounded-full bg-brand-gradient font-display font-bold text-white",
+        large ? "size-16 text-2xl shadow-glow-secondary sm:size-20 sm:text-3xl" : "size-12 text-lg"
+      )}
+    >
+      {name.trim().charAt(0).toUpperCase() || "?"}
+    </span>
   );
 }
