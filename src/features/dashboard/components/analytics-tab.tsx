@@ -35,6 +35,7 @@ import { NoPlanHero } from "./no-plan-hero";
 import { ActivateWithPlan, TrialMeter } from "./student-trial";
 import { TutorReport } from "./tutor-report";
 import { useTutor } from "./tutor-context";
+import { moduleProps } from "./tutor-nav";
 import { InactiveWall } from "./tutor-dashboard";
 
 /** Quién se está analizando: todos, un grupo o un estudiante (se guarda en la URL para compartir el enlace). */
@@ -295,7 +296,7 @@ function ExportBar({ info, stats, exams }: { info: SubjectInfo; stats: TutorStat
   }, [printing]);
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center">
+    <div {...moduleProps("reportes", "Reportes")} className="flex flex-col gap-2 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center">
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
         Reporte de <strong className="text-foreground">{info.label}</strong>
       </p>
@@ -319,7 +320,7 @@ function ExportBar({ info, stats, exams }: { info: SubjectInfo; stats: TutorStat
 function Dashboard({ info, stats, exams }: { info: SubjectInfo; stats: TutorStats; exams: TutorExam[] }) {
   return (
     <div className="flex flex-col gap-6">
-      <section aria-labelledby="overview-title" className="flex flex-col gap-3">
+      <section {...moduleProps("vista-general", "Vista general")} aria-labelledby="overview-title" className="flex flex-col gap-3">
         <h2 id="overview-title" className="sr-only">
           Vista general
         </h2>
@@ -355,11 +356,12 @@ function Dashboard({ info, stats, exams }: { info: SubjectInfo; stats: TutorStat
         </ul>
       </section>
 
-      <Card icon={TrendingUp} title="Evolución semanal" subtitle="% de aciertos por semana · últimas 12 semanas">
+      <Card module={["evolucion", "Evolución"]} icon={TrendingUp} title="Evolución semanal" subtitle="% de aciertos por semana · últimas 12 semanas">
         <WeeklyScoreChart weeks={stats.weeks} />
       </Card>
 
       <Card
+        module={["materias", "Materias"]}
         icon={Grid3x3}
         title="Mapa de calor por materias"
         subtitle="% de aciertos por materia en cada modalidad"
@@ -399,7 +401,7 @@ function ByStudent({ info, exams }: { info: SubjectInfo; exams: TutorExam[] }) {
     .sort((a, b) => (b.stats.accuracy ?? -1) - (a.stats.accuracy ?? -1));
 
   return (
-    <Card icon={Users} title="Por estudiante" subtitle="Ordenados por promedio de aciertos">
+    <Card module={["por-estudiante", "Por estudiante"]} icon={Users} title="Por estudiante" subtitle="Ordenados por promedio de aciertos">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[32rem] text-sm">
           <thead className="text-left text-xs text-muted-foreground">
@@ -454,8 +456,10 @@ function Card({
   title,
   subtitle,
   aside,
+  module,
   children,
 }: {
+  module?: [id: string, label: string];
   icon: typeof Target;
   title: string;
   subtitle?: string;
@@ -463,7 +467,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
+    <section {...(module ? moduleProps(...module) : {})} className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-brand-light">

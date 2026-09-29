@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BarChart3, CircleAlert, CreditCard, Loader2, TriangleAlert, Users } from "lucide-react";
+import { CircleAlert, Loader2, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ModeGuard, useMode } from "@/features/modes/components/mode-guard";
@@ -14,12 +13,8 @@ import { cn } from "@/lib/utils";
 import { TUTOR_COPY } from "../lib/tutor-plans";
 import { errorMessage, setTrialPlan } from "../services/tutor-service";
 import { TutorProvider, useTutor } from "./tutor-context";
+import { ModuleBar, TutorBottomNav } from "./tutor-nav";
 
-export const TUTOR_TABS = [
-  { href: "/app/dashboard", label: "Estudiantes", icon: Users },
-  { href: "/app/dashboard/analytics", label: "Estadísticas", icon: BarChart3 },
-  { href: "/app/dashboard/billing", label: "Suscripción", icon: CreditCard },
-] as const;
 
 /**
  * Home de padres, tutores y maestros: 100 % gestión y analítica (este rol no presenta exámenes).
@@ -28,13 +23,15 @@ export const TUTOR_TABS = [
 export function TutorDashboard({ children }: { children: React.ReactNode }) {
   return (
     <ModeGuard mode="parent">
-      <PanelShell>
+      <PanelShell footer={<TutorBottomNav />}>
         <TutorProvider>
           <div className="flex flex-col gap-6">
             <ModeSwitcher />
             <TutorHeader />
-            <TutorTabs />
+            <ModuleBar />
             <TutorBody>{children}</TutorBody>
+            {/* En computadora el shell no reserva espacio para el menú de abajo. */}
+            <div aria-hidden className="hidden h-12 lg:block" />
           </div>
         </TutorProvider>
       </PanelShell>
@@ -124,37 +121,6 @@ function TrialPlanSelect() {
         </p>
       )}
     </div>
-  );
-}
-
-function TutorTabs() {
-  const pathname = usePathname().replace(/\/$/, "") || "/";
-  return (
-    <nav aria-label="Secciones del panel" className="print:hidden">
-      <ul className="grid h-14 w-full grid-cols-3 gap-1 rounded-2xl border bg-muted/60 p-1.5 sm:h-16">
-        {TUTOR_TABS.map((tab) => {
-          const active = pathname === tab.href;
-          return (
-            <li key={tab.href} className="h-full">
-              <Link
-                href={tab.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex h-full w-full items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold whitespace-nowrap transition-all outline-none sm:text-lg",
-                  "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  active
-                    ? "bg-brand-gradient text-white shadow-glow-secondary"
-                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
-                )}
-              >
-                <tab.icon className="size-4 max-[380px]:hidden sm:size-5" aria-hidden />
-                {tab.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
   );
 }
 

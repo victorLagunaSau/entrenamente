@@ -65,6 +65,7 @@ import { InviteButton } from "./invite-dialog";
 import { AddGoalDialog, CreatePlanDialog, ExamResultsDialog } from "./monitor-dialogs";
 import { articleFor, Avatar, examAccuracy, PerformanceAlert, TONE, toneOf, wrongOf } from "./student-bits";
 import { useTutor } from "./tutor-context";
+import { moduleProps } from "./tutor-nav";
 
 /* ─────────────────────────── Datos derivados por estudiante ─────────────────────────── */
 
@@ -166,7 +167,7 @@ export function StudentMonitor() {
     <div className="flex flex-col gap-6">
       <FamilyBar insights={insights} />
 
-      <section aria-labelledby="students-title" className="flex flex-col gap-3">
+      <section {...moduleProps("estudiantes", "Estudiantes")} aria-labelledby="students-title" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="students-title" className="text-lg font-bold">
@@ -238,6 +239,7 @@ function FamilyBar({ insights }: { insights: Map<string, Insight> | null }) {
 
   return (
     <section
+      {...moduleProps("resumen", "Resumen")}
       aria-labelledby="family-title"
       className="relative overflow-hidden rounded-3xl border bg-card p-5 sm:p-6"
     >
@@ -494,7 +496,7 @@ function StudentProfile({ student, insight }: { student: TutorStudent; insight: 
   const nextExam = plans.filter((p) => p.officialDate > today).sort((a, b) => a.officialDate.localeCompare(b.officialDate))[0];
 
   return (
-    <article aria-label={`Entrenamiento de ${student.alias}`} className="overflow-hidden rounded-3xl border bg-card">
+    <article {...moduleProps("ficha", "Metas")} aria-label={`Entrenamiento de ${student.alias}`} className="overflow-hidden rounded-3xl border bg-card">
       {/* Quién es y a qué aspira: lo más importante. */}
       <header className="relative flex flex-col gap-5 p-5 sm:p-7 lg:flex-row lg:items-center">
         <div aria-hidden className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-primary/15 blur-3xl" />
@@ -602,6 +604,7 @@ function StudentProfile({ student, insight }: { student: TutorStudent; insight: 
 
         <div className="grid gap-5 lg:grid-cols-3">
           <Panel
+            module={["planes", "Planes de estudio"]}
             className="lg:col-span-2"
             icon={CalendarClock}
             title="Planes de estudio"
@@ -695,8 +698,10 @@ function Panel({
   icon: Icon,
   action,
   className,
+  module,
   children,
 }: {
+  module?: [id: string, label: string];
   title: string;
   icon: typeof Flame;
   action?: React.ReactNode;
@@ -704,7 +709,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("flex min-w-0 flex-col gap-4 rounded-2xl border bg-background/30 p-4 sm:p-5", className)}>
+    <section {...(module ? moduleProps(...module) : {})} className={cn("flex min-w-0 flex-col gap-4 rounded-2xl border bg-background/30 p-4 sm:p-5", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="flex items-center gap-2 font-bold">
           <Icon className="size-5 text-brand-light" aria-hidden /> {title}
@@ -834,7 +839,7 @@ function RachaPanel({ insight }: { insight: Insight }) {
   const { racha } = insight;
   const today = todayISO();
   return (
-    <Panel icon={Flame} title="Racha diaria">
+    <Panel module={["racha", "Racha diaria"]} icon={Flame} title="Racha diaria">
       <div className="flex items-center gap-4">
         <span
           className={cn(
@@ -884,6 +889,7 @@ function LibrePanel({ insight, onOpen, className }: { insight: Insight; onOpen: 
   const shown = libres.slice(0, 5);
   return (
     <Panel
+      module={["libres", "Exámenes libres"]}
       className={className}
       icon={BookOpen}
       title="Exámenes libres"
@@ -926,7 +932,7 @@ function LibrePanel({ insight, onOpen, className }: { insight: Insight; onOpen: 
 function MateriasPanel({ insight }: { insight: Insight }) {
   const rows = [...insight.stats.materias].sort((a, b) => a.overall - b.overall);
   return (
-    <Panel icon={GraduationCap} title="Materias">
+    <Panel module={["materias", "Materias"]} icon={GraduationCap} title="Materias">
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Aparecerán con su primer examen.</p>
       ) : (
