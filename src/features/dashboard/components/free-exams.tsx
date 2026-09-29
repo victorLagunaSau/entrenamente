@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { BookOpenCheck, CalendarClock, CircleAlert, ClipboardList, Download, Gift, Loader2, Lock, Target, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -29,10 +30,17 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
     .map((e, i) => ({ exam: e, n: e.pruebaNumero ?? i + 1 }))
     .sort((a, b) => a.n - b.n);
   const slots = Math.max(student.trial?.granted ?? 3, done.length ? done[done.length - 1].n : 0);
-  const [selected, setSelected] = React.useState<number | null>(done.at(-1)?.exam.id ?? null);
+  // "Ver resultados" desde la ficha llega con ?examen=ID: abre esa prueba.
+  const requested = Number(useSearchParams().get("examen"));
+  const initial = done.find((d) => d.exam.id === requested)?.exam.id ?? done.at(-1)?.exam.id ?? null;
+  const [selected, setSelected] = React.useState<number | null>(initial);
+  const sectionRef = React.useRef<HTMLElement>(null);
+  React.useEffect(() => {
+    if (requested && initial === requested) sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [requested, initial]);
 
   return (
-    <section aria-labelledby="free-exams-title" className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
+    <section ref={sectionRef} aria-labelledby="free-exams-title" className="flex scroll-mt-20 flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
           <Gift className="size-5" aria-hidden />
@@ -79,6 +87,10 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
                 <span className="text-xs text-muted-foreground">
                   {new Date(item.exam.completedAt).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} ·{" "}
                   {item.exam.universityKey}
+                </span>
+                <span className="text-xs text-cool tabular-nums">
+                  {item.exam.totalQuestions} preguntas ·{" "}
+                  {item.exam.materias.reduce((n, m) => n + m.total - m.correctas, 0)} mal contestadas
                 </span>
               </button>
             </li>

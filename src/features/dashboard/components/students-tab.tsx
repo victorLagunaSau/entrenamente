@@ -440,6 +440,9 @@ const examAccuracy = (e: TutorExam) => {
   return total ? Math.round((100 * e.materias.reduce((n, m) => n + m.correctas, 0)) / total) : 0;
 };
 
+/** Preguntas sin acierto (incorrectas o sin responder). */
+const wrongOf = (e: TutorExam) => e.materias.reduce((n, m) => n + m.total - m.correctas, 0);
+
 /** "Examen 1: Listo · Examen 2: No realizado…" — una línea por prueba permitida. */
 function ExamStatus({ student, pulse }: { student: TutorStudent; pulse: Pulse | undefined }) {
   if (!pulse) return <p className="text-sm text-muted-foreground">Cargando sus exámenes…</p>;
@@ -455,7 +458,7 @@ function ExamStatus({ student, pulse }: { student: TutorStudent; pulse: Pulse | 
           <li
             key={i}
             className={cn(
-              "flex items-center gap-3 rounded-xl border px-3 py-2.5",
+              "flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border px-3 py-2.5",
               item ? "border-secondary/40 bg-secondary/10" : "border-dashed"
             )}
           >
@@ -467,7 +470,7 @@ function ExamStatus({ student, pulse }: { student: TutorStudent; pulse: Pulse | 
             <span className="flex-1 font-semibold">Examen {i + 1}</span>
             {item ? (
               <>
-                <span className="text-xs text-muted-foreground">
+                <span className="hidden text-xs text-muted-foreground sm:inline">
                   {new Date(item.exam.completedAt).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
                 </span>
                 <span className="rounded-full bg-secondary/20 px-2.5 py-0.5 text-xs font-bold text-secondary">
@@ -476,6 +479,20 @@ function ExamStatus({ student, pulse }: { student: TutorStudent; pulse: Pulse | 
               </>
             ) : (
               <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">No realizado</span>
+            )}
+            {item && (
+              <div className="flex w-full items-center gap-3 pl-8 text-xs">
+                <span className="text-cool tabular-nums">
+                  {item.exam.totalQuestions} preguntas · <strong className="text-foreground">{wrongOf(item.exam)}</strong> mal
+                  contestadas
+                </span>
+                <Link
+                  href={`/app/dashboard/analytics?alumno=${student.id}&examen=${item.exam.id}`}
+                  className="ml-auto inline-flex items-center gap-1 font-semibold text-brand-light underline-offset-4 hover:underline"
+                >
+                  <BarChart3 className="size-3.5" aria-hidden /> Ver resultados
+                </Link>
+              </div>
             )}
           </li>
         );
@@ -539,15 +556,7 @@ function StudentSpotlight({ student, pulse, locked }: { student: TutorStudent; p
 
       <div className="grid gap-5 border-t p-5 sm:p-7 lg:grid-cols-[1.1fr_1fr]">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="font-bold">Estatus de sus evaluaciones</h4>
-            <Link
-              href={`/app/dashboard/analytics?alumno=${student.id}`}
-              className="inline-flex items-center gap-1 text-sm text-brand-light underline-offset-4 hover:underline"
-            >
-              <BarChart3 className="size-4" aria-hidden /> Ver resultados
-            </Link>
-          </div>
+          <h4 className="font-bold">Estatus de sus evaluaciones</h4>
           <ExamStatus student={student} pulse={pulse} />
           {pulse && pulse.exams > 0 && pulse.accuracy !== null && <PerformanceAlert alias={student.alias} accuracy={pulse.accuracy} />}
         </div>
@@ -559,11 +568,20 @@ function StudentSpotlight({ student, pulse, locked }: { student: TutorStudent; p
               <Sparkles className="size-6" aria-hidden />
             </span>
             <p className="font-display text-lg font-bold text-balance">
-              Asegura su lugar en {student.university ? `${articleFor(student.university)} ${student.university}` : "la universidad"}
+              Que se prepare con la mejor herramienta para{" "}
+              {student.university ? `${articleFor(student.university)} ${student.university}` : "su examen"}
             </p>
-            <p className="text-sm text-muted-foreground text-pretty">
-              Con tu plan, {student.alias} entrena sin límites y tú sigues cada examen, cada materia y su avance diario.
-            </p>
+            <ul className="flex flex-col gap-1 text-left text-sm text-cool">
+              {[
+                "Miles de preguntas tipo examen de admisión",
+                "Simulacros ilimitados y su plan de práctica",
+                "Guías con la solución de cada error",
+              ].map((t) => (
+                <li key={t} className="flex gap-2">
+                  <CircleCheck className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden /> {t}
+                </li>
+              ))}
+            </ul>
             <Button asChild variant="brand" size="lg" className="group w-full text-base">
               <Link href="/app/dashboard/billing">
                 Activar tu plan <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
