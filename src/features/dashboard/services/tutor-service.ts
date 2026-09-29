@@ -33,7 +33,14 @@ export type TutorStudent = {
   university: string | null;
   /** Ocupa un cupo vigente de una licencia de este tutor. */
   active: boolean;
+  /** tutor = cupo del tutor; otra = otra licencia; prueba = periodo gratis vigente; inactivo = sin acceso. */
+  access: StudentAccess;
+  registeredAt: string | null;
+  /** Periodo de prueba del estudiante (15 días desde su registro y exámenes gratis). */
+  trial: { endsAt: string; granted: number; used: number } | null;
 };
+
+export type StudentAccess = "tutor" | "otra" | "prueba" | "inactivo";
 
 export type TutorPanel = { license: TutorLicense | null; groups: TutorGroup[]; students: TutorStudent[] };
 
@@ -82,6 +89,10 @@ type PanelRow = {
     carrera: string | null;
     universidad: string | null;
     activo: boolean;
+    // Desde 20260929010000_panel_tutor_prueba.sql (antes de correrla no vienen).
+    acceso?: StudentAccess;
+    registrado?: string;
+    prueba?: { termina: string; otorgadas: number; usadas: number } | null;
   }[];
 };
 
@@ -114,6 +125,9 @@ export async function getTutorPanel(): Promise<TutorPanel> {
       career: s.carrera ?? findCareer(s.universidad_id, s.carrera_id)?.name ?? null,
       university: s.universidad ?? findUniversity(s.universidad_id)?.short ?? null,
       active: s.activo,
+      access: s.acceso ?? (s.activo ? "tutor" : "inactivo"),
+      registeredAt: s.registrado ?? null,
+      trial: s.prueba ? { endsAt: s.prueba.termina, granted: s.prueba.otorgadas, used: s.prueba.usadas } : null,
     })),
   };
 }

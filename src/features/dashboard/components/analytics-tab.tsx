@@ -10,13 +10,13 @@ import {
   ChevronDown,
   CircleAlert,
   Clock,
-  CreditCard,
   FileDown,
   Flame,
   Grid3x3,
   Loader2,
   MessageCircle,
   NotebookPen,
+  Sparkles,
   Target,
   TrendingUp,
   Users,
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { computeStats, EXAM_TYPES, formatHours, whatsappSummary, type TutorStats } from "../lib/tutor-stats";
 import { getTutorExams, type ExamType, type TutorExam, type TutorStudent } from "../services/tutor-service";
 import { MateriaHeatmap, WeeklyScoreChart } from "./charts";
+import { ActivateWithPlan, TrialMeter } from "./student-trial";
 import { TutorReport } from "./tutor-report";
 import { useTutor } from "./tutor-context";
 import { InactiveWall } from "./tutor-dashboard";
@@ -43,7 +44,6 @@ const MODE_ICON: Record<ExamType, typeof Flame> = { plan: CalendarCheck, libre: 
 export function AnalyticsTab() {
   const { panel, lapsed } = useTutor();
   if (lapsed) return <InactiveWall />;
-  if (!panel!.license) return <NoPlan />;
   if (panel!.students.length === 0) {
     return (
       <Empty icon={Users} title="Aún no hay estudiantes vinculados">
@@ -135,6 +135,7 @@ function Analytics() {
         </Empty>
       ) : (
         <>
+          {!panel!.license && <TrialBanner info={info} />}
           <ExportBar info={info} stats={stats} exams={ready} />
           {stats.exams === 0 ? (
             <Empty icon={BarChart3} title="Aún no hay exámenes">
@@ -197,7 +198,30 @@ function SubjectPicker({ subject, onChange }: { subject: Subject; onChange: (s: 
   );
 }
 
+/** Padre sin plan: está viendo la prueba gratuita; el contador es el del estudiante (desde su registro). */
+function TrialBanner({ info }: { info: SubjectInfo }) {
+  const student = info.single ? info.students[0] : null;
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-gold/30 bg-gold/5 p-4 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <p className="text-sm text-cool text-pretty">
+          <strong className="text-gold">Estás viendo la prueba gratuita.</strong> Activa tu plan para que{" "}
+          {student ? student.alias : "tus estudiantes"} siga{student ? "" : "n"} entrenando sin límites y descargues sus
+          reportes en PDF.
+        </p>
+        {student && <TrialMeter student={student} compact />}
+      </div>
+      <Button asChild variant="brand" className="shrink-0">
+        <Link href="/app/dashboard/billing">
+          <Sparkles /> Activa tu plan
+        </Link>
+      </Button>
+    </section>
+  );
+}
+
 function ExportBar({ info, stats, exams }: { info: SubjectInfo; stats: TutorStats; exams: TutorExam[] }) {
+  const { panel } = useTutor();
   const [copied, setCopied] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
 
@@ -229,9 +253,13 @@ function ExportBar({ info, stats, exams }: { info: SubjectInfo; stats: TutorStat
         <Button variant={copied ? "secondary" : "outline"} onClick={copy} aria-live="polite">
           {copied ? <Check /> : <MessageCircle />} {copied ? "¡Resumen copiado!" : "Copiar Resumen para WhatsApp"}
         </Button>
-        <Button variant="default" onClick={() => setPrinting(true)} disabled={printing || stats.exams === 0}>
-          {printing ? <Loader2 className="animate-spin" /> : <FileDown />} Descargar Reporte PDF
-        </Button>
+        {panel!.license ? (
+          <Button variant="default" onClick={() => setPrinting(true)} disabled={printing || stats.exams === 0}>
+            {printing ? <Loader2 className="animate-spin" /> : <FileDown />} Descargar Reporte PDF
+          </Button>
+        ) : (
+          <ActivateWithPlan label="Reporte PDF · Activa con tu plan" className="h-10" />
+        )}
       </div>
       {printing && <TutorReport info={info} stats={stats} exams={exams} />}
     </div>
@@ -411,26 +439,6 @@ function Empty({ icon: Icon, title, children }: { icon: typeof Target; title: st
       </span>
       <h2 className="text-lg font-bold">{title}</h2>
       <p className="max-w-sm text-sm text-muted-foreground text-pretty">{children}</p>
-    </section>
-  );
-}
-
-function NoPlan() {
-  return (
-    <section className="flex flex-col items-center gap-4 rounded-2xl border border-gold/30 bg-gold/5 px-6 py-10 text-center">
-      <span className="grid size-12 place-items-center rounded-xl bg-gold/15 text-gold">
-        <BarChart3 className="size-6" aria-hidden />
-      </span>
-      <h2 className="text-lg font-bold">Las estadísticas se activan con tu plan</h2>
-      <p className="max-w-md text-sm text-muted-foreground text-pretty">
-        Con un plan activo verás el promedio, la evolución semanal y el mapa de calor por materias de cada estudiante, y
-        podrás exportar reportes.
-      </p>
-      <Button asChild variant="brand">
-        <Link href="/app/dashboard/billing">
-          <CreditCard /> Ver planes
-        </Link>
-      </Button>
     </section>
   );
 }

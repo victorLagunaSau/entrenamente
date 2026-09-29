@@ -13,11 +13,11 @@ import { errorMessage, getInviteLink } from "../services/tutor-service";
 import { useTutor } from "./tutor-context";
 
 /** "+ Invitar Estudiante": el enlace único de la licencia, para copiarlo a WhatsApp o correo. */
-export function InviteButton({ disabled }: { disabled?: boolean }) {
+export function InviteButton({ disabled, variant = "brand" }: { disabled?: boolean; variant?: "brand" | "outline" }) {
   const [open, setOpen] = React.useState(false);
   return (
     <>
-      <Button variant="brand" onClick={() => setOpen(true)} disabled={disabled}>
+      <Button variant={variant} onClick={() => setOpen(true)} disabled={disabled}>
         <UserPlus /> Invitar Estudiante
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
