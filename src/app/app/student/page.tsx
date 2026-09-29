@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 
-import { StudentPanel } from "@/features/student/components/student-panel";
+import { ModeGuard } from "@/features/modes/components/mode-guard";
+import { StudentHomeRedirect } from "@/features/student/components/tier-guard";
 
 export const metadata: Metadata = { title: "Estudiante" };
 
+/** Entrada única del estudiante: redirige a /home (Pro) o /home-demo según su suscripción. */
 export default function StudentPage() {
-  return <StudentPanel />;
+  return (
+    <ModeGuard mode="student">
+      <StudentHomeRedirect />
+    </ModeGuard>
+  );
 }

@@ -5,7 +5,8 @@
 
 import type { AuthError } from "@supabase/supabase-js";
 
-import { homePathFor } from "@/features/modes/modes";
+import { homePathFor, ownMode } from "@/features/modes/modes";
+import { studentHomePath } from "@/features/student/services/access-service";
 import { supabase } from "@/lib/supabase/client";
 
 export type AuthResult = { ok: true } | { ok: false; error: string };
@@ -29,11 +30,16 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
-/** Panel al que entra cada tipo de usuario tras iniciar sesión. */
+/**
+ * Panel al que entra cada tipo de usuario tras iniciar sesión. Admin → /admin; estudiante →
+ * home Pro o Demo según su suscripción; padres/maestros → su dashboard.
+ */
 export async function homePathForCurrentUser(): Promise<string> {
   // Filtrar por el propio id: padres y admins también pueden leer otros perfiles (RLS).
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return homePathFor(null);
   const { data } = await supabase.from("profiles").select("user_type").eq("id", auth.user.id).maybeSingle();
-  return homePathFor(data?.user_type ?? null);
+  const userType = data?.user_type ?? null;
+  if (ownMode(userType) === "student") return studentHomePath().catch(() => homePathFor(userType));
+  return homePathFor(userType);
 }
