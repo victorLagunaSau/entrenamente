@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BarChart3, CircleAlert, Gift, Loader2, Power, PowerOff, Sparkles, UserMinus, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CircleAlert, GraduationCap, Loader2, Lock, Power, PowerOff, Tags, UserMinus, Users, FileDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,24 +15,28 @@ import {
   errorMessage,
   getTutorExams,
   releaseSeat,
+  studentLimit,
   unlinkStudent,
   type TutorExam,
   type TutorStudent,
 } from "../services/tutor-service";
 import { GroupChips, GroupSelect, type GroupFilter } from "./groups";
 import { InviteButton } from "./invite-dialog";
-import { AccessBadge, ActivateWithPlan, TrialMeter, trialDaysLeft } from "./student-trial";
+import { NoPlanHero } from "./no-plan-hero";
+import { AccessBadge, ActivateWithPlan, TrialMeter } from "./student-trial";
 import { useTutor } from "./tutor-context";
 import { InactiveWall } from "./tutor-dashboard";
 
 /** Pestaña Estudiantes: cupos de la licencia, invitación, grupos y la lista de estudiantes vinculados. */
 export function StudentsTab() {
-  const { lapsed } = useTutor();
+  const { lapsed, panel } = useTutor();
   if (lapsed) return <InactiveWall />;
+  // Sin plan (demo): el anuncio arriba y la ficha completa del estudiante; lo de pago se ve pero bloqueado.
+  const demo = !panel!.license;
   return (
     <div className="flex flex-col gap-6">
-      <LicenseBar />
-      <StudentsList />
+      {demo ? <NoPlanHero /> : <LicenseBar />}
+      <StudentsList demo={demo} />
     </div>
   );
 }
@@ -41,7 +45,7 @@ function LicenseBar() {
   const { kind, panel } = useTutor();
   const license = panel!.license;
 
-  if (!license) return <DemoHero />;
+  if (!license) return null;
 
   const ratio = Math.min(license.used / license.seats, 1);
   const full = license.used >= license.seats;
@@ -77,54 +81,22 @@ function LicenseBar() {
           </p>
         )}
       </div>
-      <InviteButton />
+      <InviteGate />
     </section>
   );
 }
 
-/**
- * Padre sin plan (demo): ve todo lo que entrenan sus estudiantes durante su prueba gratuita,
- * con el contador del periodo y la invitación a activar su plan.
- */
-function DemoHero() {
-  const { kind, panel } = useTutor();
-  const inTrial = panel!.students.filter((s) => s.access === "prueba" && s.trial);
-  const soonest = inTrial.reduce<number | null>((min, s) => {
-    const d = trialDaysLeft(s.trial!.endsAt);
-    return min === null || d < min ? d : min;
-  }, null);
-
+/** Invitar solo si hay lugar en el plan (sin plan: 1 estudiante). Lleno → ampliar el plan. */
+function InviteGate({ variant }: { variant?: "brand" | "outline" }) {
+  const { panel } = useTutor();
+  if (panel!.students.length < studentLimit(panel!)) return <InviteButton variant={variant} />;
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-gold/30 bg-card p-5 sm:p-6">
-      <div aria-hidden className="pointer-events-none absolute -top-24 -right-20 size-64 rounded-full bg-gold/10 blur-3xl" />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
-        <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
-          <Gift className="size-6" aria-hidden />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="text-xs font-semibold tracking-wide text-gold uppercase">Periodo de prueba</p>
-          <h2 className="text-lg font-bold text-balance">
-            {soonest === null
-              ? `Invita a ${TUTOR_COPY[kind].students} y mira cómo entrenan`
-              : soonest === 0
-                ? "La prueba gratuita termina hoy"
-                : `Quedan ${soonest} ${soonest === 1 ? "día" : "días"} de prueba gratuita`}
-          </h2>
-          <p className="text-sm text-muted-foreground text-pretty">
-            Durante la prueba ves todo lo que entrenan: exámenes, calificaciones y avance por materia. Activa tu plan
-            para que sigan sin límites y desbloquear reportes y cupos.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:items-end">
-          <Button asChild variant="brand">
-            <Link href="/app/dashboard/billing">
-              <Sparkles /> Activa tu plan
-            </Link>
-          </Button>
-          <InviteButton variant="outline" />
-        </div>
-      </div>
-    </section>
+    <div className="flex flex-col items-start gap-1 sm:items-end">
+      <ActivateWithPlan label={panel!.license ? "Amplía tu plan para invitar a otro" : "Activa tu plan para invitar a otro"} className="h-10" />
+      <p className="text-xs text-muted-foreground">
+        {panel!.license ? "Ya usaste los lugares de tu plan." : "Sin plan puedes dar seguimiento a 1 estudiante."}
+      </p>
+    </div>
   );
 }
 
@@ -183,7 +155,7 @@ function StudentPulse({ pulse }: { pulse: Pulse | undefined }) {
   );
 }
 
-function StudentsList() {
+function StudentsList({ demo }: { demo: boolean }) {
   const { kind, panel } = useTutor();
   const [filter, setFilter] = React.useState<GroupFilter>("all");
   const students = panel!.students;
@@ -205,6 +177,27 @@ function StudentsList() {
           Usa «Invitar Estudiante» y comparte el enlace con {TUTOR_COPY[kind].students}. Aparecerán aquí en cuanto se
           registren.
         </p>
+        {demo && <InviteButton />}
+      </section>
+    );
+  }
+
+  if (demo) {
+    const limit = studentLimit(panel!);
+    return (
+      <section aria-labelledby="students-title" className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="students-title" className="text-lg font-bold">
+              Tu estudiante
+            </h2>
+            <p className="text-sm text-muted-foreground">Todo lo que entrena en su prueba gratuita, en un solo lugar.</p>
+          </div>
+          <InviteGate variant="outline" />
+        </div>
+        {students.map((s, i) => (
+          <StudentSpotlight key={s.id} student={s} pulse={pulses?.get(s.id)} locked={i >= limit} />
+        ))}
       </section>
     );
   }
@@ -388,6 +381,129 @@ function StudentActions({ student }: { student: TutorStudent }) {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/** Zona que se ve pero no se usa sin plan: atenuada, sin clics, con su candado. */
+function LockedArea({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("relative", className)}>
+      <div aria-disabled className="pointer-events-none opacity-45 select-none">
+        {children}
+      </div>
+      <Link
+        href="/app/dashboard/billing"
+        className="absolute top-1/2 left-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-gold/50 bg-background/90 px-3 py-1 text-xs font-semibold whitespace-nowrap text-gold shadow-lg backdrop-blur hover:bg-gold/10"
+      >
+        <Lock className="size-3" aria-hidden /> {label}
+      </Link>
+    </div>
+  );
+}
+
+const dateLong = (iso: string) => new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+
+/** Ficha completa del estudiante del padre sin plan: datos, prueba gratis, avance y lo que desbloquea el plan. */
+function StudentSpotlight({ student, pulse, locked }: { student: TutorStudent; pulse: Pulse | undefined; locked: boolean }) {
+  if (locked) {
+    return (
+      <LockedArea label="Amplía tu plan para verlo">
+        <div className="flex items-center gap-3 rounded-2xl border bg-card p-5">
+          <Avatar name={student.alias} />
+          <StudentName student={student} />
+        </div>
+      </LockedArea>
+    );
+  }
+
+  return (
+    <article className="grid gap-5 rounded-2xl border bg-card p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar name={student.alias} />
+            <StudentName student={student} />
+          </div>
+          <AccessBadge access={student.access} />
+        </div>
+
+        <dl className="grid gap-2 text-sm sm:grid-cols-2">
+          <Datum icon={GraduationCap} label="Meta">
+            {student.career ? `${student.university ? `${student.university} · ` : ""}${student.career}` : "Sin carrera elegida"}
+          </Datum>
+          <Datum icon={CalendarDays} label="Se registró">
+            {student.registeredAt ? dateLong(student.registeredAt) : "—"}
+          </Datum>
+        </dl>
+
+        <TrialMeter student={student} />
+        <StudentPulse pulse={pulse} />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/app/dashboard/analytics?alumno=${student.id}`}>
+              <BarChart3 /> Ver sus exámenes
+            </Link>
+          </Button>
+          <ActivateWithPlan label="Activar su acceso ilimitado" />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-gold/40 bg-gold/5 p-4">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
+              <CalendarDays className="size-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-bold">Programa su plan de exámenes</h3>
+              <p className="text-sm text-muted-foreground text-pretty">
+                Elige la fecha de su examen de admisión, los días de práctica y el nivel: le armamos su calendario y tú
+                ves si cumple cada día.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" disabled className="w-full">
+            <Lock /> Programar plan
+          </Button>
+          <ActivateWithPlan className="w-full" label="Actívalo con tu plan" />
+        </div>
+
+        <LockedArea label="Grupos · Activa con tu plan">
+          <div className="flex items-center gap-2 rounded-xl border p-3 text-sm">
+            <Tags className="size-4 text-muted-foreground" aria-hidden />
+            <span className="flex-1 text-muted-foreground">Grupo</span>
+            <span className="rounded-md border px-3 py-1.5 text-muted-foreground">Sin grupo</span>
+          </div>
+        </LockedArea>
+        <LockedArea label="Reportes PDF · Activa con tu plan">
+          <div className="flex items-center gap-2 rounded-xl border p-3 text-sm">
+            <FileDown className="size-4 text-muted-foreground" aria-hidden />
+            <span className="flex-1 text-muted-foreground">Reporte en PDF para compartir</span>
+          </div>
+        </LockedArea>
+      </div>
+    </article>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand-gradient font-display text-lg font-bold text-white">
+      {name.trim().charAt(0).toUpperCase() || "?"}
+    </span>
+  );
+}
+
+function Datum({ icon: Icon, label, children }: { icon: typeof Users; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-lg bg-muted/50 px-3 py-2">
+      <Icon className="size-4 shrink-0 text-brand-light" aria-hidden />
+      <div className="min-w-0">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className="truncate font-medium">{children}</dd>
+      </div>
     </div>
   );
 }

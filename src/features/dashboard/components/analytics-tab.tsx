@@ -14,6 +14,7 @@ import {
   Flame,
   Grid3x3,
   Loader2,
+  Lock,
   MessageCircle,
   NotebookPen,
   Sparkles,
@@ -29,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { computeStats, EXAM_TYPES, formatHours, whatsappSummary, type TutorStats } from "../lib/tutor-stats";
 import { getTutorExams, type ExamType, type TutorExam, type TutorStudent } from "../services/tutor-service";
 import { MateriaHeatmap, WeeklyScoreChart } from "./charts";
+import { FreeExams } from "./free-exams";
+import { NoPlanHero } from "./no-plan-hero";
 import { ActivateWithPlan, TrialMeter } from "./student-trial";
 import { TutorReport } from "./tutor-report";
 import { useTutor } from "./tutor-context";
@@ -44,18 +47,27 @@ const MODE_ICON: Record<ExamType, typeof Flame> = { plan: CalendarCheck, libre: 
 export function AnalyticsTab() {
   const { panel, lapsed } = useTutor();
   if (lapsed) return <InactiveWall />;
+  const demo = !panel!.license;
   if (panel!.students.length === 0) {
     return (
-      <Empty icon={Users} title="Aún no hay estudiantes vinculados">
+      <div className="flex flex-col gap-6">
+        {demo && <NoPlanHero />}
+        <Empty icon={Users} title="Aún no hay estudiantes vinculados">
         Invita a tus estudiantes desde la pestaña{" "}
         <Link href="/app/dashboard" className="text-brand-light underline-offset-4 hover:underline">
           Estudiantes
         </Link>{" "}
         para ver aquí su rendimiento.
       </Empty>
+      </div>
     );
   }
-  return <Analytics />;
+  return (
+    <div className="flex flex-col gap-6">
+      {demo && <NoPlanHero />}
+      <Analytics demo={demo} />
+    </div>
+  );
 }
 
 function useSubject(): [Subject, (s: Subject) => void] {
@@ -77,10 +89,13 @@ function useSubject(): [Subject, (s: Subject) => void] {
   return [subject, set];
 }
 
-function Analytics() {
+function Analytics({ demo }: { demo: boolean }) {
   const { kind, panel } = useTutor();
   const { students, groups } = panel!;
-  const [subject, setSubject] = useSubject();
+  const [urlSubject, setSubject] = useSubject();
+  // Sin plan solo se da seguimiento a un estudiante: el primero.
+  const firstId = students[0].id;
+  const subject = React.useMemo<Subject>(() => (demo ? { kind: "student", id: firstId } : urlSubject), [demo, firstId, urlSubject]);
 
   const info = React.useMemo<SubjectInfo>(() => {
     if (subject.kind === "student") {
@@ -119,7 +134,7 @@ function Analytics() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SubjectPicker subject={subject} onChange={setSubject} />
+      {!demo && <SubjectPicker subject={subject} onChange={setSubject} />}
 
       {exams === "error" ? (
         <p role="alert" className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
@@ -134,8 +149,19 @@ function Analytics() {
           Asígnales el grupo desde la pestaña Estudiantes.
         </Empty>
       ) : (
+        demo ? (
+          <>
+            <TrialBanner info={info} />
+            <FreeExams student={info.students[0]} exams={ready} />
+            <LockedBlock>
+              <div className="flex flex-col gap-6">
+                <ExportBar info={info} stats={stats} exams={ready} />
+                <Dashboard info={info} stats={stats} exams={ready} />
+              </div>
+            </LockedBlock>
+          </>
+        ) : (
         <>
-          {!panel!.license && <TrialBanner info={info} />}
           <ExportBar info={info} stats={stats} exams={ready} />
           {stats.exams === 0 ? (
             <Empty icon={BarChart3} title="Aún no hay exámenes">
@@ -146,6 +172,7 @@ function Analytics() {
             <Dashboard info={info} stats={stats} exams={ready} />
           )}
         </>
+        )
       )}
     </div>
   );
@@ -198,6 +225,34 @@ function SubjectPicker({ subject, onChange }: { subject: Subject; onChange: (s: 
   );
 }
 
+/** Estadísticas completas sin plan: se ven (con sus datos reales) pero atenuadas y sin interacción. */
+function LockedBlock({ children }: { children: React.ReactNode }) {
+  return (
+    <section aria-label="Estadísticas completas (requiere plan)" className="relative">
+      <div aria-hidden className="pointer-events-none opacity-40 saturate-50 select-none">
+        {children}
+      </div>
+      <div className="absolute inset-x-0 top-10 flex justify-center px-4">
+        <div className="flex max-w-md flex-col items-center gap-3 rounded-2xl border border-gold/40 bg-card/95 p-5 text-center shadow-2xl backdrop-blur">
+          <span className="grid size-11 place-items-center rounded-xl bg-gold/15 text-gold">
+            <Lock className="size-5" aria-hidden />
+          </span>
+          <p className="font-bold text-balance">Estadísticas completas, gráficas y reportes</p>
+          <p className="text-sm text-muted-foreground text-pretty">
+            Evolución semanal, mapa de calor por materia, modalidades y reportes en PDF: todo listo en cuanto actives tu
+            plan.
+          </p>
+          <Button asChild variant="brand">
+            <Link href="/app/dashboard/billing">
+              <Sparkles /> Activa tu plan
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** Padre sin plan: está viendo la prueba gratuita; el contador es el del estudiante (desde su registro). */
 function TrialBanner({ info }: { info: SubjectInfo }) {
   const student = info.single ? info.students[0] : null;
@@ -211,11 +266,6 @@ function TrialBanner({ info }: { info: SubjectInfo }) {
         </p>
         {student && <TrialMeter student={student} compact />}
       </div>
-      <Button asChild variant="brand" className="shrink-0">
-        <Link href="/app/dashboard/billing">
-          <Sparkles /> Activa tu plan
-        </Link>
-      </Button>
     </section>
   );
 }

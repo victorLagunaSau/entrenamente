@@ -3,6 +3,8 @@
  * que cada estudiante esté vinculado al tutor en sesión. El cliente nunca escribe tablas directo.
  */
 
+import type { ExamRecord } from "@/features/exam/lib/libre";
+import { toExamRecord } from "@/features/exam/services/libre-service";
 import { findCareer, findUniversity } from "@/features/registro/data/catalog";
 import { supabase } from "@/lib/supabase/client";
 
@@ -53,6 +55,8 @@ export type TutorExam = {
   studentId: string;
   folio: string;
   type: ExamType;
+  /** "Prueba gratuita N" (solo exámenes hechos sin plan). */
+  pruebaNumero: number | null;
   universityKey: string;
   careerName: string;
   level: "facil" | "media" | "dificil";
@@ -137,6 +141,7 @@ type ExamRow = {
   student_id: string;
   folio: string;
   exam_type: ExamType;
+  prueba_numero?: number | null;
   university_key: string;
   career_name: string;
   level: TutorExam["level"];
@@ -160,6 +165,7 @@ export async function getTutorExams(studentIds: string[]): Promise<TutorExam[]> 
     studentId: e.student_id,
     folio: e.folio,
     type: e.exam_type,
+    pruebaNumero: e.prueba_numero ?? null,
     universityKey: e.university_key,
     careerName: e.career_name,
     level: e.level,
@@ -176,6 +182,16 @@ export async function getTutorExams(studentIds: string[]): Promise<TutorExam[]> 
     })),
   }));
 }
+
+/** Examen congelado completo (preguntas, fallas y soluciones) de un estudiante vinculado. */
+export async function getTutorExamRecord(examId: number): Promise<ExamRecord> {
+  const { data, error } = await supabase.rpc("examen_tutor", { p_examen: examId });
+  if (error) throw error;
+  return toExamRecord(data);
+}
+
+/** Cuántos estudiantes puede vincular el tutor: los cupos de su plan vigente; sin plan (demo), 1. */
+export const studentLimit = (panel: TutorPanel) => (panel.license?.active ? panel.license.seats : 1);
 
 /** Enlace de invitación de la licencia vigente. `renew` invalida el anterior y genera otro. */
 export async function getInviteLink(renew = false): Promise<{ code: string; url: string }> {
