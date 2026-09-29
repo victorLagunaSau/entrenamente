@@ -5,6 +5,7 @@ import { ArrowRight, BadgeCheck, PartyPopper, Sparkles } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
+import { STUDENT_HOMES } from "@/features/student/services/access-service";
 
 import { useRegistration } from "../../context/registration-context";
 import { findCareer, findUniversity } from "../../data/catalog";
@@ -13,7 +14,7 @@ import { ConfirmEmailNotice } from "../confirm-email-notice";
 import { Confetti } from "../confetti";
 import { StepHeader } from "../step-header";
 
-/** Paso final del estudiante: cuenta creada; entrada a los módulos /plan-gratuito o /acceso-ilimitado. */
+/** Paso final del estudiante: cuenta creada; entra a su home Demo (prueba gratuita) o a /acceso-ilimitado. */
 export function SuccessStep() {
   const { state } = useRegistration();
   // Invitado con lugar pagado por su padre/tutor: ya entra activo, sin pasar por planes.
@@ -56,7 +57,7 @@ export function SuccessStep() {
       ) : (
         <div className="flex flex-col gap-3">
           <Button asChild size="lg">
-            <Link href="/plan-gratuito">
+            <Link href={STUDENT_HOMES.demo}>
               Comenzar plan gratuito <ArrowRight />
             </Link>
           </Button>
