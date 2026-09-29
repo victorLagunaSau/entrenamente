@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { carrerasSugeridas, findInstitucion } from "../lib/catalog";
 import { useCatalogo } from "../lib/use-catalogo";
 import {
+  type DosificacionReview,
   type Guia,
   type ImportRow,
   type Issue,
@@ -33,6 +34,7 @@ import {
   hasErrors,
   parseJson,
   parseLote,
+  reviewDosificacion,
   reviewGuia,
   reviewItems,
 } from "../lib/validation";
@@ -41,6 +43,7 @@ import {
   type ImportPlan,
   getExistentes,
   getMaterias,
+  guardarDosificacion,
   importChunk,
   loadMaterias,
   planImport,
@@ -59,7 +62,7 @@ type Filter = "error" | "aviso" | "fix" | "ok" | "all";
 type Status =
   | { kind: "idle" }
   | { kind: "importing"; done: number; total: number }
-  | { kind: "done"; result: ImportPlan; omitidas: number }
+  | { kind: "done"; result: ImportPlan; omitidas: number; dosificacion: number }
   | { kind: "error"; message: string; result: ImportPlan };
 
 const rowLevel = (r: ImportRow): "error" | "aviso" | "ok" => (hasErrors(r.issues) ? "error" : r.issues.length ? "aviso" : "ok");
@@ -150,6 +153,19 @@ export function BulkImportTab({
   }, [inst, guia, rows]);
   const faltanSugeridas = sugeridas.filter((c) => !destinos.includes(c));
   const ready = Boolean(inst && destinos.length > 0);
+  // Dosificación del examen (guia.dosificacion): se guarda para las carreras del paso 1.
+  const dosificacion = React.useMemo(
+    () =>
+      items
+        ? reviewDosificacion(guia, items, {
+            materias: getMaterias(),
+            institucion: institucion ?? "",
+            carrerasElegidas: (inst?.carreras ?? []).filter((c) => destinos.includes(c.id)).map((c) => c.nombre),
+          })
+        : null,
+    [items, guia, institucion, inst, destinos]
+  );
+  const dosificacionError = Boolean(dosificacion && !dosificacion.porClave);
 
   /** Guarda los cambios en el lote conservando el formato original (lista o { guia, reactivos }). */
   const commit = (next: unknown[]) => {
@@ -246,7 +262,7 @@ export function BulkImportTab({
   }, [rows]);
 
   const runImport = async () => {
-    if (!plan) return;
+    if (!plan || dosificacionError) return;
     const toWrite = drafts.filter((d) => plan.kinds.get(d.id) !== "sinCambios");
     const result: ImportPlan = { nuevas: 0, actualizadas: 0, sinCambios: plan.counts.sinCambios };
     setStatus({ kind: "importing", done: 0, total: toWrite.length });
@@ -264,6 +280,15 @@ export function BulkImportTab({
       onImported();
       return;
     }
+    // Después de los reactivos: así ya existen las materias nuevas que la dosificación menciona.
+    if (dosificacion?.porClave)
+      try {
+        await guardarDosificacion(destinos, { ...dosificacion, porClave: dosificacion.porClave, archivo: fileName ?? "lote.json" });
+      } catch (e) {
+        setStatus({ kind: "error", message: `Reactivos guardados, pero la dosificación no: ${e instanceof Error ? e.message : e}`, result });
+        onImported();
+        return;
+      }
     const omitidas = rows.length - valid.length;
     await registrarLote({
       archivo: fileName ?? "lote.json",
@@ -274,7 +299,7 @@ export function BulkImportTab({
       resultado: result,
     }).catch(() => undefined);
     await loadMaterias().catch(() => undefined);
-    setStatus({ kind: "done", result, omitidas });
+    setStatus({ kind: "done", result, omitidas, dosificacion: dosificacion?.porClave ? destinos.length : 0 });
     onImported();
   };
 
@@ -432,6 +457,7 @@ export function BulkImportTab({
           {/* 3. Validación */}
           <Step n={3} title="Validación">
             {guia && <GuiaCard guia={guia} issues={guiaIssues} />}
+            {guia && <DosificacionCard review={dosificacion} carreras={destinos.length} />}
             <LoteSummary rows={rows} />
             {faltanSugeridas.length > 0 && (
               <p className="flex flex-wrap items-center gap-2 rounded-xl border border-gold/40 bg-gold/10 p-3 text-sm">
@@ -563,6 +589,8 @@ export function BulkImportTab({
                     <CheckCircle2 className="size-4 shrink-0" /> Listo: {status.result.nuevas} nuevas, {status.result.actualizadas}{" "}
                     actualizadas, {status.result.sinCambios} sin cambios
                     {status.omitidas ? `, ${status.omitidas} omitidas por errores` : ""}.
+                    {status.dosificacion > 0 &&
+                      ` Dosificación guardada para ${status.dosificacion} ${status.dosificacion === 1 ? "carrera" : "carreras"}.`}
                   </p>
                 ) : status.kind === "importing" ? (
                   <p className="text-muted-foreground">
@@ -576,6 +604,8 @@ export function BulkImportTab({
                       puedes reintentar sin duplicar.
                     </span>
                   </p>
+                ) : dosificacionError ? (
+                  <p className="text-destructive">Corrige la dosificación de la guía para poder guardar.</p>
                 ) : planError ? (
                   <p className="text-destructive">No se pudo consultar el banco: {planError}</p>
                 ) : !plan ? (
@@ -592,8 +622,14 @@ export function BulkImportTab({
                   </p>
                 )}
               </div>
-              <Button type="button" size="lg" disabled={busy || !ready || status.kind === "done" || toImport === 0} onClick={runImport}>
-                {status.kind === "importing" ? <Loader2 className="animate-spin" /> : <Upload />} Importar {toImport} reactivos
+              <Button
+                type="button"
+                size="lg"
+                disabled={busy || !ready || !plan || status.kind === "done" || dosificacionError || (toImport === 0 && !dosificacion)}
+                onClick={runImport}
+              >
+                {status.kind === "importing" ? <Loader2 className="animate-spin" /> : <Upload />}{" "}
+                {toImport > 0 ? `Importar ${toImport} reactivos` : "Guardar dosificación"}
               </Button>
             </div>
           </div>
@@ -822,6 +858,75 @@ function GuiaCard({ guia, issues }: { guia: Guia; issues: string[] }) {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/** Qué % del examen oficial corresponde a cada materia y cuántos reactivos de cada una trae el lote. */
+function DosificacionCard({ review, carreras }: { review: DosificacionReview | null; carreras: number }) {
+  if (!review)
+    return (
+      <p className="flex items-start gap-2 rounded-xl border border-gold/40 bg-gold/10 p-3 text-sm">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-gold" />
+        <span>
+          La guía no trae <span className="font-mono text-xs">dosificacion</span>. Las carreras conservan la que ya tenían; si no tienen,
+          los exámenes reparten las preguntas en partes iguales entre materias.
+        </span>
+      </p>
+    );
+  const errores = review.issues.filter((i) => i.level === "error");
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border bg-background/40 p-3 text-sm">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-semibold">Dosificación del examen</span>
+        <span
+          className={cn(
+            "rounded-md px-1.5 py-0.5 text-xs font-medium",
+            review.metodo === "oficial" ? "bg-secondary/15 text-secondary" : "bg-gold/15 text-gold"
+          )}
+        >
+          {review.metodo === "oficial" ? "Oficial" : "Estimada"}
+        </span>
+        <span className="text-muted-foreground">
+          {[review.fuente, review.totalOficial ? `${review.totalOficial} reactivos en el examen real` : null].filter(Boolean).join(" · ")}
+        </span>
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        {review.materias.map((m) => (
+          <li key={m.nombre} className="grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[12rem_minmax(0,1fr)_3.5rem_9rem]">
+            <span className="min-w-0 truncate">
+              {m.nombre} {m.clave && <span className="font-mono text-xs text-muted-foreground">{m.clave}</span>}
+            </span>
+            <span className="hidden h-1.5 overflow-hidden rounded-full bg-muted sm:block">
+              <span className="block h-full rounded-full bg-secondary" style={{ width: `${Math.min(100, Math.max(0, m.porcentaje))}%` }} />
+            </span>
+            <span className="text-right font-mono text-xs tabular-nums">{Number.isFinite(m.porcentaje) ? m.porcentaje.toFixed(1) : "?"} %</span>
+            <span className={cn("col-span-2 text-xs sm:col-span-1 sm:text-right", m.enLote === 0 && m.porcentaje > 0 ? "text-gold" : "text-muted-foreground")}>
+              {m.enLote === 0 ? (m.porcentaje > 0 ? "Sin reactivos en este lote" : "—") : `${m.enLote} en el lote`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {review.issues.length > 0 && (
+        <ul className="flex flex-col gap-1 text-xs">
+          {review.issues.map((i) => (
+            <li key={i.message} className="flex items-start gap-1.5">
+              {i.level === "error" ? (
+                <XCircle className="mt-px size-3.5 shrink-0 text-destructive" />
+              ) : (
+                <AlertTriangle className="mt-px size-3.5 shrink-0 text-gold" />
+              )}
+              {i.message}
+            </li>
+          ))}
+        </ul>
+      )}
+      {errores.length === 0 && (
+        <p className="flex items-center gap-1.5 text-xs text-secondary">
+          <CheckCircle2 className="size-3.5" /> Suma 100.0 %. Al guardar reemplaza la dosificación de {carreras}{" "}
+          {carreras === 1 ? "carrera" : "carreras"}.
+        </p>
       )}
     </div>
   );

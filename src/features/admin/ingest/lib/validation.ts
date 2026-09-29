@@ -281,3 +281,103 @@ export function parseLote(
 }
 
 export const hasErrors = (issues: Issue[]) => issues.some((i) => i.level === "error");
+
+/* ─────────────────────────── Dosificación (guia.dosificacion) ─────────────────────────── */
+
+export type DosificacionMateria = {
+  /** Nombre tal como viene en porMateria. */
+  nombre: string;
+  /** Clave del banco (MAT…); null si no se pudo identificar. */
+  clave: string | null;
+  porcentaje: number;
+  /** Reactivos de esa materia en este lote (0 = falta cargarlas). */
+  enLote: number;
+};
+
+export type DosificacionReview = {
+  materias: DosificacionMateria[];
+  metodo: "oficial" | "estimado";
+  fuente: string;
+  totalOficial: number | null;
+  carreras: string[];
+  issues: Issue[];
+  /** Lista para guardar: { clave: % } (null si hay errores). */
+  porClave: Record<string, number> | null;
+};
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * Revisa el bloque "dosificacion" de la guía: % del examen oficial por materia (suma 100.0, un decimal),
+ * con todas las materias del lote y los mismos nombres que configuracionExamen.materia.
+ * `carrerasElegidas`: nombres de las carreras marcadas en el paso 1 (a ellas se les guarda).
+ * Devuelve null si el lote no trae dosificación.
+ */
+export function reviewDosificacion(
+  guia: Guia | null,
+  items: unknown[],
+  { materias, institucion, carrerasElegidas }: { materias: Materia[]; institucion: string; carrerasElegidas: string[] }
+): DosificacionReview | null {
+  const d = guia?.dosificacion;
+  if (!isObj(d)) return null;
+  const issues: Issue[] = [];
+  const add = (level: Issue["level"], message: string) => issues.push({ level, field: "dosificacion", message });
+
+  // Materias del lote: nombre de configuracionExamen → clave del ID, y cuántos reactivos trae.
+  const lote = new Map<string, { clave: string; n: number }>();
+  for (const x of items.filter(isObj)) {
+    const nombre = str(isObj(x.configuracionExamen) ? x.configuracionExamen.materia : "").trim() || str(guia?.materia).trim();
+    const clave = parseId(str(isObj(x.reactivo) ? x.reactivo.id : "").trim())?.materia ?? "";
+    if (!nombre) continue;
+    const prev = lote.get(nombre);
+    lote.set(nombre, { clave: prev?.clave || clave, n: (prev?.n ?? 0) + 1 });
+  }
+
+  const por = isObj(d.porMateria) ? d.porMateria : null;
+  if (!por || Object.keys(por).length === 0) add("error", "Falta porMateria (porcentaje de cada materia).");
+  const lista: DosificacionMateria[] = Object.entries(por ?? {}).map(([nombre, v]) => {
+    const exacto = lote.get(nombre);
+    const parecido = exacto ? null : [...lote].find(([n]) => normalize(n) === normalize(nombre));
+    const clave =
+      exacto?.clave || parecido?.[1].clave || materias.find((m) => normalize(m.nombre) === normalize(nombre))?.clave || null;
+    const porcentaje = typeof v === "number" ? v : NaN;
+    if (!Number.isFinite(porcentaje) || porcentaje < 0 || porcentaje > 100) add("error", `${nombre}: el porcentaje debe ser un número de 0 a 100.`);
+    else if (round1(porcentaje) !== porcentaje) add("aviso", `${nombre}: ${porcentaje} lleva más de un decimal.`);
+    if (!clave) add("error", `«${nombre}» no está en el catálogo de materias ni en los reactivos del lote.`);
+    if (parecido) add("aviso", `«${nombre}» se escribe distinto en los reactivos («${parecido[0]}»); usa el mismo nombre.`);
+    return { nombre, clave, porcentaje, enLote: exacto?.n ?? parecido?.[1].n ?? 0 };
+  });
+
+  const suma = round1(lista.reduce((s, m) => s + (Number.isFinite(m.porcentaje) ? m.porcentaje : 0), 0));
+  if (por && suma !== 100) add("error", `Los porcentajes suman ${suma.toFixed(1)} y deben sumar 100.0.`);
+  for (const [nombre] of lote)
+    if (!(nombre in (por ?? {})) && !lista.some((m) => normalize(m.nombre) === normalize(nombre)))
+      add("error", `La materia «${nombre}» tiene reactivos en el lote pero no aparece en porMateria.`);
+  const repetidas = lista.filter((m, i) => m.clave && lista.findIndex((o) => o.clave === m.clave) !== i);
+  for (const m of repetidas) add("error", `«${m.nombre}» es la misma materia (${m.clave}) que otra de la lista.`);
+
+  const metodo = d.metodo === "oficial" || d.metodo === "estimado" ? d.metodo : "estimado";
+  if (d.metodo !== metodo) add("aviso", `metodo debe ser "oficial" o "estimado"; se guardará como estimado.`);
+  const total = d.totalReactivosExamenOficial;
+  const totalOficial = typeof total === "number" && Number.isInteger(total) && total > 0 ? total : null;
+  if (totalOficial === null) add("aviso", "totalReactivosExamenOficial debe ser un entero mayor que 0.");
+  const clave = str(d.claveInstitucion).trim().toUpperCase();
+  if (clave && institucion && clave !== institucion) add("aviso", `La dosificación es de ${clave} pero el lote se asigna a ${institucion}.`);
+
+  const carreras = Array.isArray(d.carreras) ? d.carreras.map(str).filter(Boolean) : [];
+  const elegidas = new Set(carrerasElegidas.map(normalize));
+  const fuera = carreras.filter((c) => !elegidas.has(normalize(c)));
+  if (fuera.length)
+    add("aviso", `La guía menciona ${fuera.length === 1 ? "una carrera que no marcaste" : `${fuera.length} carreras que no marcaste`}: ${fuera.join(", ")}.`);
+
+  const ok = !issues.some((i) => i.level === "error");
+  return {
+    materias: lista,
+    metodo,
+    fuente: str(d.fuente),
+    totalOficial,
+    carreras,
+    issues,
+    porClave: ok ? Object.fromEntries(lista.map((m) => [m.clave!, round1(m.porcentaje)])) : null,
+  };
+}
