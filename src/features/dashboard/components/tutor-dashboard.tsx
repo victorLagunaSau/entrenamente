@@ -28,7 +28,7 @@ export const TUTOR_TABS = [
 export function TutorDashboard({ children }: { children: React.ReactNode }) {
   return (
     <ModeGuard mode="parent">
-      <PanelShell>
+      <PanelShell footer={<TutorBottomNav />}>
         <TutorProvider>
           <div className="flex flex-col gap-6">
             <ModeSwitcher />
@@ -127,11 +127,12 @@ function TrialPlanSelect() {
   );
 }
 
+/** PC y iPad horizontal: las tres secciones arriba. En celular y iPad vertical van abajo (TutorBottomNav). */
 function TutorTabs() {
   const pathname = usePathname().replace(/\/$/, "") || "/";
   return (
-    <nav aria-label="Secciones del panel" className="print:hidden">
-      <ul className="grid h-14 w-full grid-cols-3 gap-1 rounded-2xl border bg-muted/60 p-1.5 sm:h-16">
+    <nav aria-label="Secciones del panel" className="hidden lg:block print:hidden">
+      <ul className="grid h-16 w-full grid-cols-3 gap-1 rounded-2xl border bg-muted/60 p-1.5">
         {TUTOR_TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
@@ -140,14 +141,54 @@ function TutorTabs() {
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-full w-full items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold whitespace-nowrap transition-all outline-none sm:text-lg",
+                  "flex h-full w-full items-center justify-center gap-2 rounded-xl px-2 text-lg font-semibold whitespace-nowrap transition-all outline-none",
                   "focus-visible:ring-[3px] focus-visible:ring-ring/50",
                   active
                     ? "bg-brand-gradient text-white shadow-glow-secondary"
                     : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
                 )}
               >
-                <tab.icon className="size-4 max-[380px]:hidden sm:size-5" aria-hidden />
+                <tab.icon className="size-5" aria-hidden />
+                {tab.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/** Celular y iPad vertical: menú de app fijo abajo con las tres secciones. */
+function TutorBottomNav() {
+  const pathname = usePathname().replace(/\/$/, "") || "/";
+  return (
+    <nav
+      aria-label="Secciones del panel"
+      className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/90 backdrop-blur lg:hidden print:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <ul className="mx-auto grid h-16 max-w-xl grid-cols-3">
+        {TUTOR_TABS.map((tab) => {
+          const active = pathname === tab.href;
+          return (
+            <li key={tab.href}>
+              <Link
+                href={tab.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex h-full w-full flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                  active ? "text-secondary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid h-8 w-14 place-items-center rounded-full transition-colors",
+                    active && "bg-brand-gradient text-white shadow-glow-secondary"
+                  )}
+                >
+                  <tab.icon className="size-5" aria-hidden />
+                </span>
                 {tab.label}
               </Link>
             </li>
