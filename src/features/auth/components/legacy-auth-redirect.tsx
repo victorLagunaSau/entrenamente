@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 /**
  * /auth ya no tiene pantalla propia: reenvía los enlaces antiguos a su módulo.
- * - ?invite_code=… (invitación de un padre/tutor) y ?mode=register → /registro
+ * - ?invite=… / ?invite_code=… (invitación de un padre, tutor o maestro) y ?mode=register → /registro
  * - ?mode=recover → /login/recuperar · ?mode=update → /login/nueva-contrasena
  * - cualquier otro (incluye ?next=) → /login
  */
@@ -14,7 +14,7 @@ export function LegacyAuthRedirect() {
   const params = useSearchParams();
 
   useEffect(() => {
-    const code = params.get("invite_code");
+    const code = params.get("invite") ?? params.get("invite_code");
     const mode = params.get("mode");
     const plan = params.get("plan");
     const next = params.get("next");

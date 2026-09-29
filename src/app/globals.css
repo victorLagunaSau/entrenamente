@@ -353,3 +353,22 @@ html {
     animation: none !important;
   }
 }
+
+/* Reporte PDF del home Padre / Maestro: al imprimir solo se ve #tutor-report, con los colores de la marca. */
+@media print {
+  @page {
+    size: letter;
+    margin: 12mm;
+  }
+  body:has(#tutor-report) > *:not(#tutor-report) {
+    display: none !important;
+  }
+  #tutor-report {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  html:has(#tutor-report),
+  body:has(#tutor-report) {
+    background: var(--background);
+  }
+}

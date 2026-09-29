@@ -11,6 +11,9 @@ export const FLOW_STEPS: Record<Flow, StepId[]> = {
   invited: ["name", "account", "extra", "success"],
 };
 
+/** Invitación de licencia (home del tutor): no trae meta, así que el estudiante elige escuela y carrera. */
+export const INVITED_OPEN_STEPS: StepId[] = ["name", "account", "university", "career", "extra", "success"];
+
 export const STEP_TITLES: Record<StepId, string> = {
   profile: "Perfil",
   name: "Tu nombre",
