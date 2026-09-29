@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { ANNUAL_DISCOUNT, formatMxn, TUTOR_PLANS } from "../lib/tutor-plans";
 import { trialDaysLeft } from "./student-trial";
 import { useTutor } from "./tutor-context";
-import { moduleProps } from "./tutor-nav";
 
 const STEPS = ["Elige tu plan", "Paga seguro", "¡Listo! Acceso ilimitado"];
 
@@ -35,7 +34,6 @@ export function NoPlanHero({ scroll, compact }: { scroll?: boolean; compact?: bo
   if (compact) {
     return (
       <section
-        {...moduleProps("activar", "Activa tu plan")}
         aria-labelledby="no-plan-title"
         className="rounded-2xl bg-[linear-gradient(135deg,var(--gold),var(--secondary)_45%,var(--primary))] p-px"
       >
@@ -68,7 +66,6 @@ export function NoPlanHero({ scroll, compact }: { scroll?: boolean; compact?: bo
 
   return (
     <section
-      {...moduleProps("activar", "Activa tu plan")}
       aria-labelledby="no-plan-title"
       className="relative rounded-3xl bg-[linear-gradient(135deg,var(--gold),var(--secondary)_45%,var(--primary))] p-px shadow-[0_0_60px_-20px_rgb(18_194_169/0.6)]"
     >

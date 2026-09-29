@@ -12,7 +12,6 @@ import { formatScore } from "@/features/exam/types";
 import { cn } from "@/lib/utils";
 
 import { getTutorExamRecord, type TutorExam, type TutorStudent } from "../services/tutor-service";
-import { moduleProps } from "./tutor-nav";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", { dateStyle: "long", timeStyle: "short" });
 
@@ -42,7 +41,7 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
   }, [requested, initial]);
 
   return (
-    <section ref={sectionRef} {...moduleProps("pruebas", "Pruebas gratis")} aria-labelledby="free-exams-title" className="flex scroll-mt-20 flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
+    <section ref={sectionRef} aria-labelledby="free-exams-title" className="flex scroll-mt-20 flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
           <Gift className="size-5" aria-hidden />

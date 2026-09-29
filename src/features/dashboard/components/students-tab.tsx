@@ -16,7 +16,6 @@ import { articleFor, Avatar, examAccuracy, PerformanceAlert, wrongOf } from "./s
 import { StudentMonitor } from "./student-monitor";
 import { AccessBadge, ActivateWithPlan, TrialMeter } from "./student-trial";
 import { useTutor } from "./tutor-context";
-import { moduleProps } from "./tutor-nav";
 import { InactiveWall } from "./tutor-dashboard";
 
 /** Pestaña Estudiantes: sin plan, la ficha de prueba del estudiante; con plan, el monitoreo de cada uno. */
@@ -96,7 +95,7 @@ function StudentsList() {
 
   const limit = studentLimit(panel!);
   return (
-    <section {...moduleProps("estudiante", "Tu estudiante")} aria-labelledby="students-title" className="flex flex-col gap-3">
+    <section aria-labelledby="students-title" className="flex flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="students-title" className="text-lg font-bold">
@@ -224,7 +223,7 @@ function StudentSpotlight({ student, pulse, locked }: { student: TutorStudent; p
       </div>
 
       <div className="grid gap-5 border-t p-5 sm:p-7 lg:grid-cols-[1.1fr_1fr]">
-        <div {...moduleProps("evaluaciones", "Evaluaciones")} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           <h4 className="font-bold">Estatus de sus evaluaciones</h4>
           <ExamStatus student={student} pulse={pulse} />
           {pulse && pulse.exams > 0 && pulse.accuracy !== null && <PerformanceAlert alias={student.alias} accuracy={pulse.accuracy} />}
@@ -284,7 +283,7 @@ const UNLOCKS = [
 /** Lo que desbloquea el plan: tres tarjetas con su "Activar ahora". */
 function UnlockCards() {
   return (
-    <ul {...moduleProps("con-tu-plan", "Con tu plan")} className="grid gap-3 md:grid-cols-3">
+    <ul className="grid gap-3 md:grid-cols-3">
       {UNLOCKS.map((u) => (
         <li
           key={u.title}

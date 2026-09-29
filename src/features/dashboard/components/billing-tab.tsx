@@ -27,7 +27,6 @@ import {
 import type { TutorLicense } from "../services/tutor-service";
 import { NoPlanHero } from "./no-plan-hero";
 import { useTutor } from "./tutor-context";
-import { moduleProps } from "./tutor-nav";
 
 const SOURCE: Record<TutorLicense["source"], string> = {
   stripe: "Pago con tarjeta",
@@ -62,7 +61,7 @@ export function BillingTab() {
       {!license ? (
         <NoPlanHero scroll />
       ) : (
-      <section {...moduleProps("tu-plan", "Tu plan")} aria-labelledby="plan-title" className="flex flex-col gap-4 rounded-2xl border bg-card p-5">
+      <section aria-labelledby="plan-title" className="flex flex-col gap-4 rounded-2xl border bg-card p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-brand-light">
             <CreditCard className="size-5" aria-hidden />
@@ -118,7 +117,7 @@ export function BillingTab() {
 
       {/* Con plan activo no se muestra el catálogo: solo sus datos y la oferta para sumar estudiantes. */}
       {(!license || lapsed) && (
-      <section {...moduleProps("planes", "Planes")} aria-labelledby="plans-title" className="flex flex-col gap-3">
+      <section aria-labelledby="plans-title" className="flex flex-col gap-3">
         <div>
           <h2 id="plans-title" className="text-lg font-bold">
             {license ? "Mejorar Plan / Agregar más Estudiantes" : "Elige tu plan"}
@@ -157,7 +156,6 @@ function UpgradeOffers() {
 
   return (
     <section
-      {...moduleProps("ampliar", "Agregar estudiantes")}
       aria-labelledby="upgrade-title"
       className="relative overflow-hidden rounded-3xl bg-[linear-gradient(135deg,var(--secondary),var(--primary))] p-px shadow-[0_0_60px_-24px_rgb(18_194_169/0.7)]"
     >
