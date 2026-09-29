@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { BarChart3, CircleAlert, CreditCard, Loader2, TriangleAlert, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ModeGuard } from "@/features/modes/components/mode-guard";
+import { ModeGuard, useMode } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 import { cn } from "@/lib/utils";
@@ -59,10 +59,11 @@ function TutorHeader() {
 type TrialMode = "demo" | "familiar";
 
 /**
- * TEMPORAL (pruebas con grupo de enfoque, sin procesador de pagos): cambia la cuenta entre Modo demo y un
- * Plan Familiar de prueba REAL en la base (5 lugares, 30 días). Se quita cuando se conecten los pagos.
+ * TEMPORAL (pruebas con grupo de enfoque, sin procesador de pagos), solo administradores: cambia su cuenta entre
+ * Modo demo y un Plan Familiar de prueba REAL en la base (5 lugares, 30 días). Se quita cuando se conecten los pagos.
  */
 function TrialPlanSelect() {
+  const { viewer } = useMode();
   const { panel, reload } = useTutor();
   const [busy, setBusy] = React.useState<TrialMode | null>(null);
   const [error, setError] = React.useState("");
@@ -82,7 +83,8 @@ function TrialPlanSelect() {
     }
   };
 
-  if (!panel) return null;
+  // Solo administradores (la función también lo exige en la base).
+  if (!panel || viewer.userType !== "admin") return null;
   return (
     <div className="flex flex-col items-start gap-1 sm:items-end print:hidden">
       <div
@@ -129,21 +131,23 @@ function TutorTabs() {
   const pathname = usePathname().replace(/\/$/, "") || "/";
   return (
     <nav aria-label="Secciones del panel" className="print:hidden">
-      <ul className="inline-flex h-11 w-full items-center rounded-lg bg-muted p-1 text-muted-foreground sm:w-auto">
+      <ul className="grid h-14 w-full grid-cols-3 gap-1 rounded-2xl border bg-muted/60 p-1.5 sm:h-16">
         {TUTOR_TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
-            <li key={tab.href} className="h-full flex-1 sm:flex-none">
+            <li key={tab.href} className="h-full">
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-full w-full items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-all outline-none sm:px-4",
-                  "hover:text-cool focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  active && "bg-background text-brand-light shadow-sm"
+                  "flex h-full w-full items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold whitespace-nowrap transition-all outline-none sm:text-lg",
+                  "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                  active
+                    ? "bg-brand-gradient text-white shadow-glow-secondary"
+                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
                 )}
               >
-                <tab.icon className="size-4 max-[380px]:hidden" aria-hidden />
+                <tab.icon className="size-4 max-[380px]:hidden sm:size-5" aria-hidden />
                 {tab.label}
               </Link>
             </li>
