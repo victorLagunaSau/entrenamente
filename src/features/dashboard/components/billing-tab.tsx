@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CalendarClock, Check, CreditCard, Eye, HeartHandshake, Minus, PiggyBank, Plus, Sparkles, Star, TriangleAlert, Users } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, CreditCard, Eye, HeartHandshake, Minus, PiggyBank, Plus, Sparkles, Star, TriangleAlert, UserPlus, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ import {
   savingsOf,
   TUTOR_COPY,
   TUTOR_PLANS,
+  upgradeOffers,
   type PlanChoice,
   type TutorKind,
   type TutorPlan,
@@ -112,6 +113,8 @@ export function BillingTab() {
       </section>
       )}
 
+      {license?.active && <UpgradeOffers />}
+
       <section aria-labelledby="plans-title" className="flex flex-col gap-3">
         <div>
           <h2 id="plans-title" className="text-lg font-bold">
@@ -119,7 +122,7 @@ export function BillingTab() {
           </h2>
           <p className="text-sm text-muted-foreground">Precios en pesos mexicanos. Paga mes a mes o por un año con {Math.round(ANNUAL_DISCOUNT * 100)} % de descuento.</p>
         </div>
-        {kind === "parent" && <WhyTutor />}
+        {kind === "parent" && !license && <WhyTutor />}
         <ul className={cn("grid gap-3", plans.length === 3 ? "lg:grid-cols-3" : "sm:grid-cols-2")}>
           {plans.map((p) => (
             <PlanCard
@@ -134,6 +137,88 @@ export function BillingTab() {
         </ul>
       </section>
     </div>
+  );
+}
+
+/**
+ * Con plan activo: invitación a sumar estudiantes pagando solo la diferencia (Tutor → Dúo, Dúo → Familia…).
+ * Cada oferta paga directo, mensual o anual.
+ */
+function UpgradeOffers() {
+  const { kind, panel } = useTutor();
+  const license = panel!.license!;
+  const offers = upgradeOffers(kind, license);
+  if (offers.length === 0) return null;
+  const current = currentChoice(kind, license)!;
+
+  return (
+    <section
+      aria-labelledby="upgrade-title"
+      className="relative overflow-hidden rounded-3xl bg-[linear-gradient(135deg,var(--secondary),var(--primary))] p-px shadow-[0_0_60px_-24px_rgb(18_194_169/0.7)]"
+    >
+      <div className="relative flex flex-col gap-5 rounded-[calc(1.5rem-1px)] bg-card p-5 sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute -top-24 -right-20 size-72 rounded-full bg-secondary/15 blur-3xl" />
+        <div className="relative flex items-start gap-3">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-gradient text-white shadow-glow-secondary">
+            <UserPlus className="size-6" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <h2 id="upgrade-title" className="font-display text-xl font-bold text-balance sm:text-2xl">
+              ¿Alguien más en casa se prepara para su examen?
+            </h2>
+            <p className="text-sm text-cool text-pretty">
+              Hoy pagas {formatMxn(priceOf(current))} al mes por {current.seats}{" "}
+              {current.seats === 1 ? "estudiante" : "estudiantes"}. Suma a otro y paga solo la diferencia: tus estudiantes
+              actuales conservan su lugar.
+            </p>
+          </div>
+        </div>
+
+        <ul className="relative grid gap-3 md:grid-cols-2">
+          {offers.map((o, i) => (
+            <li
+              key={`${o.choice.plan.id}-${o.choice.seats}`}
+              className={cn("flex flex-col gap-4 rounded-2xl border bg-background/40 p-5", i === 0 && "border-secondary/50")}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold tracking-wide text-secondary uppercase">
+                    {o.added === 1 ? "Agrega un estudiante más" : `Agrega ${o.added} estudiantes más`}
+                  </p>
+                  <h3 className="text-lg font-bold">
+                    {o.choice.plan.name}
+                    {o.choice.plan.perStudent && ` · ${o.choice.seats} estudiantes`}
+                  </h3>
+                </div>
+                {i === 0 && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary/15 px-2.5 py-0.5 text-xs text-secondary">
+                    <Sparkles className="size-3" aria-hidden /> Recomendado
+                  </span>
+                )}
+              </div>
+              <p className="text-cool">
+                Paga solo{" "}
+                <span className="font-display text-4xl font-bold text-foreground tabular-nums">+{formatMxn(o.extra)}</span> al mes
+              </p>
+              <p className="-mt-2 text-sm text-muted-foreground">
+                Total {formatMxn(priceOf(o.choice))} al mes o {formatMxn(annualPriceOf(o.choice))} por un año
+                {savingsOf(kind, o.choice) > 0 && ` · ahorras ${formatMxn(savingsOf(kind, o.choice))} al mes frente a planes individuales`}
+              </p>
+              <div className="mt-auto flex flex-col gap-2 sm:flex-row">
+                <Button asChild variant={i === 0 ? "brand" : "outline"} className="group flex-1">
+                  <Link href={checkoutHref(o.choice, "mensual")}>
+                    Agregar y pagar mensual <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost" className="flex-1 text-secondary hover:text-secondary">
+                  <Link href={checkoutHref(o.choice, "anual")}>Pago anual −{Math.round(ANNUAL_DISCOUNT * 100)} %</Link>
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 

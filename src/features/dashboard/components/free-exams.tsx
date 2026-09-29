@@ -103,8 +103,8 @@ export function FreeExams({ student, exams }: { student: TutorStudent; exams: Tu
   );
 }
 
-/** Resumen final de un examen congelado + guía de estudio (fallas). Descargar: no disponible sin plan. */
-function ExamSummary({ examId }: { examId: number }) {
+/** Resumen final de un examen congelado + guía de estudio (fallas). Descargar: no disponible sin plan (`demo`). */
+export function ExamSummary({ examId, demo = true }: { examId: number; demo?: boolean }) {
   const [record, setRecord] = React.useState<ExamRecord | null | "error">(null);
 
   React.useEffect(() => {
@@ -201,9 +201,11 @@ function ExamSummary({ examId }: { examId: number }) {
               {fallas.length === 0 ? "· ¡sin fallas!" : `· ${fallas.length} por repasar`}
             </span>
           </h4>
-          <Button variant="outline" size="sm" disabled title="Disponible con tu plan">
-            <Download /> Descargar <span className="text-xs font-normal">(no disponible)</span> <Lock className="size-3.5" />
-          </Button>
+          {demo && (
+            <Button variant="outline" size="sm" disabled title="Disponible con tu plan">
+              <Download /> Descargar <span className="text-xs font-normal">(no disponible)</span> <Lock className="size-3.5" />
+            </Button>
+          )}
         </div>
         {groups.map(([materia, list]) => (
           <MateriaGroup key={materia} name={materia} count={list.length} summary={`${list.length} por repasar`}>
