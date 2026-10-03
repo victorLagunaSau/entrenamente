@@ -5,11 +5,13 @@
  * invitación trae una licencia con lugar libre, asigna ese lugar. El apodo vacío se
  * completa en el servidor con el primer nombre.
  *
- * Siguen SIMULADOS: el envío de la invitación por correo y Stripe Checkout.
+ * La invitación la manda el propio padre (WhatsApp, correo o menú de compartir).
+ * Sigue SIMULADO: Stripe Checkout.
  */
 
 import { authErrorMessage } from "@/features/auth/services/auth-service";
 import { PRIVACY_VERSION } from "@/features/legal/content";
+import { inviteUrl } from "@/features/invitacion/lib/invite-link";
 import { authCallbackUrl, supabase } from "@/lib/supabase/client";
 
 import type { AccountData, ExtraData, GoalData, Invite, PlanId } from "../types";
@@ -18,9 +20,6 @@ import type { AccountData, ExtraData, GoalData, Invite, PlanId } from "../types"
 export class RegistrationError extends Error {}
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-// El enlace sigue el formato del spec (/auth?invite_code=…); /auth lo redirige al wizard.
-const inviteUrl = (code: string) => `${window.location.origin}/auth?invite_code=${code}`;
 
 // Mismo alfabeto que valida la tabla `invites` (sin I, O, 0 ni 1).
 function newCode() {
@@ -109,14 +108,9 @@ export async function registerParent(input: { account: AccountData; goal: GoalDa
   );
   return {
     ...result,
-    // Aún sin licencia pagada: la invitación liga la meta; el lugar se asigna al pagar el paquete.
+    // Enlace reutilizable con la meta del padre; si después activa un plan, el estudiante ocupa su lugar al registrarse.
     invite: { code, url: inviteUrl(code), parentName: input.account.fullName.trim(), goal: input.goal, sponsored: false },
   };
-}
-
-export async function sendInviteEmail(code: string, to: string): Promise<void> {
-  await wait(800);
-  console.info(`[mock] Invitación ${code} enviada a ${to}`);
 }
 
 /** Simula Stripe Checkout. `simulateFailure` reproduce una tarjeta rechazada. */

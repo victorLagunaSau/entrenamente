@@ -6,6 +6,7 @@
 import type { ExamRecord, Nivel } from "@/features/exam/lib/libre";
 import type { PlanDraft, PlanSession, StudentPlan } from "@/features/plan/lib/plan";
 import { toExamRecord } from "@/features/exam/services/libre-service";
+import { inviteUrl } from "@/features/invitacion/lib/invite-link";
 import { findCareer, findUniversity } from "@/features/registro/data/catalog";
 import { supabase } from "@/lib/supabase/client";
 
@@ -208,12 +209,12 @@ export async function getTutorExamRecord(examId: number): Promise<ExamRecord> {
 /** Cuántos estudiantes puede vincular el tutor: los cupos de su plan vigente; sin plan (demo), 1. */
 export const studentLimit = (panel: TutorPanel) => (panel.license?.active ? panel.license.seats : 1);
 
-/** Enlace de invitación de la licencia vigente. `renew` invalida el anterior y genera otro. */
+/** Enlace de invitación del tutor (el mismo que recibió al registrarse). `renew` invalida el anterior y genera otro. */
 export async function getInviteLink(renew = false): Promise<{ code: string; url: string }> {
   const { data, error } = await supabase.rpc("invitacion_tutor", { p_nuevo: renew });
   if (error) throw error;
   const code = data as string;
-  return { code, url: `${window.location.origin}/auth?invite=${code}` };
+  return { code, url: inviteUrl(code) };
 }
 
 export async function createGroup(name: string): Promise<number> {
