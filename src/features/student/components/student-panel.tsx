@@ -114,7 +114,7 @@ function StudentHome() {
 
   return (
     <>
-      <StudentWelcome summary={summary} streakDays={bestStreak} />
+      <StudentWelcome summary={summary} careers={profileCareers} streakDays={bestStreak} />
       {careers.length > 0 && (
         <>
           <StudyPlanModule plans={plans} canCreate={planCareers.length > 0} onCreate={() => setWizardOpen(true)} />
