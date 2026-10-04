@@ -45,11 +45,11 @@ export function DifficultyBadge({ value }: { value: Dificultad }) {
 /** Punto con el color institucional (si la institución tiene uno). */
 export function InstitucionDot({ clave }: { clave: string }) {
   const { catalogo } = useCatalogo();
-  const colorId = catalogo ? findInstitucion(catalogo, clave)?.colorId : null;
+  const color = catalogo ? findInstitucion(catalogo, clave)?.colorPrimario : null;
   return (
     <span
       className="size-2.5 shrink-0 rounded-full ring-1 ring-white/20"
-      style={{ backgroundColor: colorId ? `var(--uni-${colorId})` : "var(--muted-foreground)" }}
+      style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
     />
   );
 }

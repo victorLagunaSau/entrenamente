@@ -2,13 +2,17 @@
 
 import * as React from "react";
 
+import { schoolVars } from "@/features/identidad";
+
 /**
  * Mimetización visual del examen: mientras el alumno está en el flujo del examen, TODA la interfaz
  * (barra, tarjetas, preguntas, diálogos) toma los colores de la institución. Se aplica sobre <html>
  * para que también alcance a los diálogos (se montan fuera del árbol) y se restaura al salir.
  *
- * Base clara neutra (blanco/gris) + el color institucional (`--uni-*` de globals.css) en la barra,
- * títulos, botones, selección y progreso: UNAM azul, POLI guinda, etc. Da la sensación de estar en su examen.
+ * Base clara neutra (blanco/gris) + los colores de la institución (identidad en Supabase, que
+ * IdentidadProvider inyecta como --uni-<key>*) en la barra, títulos, botones, selección y progreso:
+ * UNAM azul, POLI guinda, etc. Da la sensación de estar en su examen. También expone
+ * --school-primary/-secondary/-accent/-on-primary para componentes que quieran mimetizarse.
  */
 
 type ThemeVars = Record<`--${string}`, string>;
@@ -34,34 +38,41 @@ const NEUTRAL_LIGHT: ThemeVars = {
   "--success": "#1b7a43",
 };
 
-function varsFor(colorId: string | null): ThemeVars {
+function varsFor(key: string | null): ThemeVars {
   // Sin color registrado para la institución: negro.
-  const color = colorId ? `var(--uni-${colorId}, #1a1a1a)` : "#1a1a1a";
+  const school = schoolVars(key) as ThemeVars;
+  const color = school["--school-primary"];
+  const onColor = school["--school-on-primary"];
   return {
     ...NEUTRAL_LIGHT,
+    ...school,
     "--uni-bar": color,
     "--uni-accent": color,
     "--primary": color,
-    "--primary-foreground": "#ffffff",
+    "--primary-foreground": onColor,
     "--secondary": color,
-    "--secondary-foreground": "#ffffff",
+    "--secondary-foreground": onColor,
     "--brand-light": color,
     "--brand-gradient": `linear-gradient(135deg, ${color} 0%, ${color} 100%)`,
     "--ring": color,
   };
 }
 
-/** Aplica el tema institucional mientras el componente esté montado. */
-export function useUniTheme(colorId: string | null | undefined, enabled = true) {
+/**
+ * Aplica el tema institucional mientras el componente esté montado.
+ * `institucion`: id o clave de la institución (null = neutro; undefined = aún no se sabe, no aplica nada).
+ */
+export function useUniTheme(institucion: string | null | undefined, enabled = true) {
+  const key = institucion?.toLowerCase() ?? institucion;
   React.useLayoutEffect(() => {
-    if (!enabled || colorId === undefined) return;
+    if (!enabled || key === undefined) return;
     const root = document.documentElement;
-    const vars = varsFor(colorId);
+    const vars = varsFor(key);
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
-    root.dataset.uniTheme = colorId ?? "neutral";
+    root.dataset.uniTheme = key ?? "neutral";
     return () => {
       for (const k of Object.keys(vars)) root.style.removeProperty(k);
       delete root.dataset.uniTheme;
     };
-  }, [colorId, enabled]);
+  }, [key, enabled]);
 }

@@ -48,14 +48,7 @@
 
   --text-cool: #e2e8f0;
 
-  /* Colores institucionales: solo para identificar universidades (badges, chips), nunca como color de UI. */
-  --uni-unam: #1f3a93;
-  --uni-ipn: #7b1f3a;
-  --uni-poli: var(--uni-ipn);
-  --uni-uam: #d4561a;
-  --uni-uvm: #b91c24;
-  --uni-tec: #1450a0;
-  --uni-udg: #2c3e50;
+  /* Colores institucionales (--uni-<id>, -fg, -2, -accent): los inyecta IdentidadProvider desde Supabase. */
 }
 
 @theme inline {
@@ -84,13 +77,6 @@
   --color-energy: var(--energy);
   --color-gold: var(--gold);
   --color-success: var(--success);
-  --color-uni-unam: var(--uni-unam);
-  --color-uni-ipn: var(--uni-ipn);
-  --color-uni-poli: var(--uni-poli);
-  --color-uni-uam: var(--uni-uam);
-  --color-uni-uvm: var(--uni-uvm);
-  --color-uni-tec: var(--uni-tec);
-  --color-uni-udg: var(--uni-udg);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

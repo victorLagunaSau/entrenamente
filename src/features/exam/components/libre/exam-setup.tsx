@@ -35,7 +35,7 @@ export async function resolveTarget(carreraParam: string | null): Promise<Resolv
   if (!inst || !carrera) return { status: "sin-preguntas", target: null };
 
   const target: ExamTarget = {
-    institucion: { id: inst.id, clave: inst.clave, nombre: inst.nombre, colorId: inst.colorId },
+    institucion: { id: inst.id, clave: inst.clave, nombre: inst.nombre },
     carrera: { id: carrera.id, nombre: carrera.nombre, area: inst.areas.find((a) => a.id === carrera.areaId)?.nombre ?? null },
   };
   const conteo = disponibles.get(carrera.id);

@@ -8,21 +8,13 @@
 
 import type { PostgrestError } from "@supabase/supabase-js";
 
+import { IDENTIDAD_COLUMNS, toIdentidad } from "@/features/identidad/services/identidad-service";
 import { supabase } from "@/lib/supabase/client";
 
 import { byOrden, normalizeName, slugify, uniqueId } from "../lib/catalogo";
 import type { Area, AreaInput, Carrera, CarreraInput, Institucion, InstitucionInput } from "../types";
 
-type InstitucionRow = {
-  id: string;
-  clave: string;
-  nombre: string;
-  tipo: Institucion["tipo"];
-  examen: string | null;
-  color_id: string | null;
-  activo: boolean;
-  orden: number;
-};
+type InstitucionRow = Parameters<typeof toIdentidad>[0];
 type AreaRow = { id: string; institucion_id: string; codigo: string; nombre: string; activo: boolean; orden: number };
 type CarreraRow = { id: string; institucion_id: string; area_id: string | null; nombre: string; activo: boolean; orden: number };
 
@@ -67,7 +59,7 @@ function fail(error: PostgrestError): never {
 /** Instituciones con sus áreas y carreras, ordenadas. */
 export async function getCatalogo({ incluirInactivos = false } = {}): Promise<Institucion[]> {
   const [inst, areas, carreras] = await Promise.all([
-    supabase.from("instituciones").select("id, clave, nombre, tipo, examen, color_id, activo, orden"),
+    supabase.from("instituciones").select(IDENTIDAD_COLUMNS),
     supabase.from("areas").select("id, institucion_id, codigo, nombre, activo, orden"),
     supabase.from("carreras").select("id, institucion_id, area_id, nombre, activo, orden"),
   ]);
@@ -80,14 +72,7 @@ export async function getCatalogo({ incluirInactivos = false } = {}): Promise<In
   return (inst.data as InstitucionRow[])
     .filter(keep)
     .map((r) => ({
-      id: r.id,
-      clave: r.clave,
-      nombre: r.nombre,
-      tipo: r.tipo,
-      examen: r.examen,
-      colorId: r.color_id,
-      activo: r.activo,
-      orden: r.orden,
+      ...toIdentidad(r),
       areas: (areas.data as AreaRow[]).filter((a) => a.institucion_id === r.id && keep(a)).map(toArea).sort(byOrden),
       carreras: (carreras.data as CarreraRow[])
         .filter((c) => c.institucion_id === r.id && keep(c))
@@ -108,7 +93,7 @@ function cleanInstitucion(input: InstitucionInput, catalogo: Institucion[], self
   if (!/^[A-Z0-9]{2,12}$/.test(clave)) throw new CatalogoError("La clave lleva de 2 a 12 letras o números, sin espacios.");
   if (!nombre) throw new CatalogoError("Escribe el nombre.");
   if (catalogo.some((i) => i.id !== selfId && i.clave === clave)) throw new CatalogoError("Ya existe una institución con esa clave.");
-  return { clave, nombre, tipo: input.tipo, examen: input.examen?.trim() || null, colorId: input.colorId || null };
+  return { clave, nombre, tipo: input.tipo, examen: input.examen?.trim() || null };
 }
 
 export async function crearInstitucion(input: InstitucionInput, catalogo: Institucion[]) {
@@ -120,7 +105,7 @@ export async function crearInstitucion(input: InstitucionInput, catalogo: Instit
     nombre: v.nombre,
     tipo: v.tipo,
     examen: v.examen,
-    color_id: v.colorId,
+    sigla: v.clave,
     orden: nextOrden(catalogo, 10),
   });
   if (error) fail(error);
@@ -131,7 +116,7 @@ export async function actualizarInstitucion(id: string, input: InstitucionInput,
   const v = cleanInstitucion(input, catalogo, id);
   const { error } = await supabase
     .from("instituciones")
-    .update({ clave: v.clave, nombre: v.nombre, tipo: v.tipo, examen: v.examen, color_id: v.colorId })
+    .update({ clave: v.clave, nombre: v.nombre, tipo: v.tipo, examen: v.examen })
     .eq("id", id);
   if (error) fail(error);
 }

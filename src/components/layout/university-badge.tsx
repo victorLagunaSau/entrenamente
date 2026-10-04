@@ -1,7 +1,7 @@
-import { cn } from "@/lib/utils";
+"use client";
 
-/** Instituciones con color oficial en globals.css (`--uni-*`). */
-export type UniversityColorId = "unam" | "ipn" | "poli" | "uam" | "uvm" | "tec" | "udg";
+import { useIdentidad } from "@/features/identidad";
+import { cn } from "@/lib/utils";
 
 const SIZES = {
   sm: "h-8 min-w-11 rounded-lg px-2 text-xs",
@@ -10,8 +10,9 @@ const SIZES = {
 } as const;
 
 /**
- * Siglas de una universidad sobre su color institucional (texto blanco).
- * Si no hay color registrado para `id`, usa el marino de marca.
+ * Sigla de una institución sobre su color institucional (identidad en Supabase, ver IdentidadProvider).
+ * `id` puede ser el id o la clave; si la institución tiene sigla registrada, esa reemplaza a `label`.
+ * Sin identidad, usa el marino de marca.
  */
 export function UniversityBadge({
   id,
@@ -24,16 +25,18 @@ export function UniversityBadge({
   size?: keyof typeof SIZES;
   className?: string;
 }) {
+  const identidad = useIdentidad(id);
+  const key = identidad?.id ?? id;
   return (
     <span
       className={cn(
-        "inline-grid shrink-0 place-items-center font-display font-bold tracking-tight text-white shadow-sm ring-1 ring-white/10",
+        "inline-grid shrink-0 place-items-center font-display font-bold tracking-tight shadow-sm ring-1 ring-white/10",
         SIZES[size],
         className
       )}
-      style={{ backgroundColor: `var(--uni-${id}, var(--muted))` }}
+      style={{ backgroundColor: `var(--uni-${key}, var(--muted))`, color: `var(--uni-${key}-fg, #ffffff)` }}
     >
-      {label}
+      {identidad?.sigla ?? label}
     </span>
   );
 }

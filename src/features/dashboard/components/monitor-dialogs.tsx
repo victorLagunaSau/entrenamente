@@ -132,7 +132,7 @@ export function AddGoalDialog({
                       u.id === uni ? "ring-secondary" : "ring-transparent opacity-70 hover:opacity-100"
                     )}
                   >
-                    <UniversityBadge id={u.colorId ?? u.id} label={u.clave} size="sm" />
+                    <UniversityBadge id={u.id} label={u.clave} size="sm" />
                   </button>
                 ))}
               </div>

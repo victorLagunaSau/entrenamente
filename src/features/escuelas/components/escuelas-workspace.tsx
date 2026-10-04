@@ -30,6 +30,7 @@ import {
 } from "../services/catalogo-service";
 import type { Area, Carrera, Institucion } from "../types";
 import { AreaDialog, CarreraDialog, ConfirmDialog, InstitucionDialog, type ConfirmRequest } from "./catalogo-dialogs";
+import { IdentidadSection } from "./identidad-section";
 
 type DialogState =
   | { kind: "institucion"; institucion: Institucion | null }
@@ -157,12 +158,12 @@ export function EscuelasWorkspace() {
 
 /* ─────────────────────────── Piezas ─────────────────────────── */
 
-function ColorDot({ colorId }: { colorId: string | null }) {
+function ColorDot({ color }: { color: string | null }) {
   return (
     <span
       aria-hidden
       className="size-2.5 shrink-0 rounded-full ring-1 ring-white/20"
-      style={{ backgroundColor: colorId ? `var(--uni-${colorId})` : "var(--muted-foreground)" }}
+      style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
     />
   );
 }
@@ -233,7 +234,7 @@ function InstitucionesList({
                     !inst.activo && "opacity-70"
                   )}
                 >
-                  <ColorDot colorId={inst.colorId} />
+                  <ColorDot color={inst.colorPrimario} />
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <code className="font-mono text-sm font-semibold text-gold">{inst.clave}</code>
@@ -347,7 +348,7 @@ function InstitucionDetail({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 ref={headingRef} tabIndex={-1} className="flex flex-wrap items-center gap-2 text-xl font-semibold outline-none">
-              <ColorDot colorId={inst.colorId} />
+              <ColorDot color={inst.colorPrimario} />
               <code className="font-mono text-gold">{inst.clave}</code>
               <span className="min-w-0 text-pretty">{inst.nombre}</span>
             </h2>
@@ -376,6 +377,8 @@ function InstitucionDetail({
           <CircleAlert className="size-4" /> {actionError}
         </p>
       )}
+
+      <IdentidadSection institucion={inst} onSaved={onChanged} />
 
       {/* Áreas */}
       <section aria-labelledby="areas-title" className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:p-5">
