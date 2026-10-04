@@ -75,7 +75,15 @@ export function IdentidadSection({ institucion, onSaved }: { institucion: Instit
             </React.Fragment>
           ))}
           <dt className="text-muted-foreground">Ícono</dt>
-          <dd>{institucion.iconoSvg ? <SchoolIcon svgRaw={institucion.iconoSvg} color={p.primary} className="size-7" /> : "Genérico"}</dd>
+          <dd>
+            {institucion.iconoSvg ? (
+              <span className="inline-flex size-9 items-center justify-center rounded-lg" style={{ background: p.primary }}>
+                <SchoolIcon svgRaw={institucion.iconoSvg} color={p.onPrimary} className="size-6" />
+              </span>
+            ) : (
+              "Genérico"
+            )}
+          </dd>
           <dt className="text-muted-foreground">Logo</dt>
           <dd>
             {institucion.logoUrl ? (
