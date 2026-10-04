@@ -58,7 +58,14 @@ export function PanelShell({
               </Link>
             </Button>
             {topNav}
-            <AccountMenu alias={viewer.alias} email={viewer.email} onLogout={logout} leaving={leaving} extra={accountExtra} />
+            <AccountMenu
+              alias={viewer.alias}
+              email={viewer.email}
+              avatarUrl={viewer.avatarUrl}
+              onLogout={logout}
+              leaving={leaving}
+              extra={accountExtra}
+            />
           </div>
         </div>
       </header>

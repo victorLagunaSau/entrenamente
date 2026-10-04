@@ -1,23 +1,32 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { LogOut, Settings, User } from "lucide-react";
 
+import { UserAvatar } from "@/features/cuenta/components/user-avatar";
+import { ACCOUNT_PATHS } from "@/features/cuenta/lib/paths";
 import { cn } from "@/lib/utils";
 
 type Props = {
   alias: string;
   email: string;
+  avatarUrl: string | null;
   onLogout: () => void;
   leaving: boolean;
   extra?: React.ReactNode;
 };
 
 /** Botón redondo de perfil; despliega nombre, correo, opciones del home (`extra`), Perfil, Configuración y Cerrar sesión. */
-export function AccountMenu({ alias, email, onLogout, leaving, extra }: Props) {
+export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra }: Props) {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const go = (path: string) => {
+    setOpen(false);
+    router.push(path);
+  };
   const panelId = React.useId();
 
   React.useEffect(() => {
@@ -34,8 +43,6 @@ export function AccountMenu({ alias, email, onLogout, leaving, extra }: Props) {
     };
   }, [open]);
 
-  const initial = alias.trim().charAt(0).toUpperCase() || "?";
-
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -45,23 +52,26 @@ export function AccountMenu({ alias, email, onLogout, leaving, extra }: Props) {
         aria-controls={panelId}
         aria-label="Mi cuenta"
         className={cn(
-          "grid size-10 place-items-center rounded-full border bg-card font-display font-bold text-brand-light transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-          open && "border-brand-light/60 bg-accent"
+          "rounded-full ring-2 ring-transparent transition-shadow hover:ring-brand-light/40 focus-visible:ring-ring/60 focus-visible:outline-none",
+          open && "ring-brand-light/60"
         )}
       >
-        {initial}
+        <UserAvatar avatarUrl={avatarUrl} alias={alias} />
       </button>
 
       {open && (
         <div id={panelId} className="absolute top-12 right-0 z-40 w-64 overflow-hidden rounded-2xl border bg-card shadow-xl">
-          <div className="border-b px-4 py-3">
-            <p className="truncate text-sm font-semibold">{alias}</p>
-            <p className="truncate text-xs text-muted-foreground">{email}</p>
+          <div className="flex items-center gap-3 border-b px-4 py-3">
+            <UserAvatar avatarUrl={avatarUrl} alias={alias} className="size-9" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{alias}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            </div>
           </div>
           <ul className="p-1.5">
             {extra}
-            <MenuItem icon={User} label="Perfil" />
-            <MenuItem icon={Settings} label="Configuración" />
+            <MenuItem icon={User} label="Perfil" onClick={() => go(ACCOUNT_PATHS.perfil)} />
+            <MenuItem icon={Settings} label="Configuración" onClick={() => go(ACCOUNT_PATHS.configuracion)} />
             <li className="my-1 border-t" aria-hidden />
             <MenuItem icon={LogOut} label={leaving ? "Cerrando sesión…" : "Cerrar sesión"} onClick={onLogout} disabled={leaving} />
           </ul>

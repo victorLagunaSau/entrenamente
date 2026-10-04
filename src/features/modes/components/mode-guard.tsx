@@ -9,10 +9,12 @@ import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/features/auth/hooks/use-session";
 
-import { canViewMode, homePathFor, MODES, type Mode } from "../modes";
+import { canViewMode, homePathFor, MODES, type Mode, ownMode } from "../modes";
 import { getViewer, type Viewer } from "../services/viewer-service";
 
-const ModeContext = React.createContext<{ viewer: Viewer; mode: Mode } | null>(null);
+type ModeValue = { viewer: Viewer; mode: Mode; /** Vuelve a leer el perfil (p. ej. tras cambiar nombre o foto). */ refreshViewer: () => void };
+
+const ModeContext = React.createContext<ModeValue | null>(null);
 
 /** Quién está en sesión y qué modo (home) está viendo; solo dentro de <ModeGuard>. */
 export function useMode() {
@@ -24,8 +26,9 @@ export function useMode() {
 /**
  * Protección en el cliente de cada home (sin middleware por el export estático de Capacitor).
  * Sin sesión → login; rol sin acceso a este modo → 403. La seguridad real de los datos la da RLS.
+ * Sin `mode` (pantallas de cuenta) se usa el modo propio del rol.
  */
-export function ModeGuard({ mode, children }: { mode: Mode; children: React.ReactNode }) {
+export function ModeGuard({ mode: requested, children }: { mode?: Mode; children: React.ReactNode }) {
   const session = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -36,19 +39,30 @@ export function ModeGuard({ mode, children }: { mode: Mode; children: React.Reac
     if (session === null) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [session, pathname, router]);
 
+  const [version, setVersion] = React.useState(0);
+  const refreshViewer = React.useCallback(() => setVersion((v) => v + 1), []);
+
+  // Otro usuario: se vuelve a verificar desde cero (refrescar al mismo usuario no parpadea).
+  React.useEffect(() => setViewer(undefined), [userId]);
+
   React.useEffect(() => {
     if (!userId) return;
     let active = true;
-    setViewer(undefined);
     getViewer()
       .then((result) => active && setViewer(result))
       .catch(() => active && setViewer("error"));
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, [userId, version]);
 
-  const value = React.useMemo(() => (viewer && viewer !== "error" ? { viewer, mode } : null), [viewer, mode]);
+  const value = React.useMemo(
+    () =>
+      viewer && viewer !== "error"
+        ? { viewer, mode: requested ?? ownMode(viewer.userType), refreshViewer }
+        : null,
+    [viewer, requested, refreshViewer]
+  );
 
   if (!session || viewer === undefined) {
     return (
@@ -58,7 +72,8 @@ export function ModeGuard({ mode, children }: { mode: Mode; children: React.Reac
     );
   }
   if (viewer === "error" || !value) return <AccessError />;
-  if (!canViewMode(value.viewer.userType, mode)) return <Forbidden mode={mode} home={homePathFor(value.viewer.userType)} />;
+  if (!canViewMode(value.viewer.userType, value.mode))
+    return <Forbidden mode={value.mode} home={homePathFor(value.viewer.userType)} />;
 
   return <ModeContext.Provider value={value}>{children}</ModeContext.Provider>;
 }
