@@ -4,9 +4,11 @@
 --   · student_goals sigue siendo la fuente: (user_id, university_id, career_id, is_initial). El cliente solo
 --     la lee (RLS "goals: ver las propias"); escribir pasa por estas funciones.
 --   · Tope: 5 carreras simultáneas (metas_maximas()), también para lo que agrega el tutor.
---   · Sin licencia vigente (Demo) se mantiene 1 sola: puede cambiarla, no agregar ni quitar.
---   · Con licencia: agregar hasta 5, cambiar y quitar (siempre queda al menos 1).
---   · Una carrera con plan activo no se cambia ni se quita: primero se cancela el plan.
+--   · Una meta nunca se cambia por otra (rompería su historial): solo se agrega o se quita.
+--     Quitarla no borra exam_history ni guías; cada examen guarda su propia carrera.
+--   · Sin licencia vigente (Demo) se mantiene 1 sola: no se agrega ni se quita.
+--   · Con licencia: agregar hasta 5 y quitar (siempre queda al menos 1).
+--   · Una carrera con plan activo no se quita: primero se cancela el plan.
 --   · Si se quita la meta inicial, la más antigua que queda pasa a ser la inicial (las pruebas gratis
 --     del Demo usan la inicial).
 
@@ -64,7 +66,7 @@ begin
     select 1 from public.student_plans
     where student_id = p_uid and career_id = p_carrera and status = 'active'
   ) then
-    raise exception 'Esta carrera tiene un plan activo. Cancélalo antes de cambiarla o quitarla.' using errcode = '23503';
+    raise exception 'Esta carrera tiene un plan activo. Cancélalo antes de quitarla.' using errcode = '23503';
   end if;
 end;
 $$;
@@ -97,34 +99,6 @@ begin
 end;
 $$;
 
--- Reemplaza una meta por otra en su mismo lugar (conserva si es la inicial y su antigüedad).
-create or replace function public.cambiar_meta(p_actual text, p_nueva text)
-returns void
-language plpgsql volatile security definer set search_path = ''
-as $$
-declare
-  v_uid uuid := public.exigir_alumno_metas();
-  v_inst text := public.institucion_de_carrera(p_nueva);
-begin
-  if not exists (select 1 from public.student_goals where user_id = v_uid and career_id = p_actual) then
-    raise exception 'Esa carrera no está en tus metas.' using errcode = '02000';
-  end if;
-  if p_actual = p_nueva then
-    return;
-  end if;
-  if v_inst is null then
-    raise exception 'La carrera no está disponible.' using errcode = '23503';
-  end if;
-  if exists (select 1 from public.student_goals where user_id = v_uid and career_id = p_nueva) then
-    raise exception 'Esa carrera ya es una de tus metas.' using errcode = '23505';
-  end if;
-  perform public.exigir_meta_sin_plan(v_uid, p_actual);
-  update public.student_goals
-  set university_id = v_inst, career_id = p_nueva
-  where user_id = v_uid and career_id = p_actual;
-end;
-$$;
-
 create or replace function public.quitar_meta(p_carrera text)
 returns void
 language plpgsql volatile security definer set search_path = ''
@@ -139,7 +113,7 @@ begin
     raise exception 'Esa carrera no está en tus metas.' using errcode = '02000';
   end if;
   if (select count(*) from public.student_goals where user_id = v_uid) <= 1 then
-    raise exception 'Necesitas al menos una carrera. Cámbiala en lugar de quitarla.' using errcode = '23514';
+    raise exception 'Necesitas al menos una carrera.' using errcode = '23514';
   end if;
   perform public.exigir_meta_sin_plan(v_uid, p_carrera);
   delete from public.student_goals where user_id = v_uid and career_id = p_carrera;
@@ -151,10 +125,8 @@ end;
 $$;
 
 revoke execute on function public.agregar_meta(text) from public, anon;
-revoke execute on function public.cambiar_meta(text, text) from public, anon;
 revoke execute on function public.quitar_meta(text) from public, anon;
 grant execute on function public.agregar_meta(text) to authenticated;
-grant execute on function public.cambiar_meta(text, text) to authenticated;
 grant execute on function public.quitar_meta(text) to authenticated;
 
 -- ═════════════════════════ Tutor: mismo tope de 5 ═════════════════════════

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CalendarCheck, CircleAlert, GraduationCap, Loader2, Lock, Plus, Repeat, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarCheck, CircleAlert, GraduationCap, Loader2, Lock, Plus, Star, Trash2 } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
@@ -17,14 +17,15 @@ import { getMyPlans } from "@/features/plan/services/plan-service";
 
 import { type DemoCampaign, getDemoCampaign } from "../services/demo-service";
 import { getStudentCareers, type StudentCareer } from "../services/student-careers-service";
-import { addGoal, changeGoal, goalErrorMessage, MAX_GOALS, MY_CAREERS_PATH, removeGoal } from "../services/student-goals-service";
+import { addGoal, goalErrorMessage, MAX_GOALS, MY_CAREERS_PATH, removeGoal } from "../services/student-goals-service";
 import { getStudentSummary } from "../services/student-service";
 import { PlansDialog } from "./demo/demo-upsell";
 import { AddSchoolMenuItem } from "./add-school-menu-item";
 
 /**
- * Mis carreras: metas Universidad → Carrera del alumno, hasta MAX_GOALS. Demo mantiene 1 (la puede cambiar);
- * "Agregar otra carrera" abre el modal de planes. Con suscripción agrega, cambia y quita.
+ * Mis carreras: metas Universidad → Carrera del alumno, hasta MAX_GOALS. Una meta nunca se cambia por otra
+ * (rompería su historial): solo se agrega o se quita. Demo mantiene 1 y "Agregar otra carrera" abre el modal
+ * de planes; con suscripción agrega y quita.
  */
 export function MyCareersPanel() {
   return (
@@ -45,19 +46,17 @@ function Skeleton() {
 type Data = {
   pro: boolean;
   careers: StudentCareer[];
-  /** Carreras con plan activo: no se cambian ni se quitan. */
+  /** Carreras con plan activo: no se quitan. */
   withPlan: Set<string>;
   campaign: DemoCampaign | null;
 };
-
-type Editing = { kind: "add" } | { kind: "change"; current: StudentCareer };
 
 function MyCareers() {
   const router = useRouter();
   const wantsAdd = useSearchParams().get("agregar") === "1";
   const [data, setData] = React.useState<Data | null | undefined>(undefined);
   const [failed, setFailed] = React.useState(false);
-  const [editing, setEditing] = React.useState<Editing | null>(null);
+  const [adding, setAdding] = React.useState(false);
   const [removing, setRemoving] = React.useState<StudentCareer | null>(null);
   const [paywall, setPaywall] = React.useState(false);
   const autoOpened = React.useRef(false);
@@ -88,7 +87,7 @@ function MyCareers() {
       else router.push("/acceso-ilimitado");
       return;
     }
-    if (data.careers.length < MAX_GOALS) setEditing({ kind: "add" });
+    if (data.careers.length < MAX_GOALS) setAdding(true);
   }, [data, router]);
 
   // "Agregar escuela" desde el home o el menú llega con ?agregar=1: se abre una sola vez y se limpia la URL.
@@ -157,35 +156,24 @@ function MyCareers() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  {data.pro && (
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={locked}
-                      title={locked ? "Tiene un plan activo: cancélalo antes de cambiarla." : undefined}
-                      onClick={() => setEditing({ kind: "change", current: c })}
+                      disabled={locked || lastOne}
+                      title={
+                        locked
+                          ? "Tiene un plan activo: cancélalo antes de quitarla."
+                          : lastOne
+                            ? "Necesitas al menos una carrera."
+                            : undefined
+                      }
+                      onClick={() => setRemoving(c)}
+                      aria-label={`Quitar ${c.name}`}
                     >
-                      <Repeat /> Cambiar
+                      <Trash2 /> Quitar
                     </Button>
-                    {data.pro && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={locked || lastOne}
-                        title={
-                          locked
-                            ? "Tiene un plan activo: cancélalo antes de quitarla."
-                            : lastOne
-                              ? "Necesitas al menos una carrera."
-                              : undefined
-                        }
-                        onClick={() => setRemoving(c)}
-                        aria-label={`Quitar ${c.name}`}
-                      >
-                        <Trash2 /> Quitar
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </li>
               );
             })}
@@ -211,10 +199,10 @@ function MyCareers() {
             </button>
           )}
 
-          <GoalDialog
-            editing={editing}
+          <AddGoalDialog
+            open={adding}
             careers={data.careers}
-            onOpenChange={(open) => !open && setEditing(null)}
+            onOpenChange={setAdding}
             onSaved={load}
           />
           <RemoveDialog career={removing} onOpenChange={(open) => !open && setRemoving(null)} onRemoved={load} />
@@ -242,19 +230,18 @@ function FormError({ text }: { text: string }) {
   );
 }
 
-/** Agregar una carrera nueva o cambiar una existente por otra del catálogo oficial. */
-function GoalDialog({
-  editing,
+/** Agregar una carrera del catálogo oficial. */
+function AddGoalDialog({
+  open,
   careers,
   onOpenChange,
   onSaved,
 }: {
-  editing: Editing | null;
+  open: boolean;
   careers: StudentCareer[];
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
 }) {
-  const open = editing !== null;
   const [catalog, setCatalog] = React.useState<Institucion[] | null>(null);
   const [uni, setUni] = React.useState<string | null>(null);
   const [career, setCareer] = React.useState<string | null>(null);
@@ -262,10 +249,10 @@ function GoalDialog({
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
-    if (!editing) return;
+    if (!open) return;
     setCareer(null);
     setError("");
-    setUni(editing.kind === "change" ? editing.current.universityId : (careers[0]?.universityId ?? null));
+    setUni(careers[0]?.universityId ?? null);
     if (catalog) return;
     getCatalogo()
       .then((c) => {
@@ -274,17 +261,16 @@ function GoalDialog({
         setUni((u) => (u && active.some((i) => i.id === u) ? u : (active[0]?.id ?? null)));
       })
       .catch(() => setError("No pudimos cargar el catálogo de carreras."));
-  }, [editing, catalog, careers]);
+  }, [open, catalog, careers]);
 
   const taken = React.useMemo(() => new Set(careers.map((c) => c.id)), [careers]);
 
   const save = async () => {
-    if (!career || !editing) return;
+    if (!career) return;
     setSaving(true);
     setError("");
     try {
-      if (editing.kind === "add") await addGoal(career);
-      else await changeGoal(editing.current.id, career);
+      await addGoal(career);
       await onSaved();
       onOpenChange(false);
     } catch (e) {
@@ -298,11 +284,9 @@ function GoalDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing?.kind === "change" ? "Cambiar carrera" : "Agregar otra carrera"}</DialogTitle>
+          <DialogTitle>Agregar otra carrera</DialogTitle>
           <DialogDescription>
-            {editing?.kind === "change"
-              ? `Elige la carrera que tomará el lugar de ${editing.current.name} (${editing.current.universityShort}). Tus exámenes anteriores se conservan.`
-              : "Elige la universidad y la carrera a la que también aspiras: entrenarás con el formato de su examen."}
+            Elige la universidad y la carrera a la que también aspiras: entrenarás con el formato de su examen.
           </DialogDescription>
         </DialogHeader>
 
@@ -337,8 +321,7 @@ function GoalDialog({
             Cancelar
           </Button>
           <Button variant="brand" disabled={!career || saving} onClick={save}>
-            {saving ? <Loader2 className="animate-spin" /> : editing?.kind === "change" ? <Repeat /> : <Plus />}
-            {editing?.kind === "change" ? "Cambiar carrera" : "Agregar carrera"}
+            {saving ? <Loader2 className="animate-spin" /> : <Plus />} Agregar carrera
           </Button>
         </div>
       </DialogContent>

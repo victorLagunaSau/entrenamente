@@ -1,6 +1,7 @@
 /**
- * Metas del alumno (Universidad → Carrera) en `student_goals`. El cliente solo lee; agregar, cambiar y
- * quitar pasan por RPCs que validan licencia, catálogo, planes activos y el tope de carreras.
+ * Metas del alumno (Universidad → Carrera) en `student_goals`. El cliente solo lee; agregar y quitar pasan
+ * por RPCs que validan licencia, catálogo, planes activos y el tope. Una meta nunca se cambia por otra:
+ * rompería su historial.
  */
 
 import { supabase } from "@/lib/supabase/client";
@@ -14,11 +15,6 @@ export const ADD_CAREER_PATH = `${MY_CAREERS_PATH}?agregar=1`;
 
 export async function addGoal(careerId: string) {
   const { error } = await supabase.rpc("agregar_meta", { p_carrera: careerId });
-  if (error) throw error;
-}
-
-export async function changeGoal(currentId: string, nextId: string) {
-  const { error } = await supabase.rpc("cambiar_meta", { p_actual: currentId, p_nueva: nextId });
   if (error) throw error;
 }
 
