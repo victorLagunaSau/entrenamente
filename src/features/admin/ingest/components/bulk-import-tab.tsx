@@ -619,6 +619,10 @@ export function BulkImportTab({
                     {plan.counts.sinCambios > 0 && `; ${plan.counts.sinCambios} sin cambios no se reescriben`}
                     {counts.error > 0 && <span className="text-destructive">; {counts.error} con errores se omiten</span>}
                     {removed > 0 && `; ${removed} ${removed === 1 ? "quitado" : "quitados"} del lote`}.
+                    {toImport === 0 &&
+                      (dosificacion
+                        ? " Solo se guardará la dosificación."
+                        : " El lote no trae dosificación (guia.dosificacion): no hay nada que guardar.")}
                   </p>
                 )}
               </div>
@@ -629,7 +633,7 @@ export function BulkImportTab({
                 onClick={runImport}
               >
                 {status.kind === "importing" ? <Loader2 className="animate-spin" /> : <Upload />}{" "}
-                {toImport > 0 ? `Importar ${toImport} reactivos` : "Guardar dosificación"}
+                {toImport > 0 ? `Importar ${toImport} reactivos` : dosificacion ? "Guardar dosificación" : "Nada que guardar"}
               </Button>
             </div>
           </div>

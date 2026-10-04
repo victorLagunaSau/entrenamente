@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FileJson, Plus, Table2 } from "lucide-react";
+import { BarChart3, FileJson, Plus, Table2 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,13 +11,15 @@ import { loadMaterias } from "../services/questions-service";
 import type { Pregunta } from "../types";
 import { BulkImportTab } from "./bulk-import-tab";
 import { CatalogTab } from "./catalog-tab";
+import { InventoryTab } from "./inventory-tab";
 import { QuestionForm } from "./question-form";
 import { QuestionPreviewDialog } from "./question-preview-dialog";
 
-type TabId = "catalog" | "new" | "import";
+type TabId = "catalog" | "inventory" | "new" | "import";
 
 const TABS: { id: TabId; label: string; short: string; icon: typeof Table2 }[] = [
   { id: "catalog", label: "Catálogo", short: "Catálogo", icon: Table2 },
+  { id: "inventory", label: "Inventario", short: "Totales", icon: BarChart3 },
   { id: "new", label: "Pregunta", short: "Pregunta", icon: Plus },
   { id: "import", label: "Carga masiva", short: "JSON", icon: FileJson },
 ];
@@ -58,6 +60,9 @@ export function IngestWorkspace() {
         {/* forceMount conserva la búsqueda, el borrador y el JSON al cambiar de pestaña. */}
         <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
           <CatalogTab version={version} onEdit={setEditing} onPreview={setPreviewing} onChanged={refresh} />
+        </TabsContent>
+        <TabsContent value="inventory">
+          <InventoryTab version={version} />
         </TabsContent>
         <TabsContent value="new" forceMount className="data-[state=inactive]:hidden">
           <QuestionForm editing={null} onPreview={setPreviewing} onSaved={refresh} />

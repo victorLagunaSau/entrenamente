@@ -57,6 +57,55 @@ export async function getResumen(filtro: { institucion?: string | null; area?: s
   return data as Resumen;
 }
 
+/* ─────────────────────────── Inventario ─────────────────────────── */
+
+/** Conteos de un grupo: `total` incluye variantes; `raices` cuenta cada pregunta raíz una vez. */
+export type ConteoBanco = {
+  id: string;
+  total: number;
+  raices: number;
+  por_materia: Record<string, number>;
+  por_dificultad: Partial<Record<Dificultad, number>>;
+};
+
+export type Inventario = {
+  instituciones: ConteoBanco[];
+  areas: ConteoBanco[];
+  carreras: ConteoBanco[];
+  sin_carrera: number;
+  dosificacion: {
+    carrera_id: string;
+    por_materia: Record<string, number>;
+    metodo: "oficial" | "estimado";
+    fuente: string | null;
+    total_reactivos_oficial: number | null;
+    archivo: string | null;
+    actualizado: string;
+  }[];
+  lotes: {
+    id: number;
+    archivo: string;
+    institucion_id: string | null;
+    carreras: string[];
+    total: number;
+    nuevas: number;
+    actualizadas: number;
+    sin_cambios: number;
+    omitidas: number;
+    created_at: string;
+  }[];
+};
+
+/** Cuántas preguntas hay por escuela, área y carrera (solo conteos) y las últimas cargas. */
+export async function getInventario(): Promise<Inventario> {
+  const { data, error } = await supabase.rpc("inventario_banco");
+  if (error) {
+    if (error.code === "PGRST202") throw new BancoError("Falta correr la migración 20261004000000_inventario_banco.sql en Supabase.");
+    fail(error);
+  }
+  return data as Inventario;
+}
+
 /* ─────────────────────────── Lectura ─────────────────────────── */
 
 const SELECT =
@@ -288,3 +337,4 @@ export async function deleteQuestion(codigo: string): Promise<void> {
   const { error } = await supabase.from("reactivos").delete().eq("codigo", codigo);
   if (error) fail(error);
 }
+
