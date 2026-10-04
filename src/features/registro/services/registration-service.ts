@@ -108,7 +108,7 @@ export async function registerParent(input: { account: AccountData; goal: GoalDa
   );
   return {
     ...result,
-    // Enlace reutilizable con la meta del padre; si después activa un plan, el estudiante ocupa su lugar al registrarse.
+    // Invitación del primer hijo con la meta del padre; si después activa un plan, el hijo ocupa su lugar al registrarse.
     invite: { code, url: inviteUrl(code), parentName: input.account.fullName.trim(), goal: input.goal, sponsored: false },
   };
 }

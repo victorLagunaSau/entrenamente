@@ -39,7 +39,7 @@ las páginas de `src/app/` solo los importan. Lo compartido queda en `src/compon
 | Backoffice | `src/features/admin` |
 
 **Registro** (`src/features/registro/services/registration-service.ts`, con Supabase; el pago sigue simulado):
-perfil preseleccionado `/registro?perfil=estudiante|tutor` · invitación del padre `/registro?invite_code=CODIGO` (el estudiante hereda su universidad, carrera y, si hay lugar, su licencia; el padre la comparte desde su teléfono, no mandamos correos) · en el modal de pago, la casilla «DEV» simula una tarjeta rechazada.
+perfil preseleccionado `/registro?perfil=estudiante|tutor` · invitación del padre `/registro?invite_code=CODIGO` (un enlace por estudiante; hereda la universidad y carrera si el tutor las eligió y, si hay lugar, su licencia; el tutor lo comparte desde su teléfono con `@capacitor/share`, no mandamos correos) · enlaces públicos con `NEXT_PUBLIC_SITE_URL` (por defecto `https://entrenamente.vercel.app`, ver `src/lib/site.ts`) · en el modal de pago, la casilla «DEV» simula una tarjeta rechazada.
 
 ## Marca y tema
 

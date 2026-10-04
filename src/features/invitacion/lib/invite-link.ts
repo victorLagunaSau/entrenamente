@@ -1,7 +1,8 @@
 import { BRAND } from "@/lib/brand";
+import { publicOrigin } from "@/lib/site";
 
 /** Enlace de invitación del padre/tutor: abre el registro con el código ya puesto. */
-export const inviteUrl = (code: string) => `${window.location.origin}/registro?invite_code=${code}`;
+export const inviteUrl = (code: string) => `${publicOrigin()}/registro?invite_code=${code}`;
 
 export const INVITE_SUBJECT = `Te invito a entrenar en ${BRAND.name}`;
 

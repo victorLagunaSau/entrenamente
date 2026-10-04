@@ -12,7 +12,7 @@ import { formatMxn, PLANS } from "../../data/plans";
 import { ConfirmEmailNotice } from "../confirm-email-notice";
 import { StepHeader } from "../step-header";
 
-/** Paso final del padre: su enlace único (el mismo de su panel) para que el estudiante herede su meta. */
+/** Paso final del padre: la invitación de su primer hijo/a, que hereda la meta elegida. Las demás se crean en el panel. */
 export function InviteStep() {
   const { state, dispatch } = useRegistration();
   const invite = state.createdInvite;
@@ -22,7 +22,7 @@ export function InviteStep() {
     <div className="flex flex-col gap-6">
       <StepHeader
         title="Invita a tu hijo/a"
-        description="Cuando se registre con este enlace quedará vinculado a tu panel y su plan de entrenamiento arrancará con la universidad y carrera que elegiste."
+        description="Este enlace es solo para tu hijo/a: al registrarse quedará vinculado a tu panel, con la universidad y carrera que elegiste. ¿Tienes más hijos? Invítalos desde tu panel."
       />
 
       <ShareInvite link={invite} />

@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { publicOrigin } from "@/lib/site";
+
 /**
  * Cliente único de Supabase (solo navegador). La sesión vive en localStorage para que
  * funcione igual en Vercel y en el export estático de Capacitor, donde no hay servidor.
@@ -19,6 +21,6 @@ export const supabase = createClient(url, key, {
 
 /** URL absoluta de /auth/callback, a donde regresan Google y los correos de confirmación. */
 export function authCallbackUrl(next?: string) {
-  const base = `${window.location.origin}/auth/callback`;
+  const base = `${publicOrigin()}/auth/callback`;
   return next ? `${base}?next=${encodeURIComponent(next)}` : base;
 }

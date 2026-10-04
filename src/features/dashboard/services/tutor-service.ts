@@ -209,12 +209,59 @@ export async function getTutorExamRecord(examId: number): Promise<ExamRecord> {
 /** Cuántos estudiantes puede vincular el tutor: los cupos de su plan vigente; sin plan (demo), 1. */
 export const studentLimit = (panel: TutorPanel) => (panel.license?.active ? panel.license.seats : 1);
 
-/** Enlace de invitación del tutor (el mismo que recibió al registrarse). `renew` invalida el anterior y genera otro. */
-export async function getInviteLink(renew = false): Promise<{ code: string; url: string }> {
-  const { data, error } = await supabase.rpc("invitacion_tutor", { p_nuevo: renew });
+/** Invitación de un solo estudiante que aún no se canjea. Sin meta, el estudiante elige escuela y carrera. */
+export type PendingInvite = {
+  code: string;
+  url: string;
+  label: string | null;
+  universityId: string | null;
+  careerId: string | null;
+  createdAt: string;
+  expiresAt: string;
+};
+
+type InviteRow = {
+  code: string;
+  label: string | null;
+  university_id: string | null;
+  career_id: string | null;
+  created_at: string;
+  expires_at: string;
+};
+
+export async function listInvites(): Promise<PendingInvite[]> {
+  const { data, error } = await supabase.rpc("invitaciones_tutor");
+  if (error) throw error;
+  return ((data ?? []) as InviteRow[]).map((r) => ({
+    code: r.code,
+    url: inviteUrl(r.code),
+    label: r.label,
+    universityId: r.university_id,
+    careerId: r.career_id,
+    createdAt: r.created_at,
+    expiresAt: r.expires_at,
+  }));
+}
+
+export async function createInvite(input: {
+  label?: string;
+  universityId?: string | null;
+  careerId?: string | null;
+}): Promise<{ code: string; url: string }> {
+  const { data, error } = await supabase.rpc("crear_invitacion_tutor", {
+    p_university: input.universityId ?? null,
+    p_career: input.careerId ?? null,
+    p_label: input.label?.trim() || null,
+  });
   if (error) throw error;
   const code = data as string;
   return { code, url: inviteUrl(code) };
+}
+
+/** Cancela una invitación pendiente y libera su lugar. */
+export async function cancelInvite(code: string) {
+  const { error } = await supabase.rpc("cancelar_invitacion_tutor", { p_code: code });
+  if (error) throw error;
 }
 
 export async function createGroup(name: string): Promise<number> {
