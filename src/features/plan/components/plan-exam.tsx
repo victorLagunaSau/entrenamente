@@ -76,7 +76,7 @@ function PlanExamFlow() {
     };
   }, [config, sesionId, attempt]);
 
-  useUniTheme(config ? config.institucion.colorId : undefined);
+  useUniTheme(config ? config.institucion.id : undefined);
 
   const save = React.useCallback((sheet: AnswerSheet) => guardarExamenPlan(sesionId, sheet), [sesionId]);
   const onFinished = React.useCallback((id: number) => router.replace(`/app/student/exam/resultado?id=${id}`), [router]);

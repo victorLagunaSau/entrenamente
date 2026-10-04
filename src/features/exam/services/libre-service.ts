@@ -125,7 +125,7 @@ export function toExamRecord(row: unknown): ExamRecord {
   const r = row as HistoryRow;
   const f = r.frozen_exam_data;
   const target: ExamTarget = {
-    institucion: { id: f.institucion.clave.toLowerCase(), clave: f.institucion.clave, nombre: f.institucion.nombre, colorId: f.institucion.color_id },
+    institucion: { id: f.institucion.clave.toLowerCase(), clave: f.institucion.clave, nombre: f.institucion.nombre },
     carrera: f.carrera,
   };
   const num = (x: unknown) => Number(x);

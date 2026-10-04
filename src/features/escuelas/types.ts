@@ -31,14 +31,19 @@ export type Institucion = {
   tipo: TipoInstitucion;
   /** Nombre del examen de admisión cuando no es el genérico (TEC → PAA). */
   examen: string | null;
-  /** Sufijo de `--uni-*` en globals.css. */
-  colorId: string | null;
+  /** Identidad visual (se edita aparte, ver features/identidad). */
+  sigla: string;
+  colorPrimario: string | null;
+  colorSecundario: string | null;
+  colorAcento: string | null;
+  iconoSvg: string | null;
+  logoUrl: string | null;
   activo: boolean;
   orden: number;
   areas: Area[];
   carreras: Carrera[];
 };
 
-export type InstitucionInput = Pick<Institucion, "clave" | "nombre" | "tipo" | "examen" | "colorId">;
+export type InstitucionInput = Pick<Institucion, "clave" | "nombre" | "tipo" | "examen">;
 export type AreaInput = Pick<Area, "codigo" | "nombre">;
 export type CarreraInput = Pick<Carrera, "nombre" | "areaId">;

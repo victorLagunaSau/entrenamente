@@ -5,9 +5,6 @@ export const TIPOS: { value: TipoInstitucion; nombre: string }[] = [
   { value: "examen_especial", nombre: "Examen especial" },
 ];
 
-/** Colores institucionales definidos en globals.css (`--uni-*`). */
-export const COLORES_INSTITUCION = ["unam", "ipn", "uam", "uvm", "tec", "udg"] as const;
-
 export const tipoNombre = (tipo: TipoInstitucion) => TIPOS.find((t) => t.value === tipo)?.nombre ?? tipo;
 
 /** "Carrera" o "Edición" según el tipo de institución. */

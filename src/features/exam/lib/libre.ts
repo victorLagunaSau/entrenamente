@@ -57,7 +57,7 @@ export type ExamItem = {
 
 /** Institución y carrera elegidas: también definen la mimetización visual del examen. */
 export type ExamTarget = {
-  institucion: { id: string; clave: string; nombre: string; colorId: string | null };
+  institucion: { id: string; clave: string; nombre: string };
   carrera: { id: string; nombre: string; area: string | null };
 };
 

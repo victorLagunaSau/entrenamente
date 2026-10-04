@@ -44,7 +44,7 @@ function Loader() {
     };
   }, [id]);
 
-  useUniTheme(record ? record.target.institucion.colorId : undefined);
+  useUniTheme(record ? record.target.institucion.id : undefined);
 
   if (error || record === null) {
     return (

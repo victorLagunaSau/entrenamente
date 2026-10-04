@@ -50,7 +50,7 @@ function ExamLibreFlow() {
   }, [carreraParam]);
 
   const target = resolved && resolved.status !== "sin-meta" ? resolved.target : null;
-  useUniTheme(target ? target.institucion.colorId : undefined);
+  useUniTheme(target ? target.institucion.id : undefined);
 
   if (error) return <Notice text={error} />;
   if (!resolved) return <Loading />;
@@ -159,7 +159,7 @@ function ExamResultLoader() {
     };
   }, [id, folio]);
 
-  useUniTheme(record ? record.target.institucion.colorId : undefined);
+  useUniTheme(record ? record.target.institucion.id : undefined);
 
   if (error || record === null) return <Notice text={error ?? "No encontramos este examen."} />;
   if (record === undefined) return <Loading />;

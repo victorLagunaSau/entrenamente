@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { FormField, invalidClass } from "@/features/registro/components/form-field";
 import { cn } from "@/lib/utils";
 
-import { COLORES_INSTITUCION, TIPOS, byOrden, carreraLabel } from "../lib/catalogo";
+import { TIPOS, byOrden, carreraLabel } from "../lib/catalogo";
 import {
   CatalogoError,
   actualizarArea,
@@ -103,7 +103,6 @@ export function InstitucionDialog({
   const [nombre, setNombre] = React.useState("");
   const [tipo, setTipo] = React.useState<TipoInstitucion>("universidad");
   const [examen, setExamen] = React.useState("");
-  const [colorId, setColorId] = React.useState("");
   const savedId = React.useRef<string | null>(null);
   const { saving, error, run } = useSave(() => onSaved(savedId.current ?? institucion?.id ?? ""));
 
@@ -113,12 +112,11 @@ export function InstitucionDialog({
     setNombre(institucion?.nombre ?? "");
     setTipo(institucion?.tipo ?? "universidad");
     setExamen(institucion?.examen ?? "");
-    setColorId(institucion?.colorId ?? "");
   }, [open, institucion]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const input = { clave, nombre, tipo, examen: examen || null, colorId: colorId || null };
+    const input = { clave, nombre, tipo, examen: examen || null };
     run(async () => {
       savedId.current = institucion
         ? (await actualizarInstitucion(institucion.id, input, catalogo), institucion.id)
@@ -174,18 +172,6 @@ export function InstitucionDialog({
               {(a11y) => <Input {...a11y} value={examen} onChange={(e) => setExamen(e.target.value)} />}
             </FormField>
           )}
-          <FormField id="inst-color" label="Color institucional" optional>
-            {(a11y) => (
-              <NativeSelect {...a11y} value={colorId} onChange={(e) => setColorId(e.target.value)}>
-                <option value="">Sin color</option>
-                {COLORES_INSTITUCION.map((c) => (
-                  <option key={c} value={c}>
-                    {c.toUpperCase()}
-                  </option>
-                ))}
-              </NativeSelect>
-            )}
-          </FormField>
           <FormError error={error} />
           <FormActions saving={saving} onCancel={onClose} label={institucion ? "Guardar" : "Agregar"} />
         </form>
