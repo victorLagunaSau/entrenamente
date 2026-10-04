@@ -3,15 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, BarChart3, CalendarDays, ChevronRight, CircleAlert, History, Loader2, School, Trash2 } from "lucide-react";
+import { ArrowLeft, BarChart3, CalendarDays, ChevronRight, CircleAlert, History, Loader2, Trash2 } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NIVELES } from "@/features/exam/lib/libre";
-import { MenuItem } from "@/features/modes/components/account-menu";
 import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { PanelShell } from "@/features/modes/components/panel-shell";
+import { AddSchoolMenuItem } from "@/features/student/components/add-school-menu-item";
 import { cn } from "@/lib/utils";
 
 import {
@@ -35,7 +35,7 @@ import { PlanStats } from "./plan-stats";
 export function PlanPanel() {
   return (
     <ModeGuard mode="student">
-      <PanelShell accountExtra={<MenuItem icon={School} label="Agregar escuela" />}>
+      <PanelShell accountExtra={<AddSchoolMenuItem />}>
         <React.Suspense fallback={<Skeleton />}>
           <PlanView />
         </React.Suspense>

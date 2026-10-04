@@ -3,23 +3,23 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ChevronRight, CircleAlert, CircleCheck, FileText, Library, NotebookPen, School } from "lucide-react";
+import { ArrowLeft, ChevronRight, CircleAlert, CircleCheck, FileText, Library, NotebookPen } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
-import { MenuItem } from "@/features/modes/components/account-menu";
 import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 import { getStudyGuides, type StudyGuide } from "../services/exam-record-service";
+import { AddSchoolMenuItem } from "./add-school-menu-item";
 
 /** Guías de estudio guardadas: una por cada examen libre presentado; `?carrera=` preselecciona el filtro. */
 export function StudyGuidesPanel() {
   return (
     <ModeGuard mode="student">
-      <PanelShell accountExtra={<MenuItem icon={School} label="Agregar escuela" />}>
+      <PanelShell accountExtra={<AddSchoolMenuItem />}>
         <React.Suspense fallback={<Skeleton />}>
           <StudyGuides />
         </React.Suspense>

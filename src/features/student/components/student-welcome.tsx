@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Flame, GraduationCap, Power, School, Sparkles, Zap } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { findCareer, findUniversity } from "@/features/registro/data/catalog";
 import { cn } from "@/lib/utils";
 
+import { ADD_CAREER_PATH, MY_CAREERS_PATH } from "../services/student-goals-service";
 import type { StudentSummary } from "../services/student-service";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
@@ -46,13 +48,16 @@ export function StudentWelcome({ summary, streakDays }: { summary: StudentSummar
             </span>
           </div>
         )}
-        {/* Pendiente: las vistas de carreras y de alta de escuelas aún no existen. */}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled title="Próximamente">
-            <School /> Agregar escuela
+          <Button variant="outline" size="sm" asChild>
+            <Link href={ADD_CAREER_PATH}>
+              <School /> Agregar escuela
+            </Link>
           </Button>
-          <Button variant="outline" size="sm" disabled title="Próximamente">
-            <GraduationCap /> Ir a carreras
+          <Button variant="outline" size="sm" asChild>
+            <Link href={MY_CAREERS_PATH}>
+              <GraduationCap /> Ir a carreras
+            </Link>
           </Button>
         </div>
       </div>

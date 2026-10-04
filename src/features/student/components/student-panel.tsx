@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CircleAlert, School } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 
-import { MenuItem } from "@/features/modes/components/account-menu";
 import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
@@ -23,6 +22,7 @@ import { DemoHome } from "./demo/demo-home";
 import { DEMO_NAV, PRO_NAV, StudentNav, StudentTopNav } from "./student-nav";
 import { StudentWelcome } from "./student-welcome";
 import { TierGuard } from "./tier-guard";
+import { AddSchoolMenuItem } from "./add-school-menu-item";
 
 /**
  * Home del estudiante con menú inferior. `pro` = suscripción activa (/app/student/home): Saludo → Plan →
@@ -37,7 +37,7 @@ export function StudentPanel({ tier }: { tier: StudentTier }) {
           home={STUDENT_HOMES[tier]}
           footer={<StudentNav items={nav} />}
           topNav={<StudentTopNav items={nav} />}
-          accountExtra={<MenuItem icon={School} label="Agregar escuela" />}
+          accountExtra={<AddSchoolMenuItem />}
         >
           <div className="flex flex-col gap-8">
             <ModeSwitcher />

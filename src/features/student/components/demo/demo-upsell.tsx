@@ -10,7 +10,7 @@ import { formatMxn } from "../../services/demo-service";
 import { type Prices, StudentPlans } from "./demo-plans";
 
 /** Qué CTA abrió el modal: ajusta su título. */
-export type UnlockFocus = "racha" | "plan" | null;
+export type UnlockFocus = "racha" | "plan" | "carreras" | null;
 
 
 type Benefit = {
@@ -127,6 +127,12 @@ export function PaywallBar({ phrase, prices, onUnlock }: { phrase: string; price
 const FOCUS_TITLES: Record<Exclude<UnlockFocus, null>, string> = {
   racha: "El Modo Racha es parte del Plan Estudiante",
   plan: "El Plan personalizado es parte del Plan Estudiante",
+  carreras: "Varias carreras son parte del Plan Estudiante",
+};
+
+/** Frase propia del CTA que abrió el modal; sin ella va la de la campaña. */
+const FOCUS_PHRASES: Partial<Record<Exclude<UnlockFocus, null>, string>> = {
+  carreras: "Entrena para múltiples universidades (UNAM, IPN, UAM) desbloqueando tu Plan Estudiante Ilimitado.",
 };
 
 /** Modal de planes: la frase y los precios vienen de la campaña; el pago vive en /acceso-ilimitado. */
@@ -151,7 +157,7 @@ export function PlansDialog({
             <Rocket className="size-6" aria-hidden />
           </span>
           <DialogTitle>{focus ? FOCUS_TITLES[focus] : "Entrena sin límites"}</DialogTitle>
-          <DialogDescription>{phrase}</DialogDescription>
+          <DialogDescription>{(focus && FOCUS_PHRASES[focus]) || phrase}</DialogDescription>
         </DialogHeader>
 
         <ul className="flex flex-col gap-2 text-sm text-cool">
