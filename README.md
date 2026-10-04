@@ -35,10 +35,11 @@ las páginas de `src/app/` solo los importan. Lo compartido queda en `src/compon
 | Registro (wizard) | `src/features/registro` |
 | Panel del estudiante | `src/features/student` |
 | Dashboard padres/tutores | `src/features/dashboard` |
+| Invitación del padre/tutor (enlace y compartir) | `src/features/invitacion` |
 | Backoffice | `src/features/admin` |
 
-**Registro con datos simulados** (`src/features/registro/services/registration-service.ts`, se reemplaza por Supabase + Stripe):
-perfil preseleccionado `/registro?perfil=estudiante|tutor` · correo ya registrado `demo@entrenamente.com` · invitación válida `/auth?invite_code=DEMO2026` · en el modal de pago, la casilla «DEV» simula una tarjeta rechazada.
+**Registro** (`src/features/registro/services/registration-service.ts`, con Supabase; el pago sigue simulado):
+perfil preseleccionado `/registro?perfil=estudiante|tutor` · invitación del padre `/registro?invite_code=CODIGO` (un enlace por estudiante; hereda la universidad y carrera si el tutor las eligió y, si hay lugar, su licencia; el tutor lo comparte desde su teléfono con `@capacitor/share`, no mandamos correos) · enlaces públicos con `NEXT_PUBLIC_SITE_URL` (por defecto `https://entrenamente.vercel.app`, ver `src/lib/site.ts`) · en el modal de pago, la casilla «DEV» simula una tarjeta rechazada.
 
 ## Marca y tema
 
