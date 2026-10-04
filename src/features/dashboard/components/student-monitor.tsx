@@ -44,6 +44,7 @@ import {
   todayISO,
   toISODate,
 } from "@/features/plan/lib/plan";
+import { MAX_GOALS } from "@/features/student/services/student-goals-service";
 import { cn } from "@/lib/utils";
 
 import { formatDate, formatMxn, planName, TUTOR_COPY, upgradeOffers } from "../lib/tutor-plans";
@@ -522,9 +523,13 @@ function StudentProfile({ student, insight }: { student: TutorStudent; insight: 
                 </li>
               ))}
               <li>
-                <Button variant="outline" size="sm" className="h-8 rounded-full border-dashed" onClick={() => setAddGoal(true)}>
-                  <Plus /> Agregar otra carrera/escuela
-                </Button>
+                {goals.length < MAX_GOALS ? (
+                  <Button variant="outline" size="sm" className="h-8 rounded-full border-dashed" onClick={() => setAddGoal(true)}>
+                    <Plus /> Agregar otra carrera/escuela
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Límite de {MAX_GOALS} carreras simultáneas</span>
+                )}
               </li>
             </ul>
           </div>

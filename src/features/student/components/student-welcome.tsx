@@ -1,12 +1,16 @@
 "use client";
 
-import { Flame, GraduationCap, Power, School, Sparkles, Zap } from "lucide-react";
+import * as React from "react";
+import Link from "next/link";
+import { Flame, Plus, Power, Sparkles, Star, Zap } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
-import { findCareer, findUniversity } from "@/features/registro/data/catalog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
+import type { StudentCareer } from "../services/student-careers-service";
+import { ADD_CAREER_PATH } from "../services/student-goals-service";
 import type { StudentSummary } from "../services/student-service";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
@@ -15,10 +19,23 @@ const dateFmt = new Intl.DateTimeFormat("es-MX", {
   year: "numeric",
 });
 
-/** Módulo 1 · Saludo: apodo (con fuego si hay rachas activas), plan y acceso a sus carreras. */
-export function StudentWelcome({ summary, streakDays }: { summary: StudentSummary; streakDays: number | null }) {
-  const university = findUniversity(summary.goal?.universityId ?? null);
-  const career = findCareer(summary.goal?.universityId ?? null, summary.goal?.careerId ?? null);
+/**
+ * Módulo 1 · Saludo: apodo (con fuego si hay rachas activas), plan, su meta inicial y "+ Carreras".
+ * Con más de una carrera, "Ver más" abre la lista completa con el acceso para agregar otra.
+ */
+export function StudentWelcome({
+  summary,
+  careers,
+  streakDays,
+}: {
+  summary: StudentSummary;
+  /** Metas del alumno, la inicial primero. */
+  careers: StudentCareer[];
+  streakDays: number | null;
+}) {
+  const [showAll, setShowAll] = React.useState(false);
+  const initial = careers[0];
+  const more = careers.length - 1;
 
   return (
     <section id="saludo" className="flex scroll-mt-20 flex-col gap-3 rounded-2xl border bg-card p-5 sm:p-6">
@@ -37,26 +54,70 @@ export function StudentWelcome({ summary, streakDays }: { summary: StudentSummar
       </div>
       <AccessChip access={summary.access} />
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {university && career && (
-          <div className="flex min-w-0 items-center gap-3">
-            <UniversityBadge id={university.id} label={university.short} size="sm" />
+        {initial && (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <UniversityBadge id={initial.universityId} label={initial.universityShort} size="sm" />
             <span className="min-w-0 truncate text-sm text-cool">
               <span className="text-muted-foreground">Meta inicial · </span>
-              {career.name}
+              {initial.name}
             </span>
+            {more > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="rounded-md text-sm font-semibold text-brand-light hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                +{more} · Ver más
+              </button>
+            )}
           </div>
         )}
-        {/* Pendiente: las vistas de carreras y de alta de escuelas aún no existen. */}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled title="Próximamente">
-            <School /> Agregar escuela
-          </Button>
-          <Button variant="outline" size="sm" disabled title="Próximamente">
-            <GraduationCap /> Ir a carreras
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={ADD_CAREER_PATH}>
+            <Plus /> Carreras
+          </Link>
+        </Button>
       </div>
+      <CareersDialog careers={careers} open={showAll} onOpenChange={setShowAll} />
     </section>
+  );
+}
+
+/** Informativo: todas sus carreras y el acceso para agregar más. */
+function CareersDialog({
+  careers,
+  open,
+  onOpenChange,
+}: {
+  careers: StudentCareer[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Tus carreras</DialogTitle>
+          <DialogDescription>
+            Entrenas para {careers.length} carreras, cada una con el formato de examen de su universidad.
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="flex flex-col gap-2">
+          {careers.map((c, i) => (
+            <li key={c.id} className="flex items-center gap-3 rounded-xl border bg-background/40 p-3">
+              <UniversityBadge id={c.universityId} label={c.universityShort} size="sm" />
+              <span className="min-w-0 flex-1 text-sm font-medium text-balance">{c.name}</span>
+              {i === 0 && <Star className="size-4 shrink-0 fill-gold text-gold" aria-label="Meta inicial" />}
+            </li>
+          ))}
+        </ul>
+        <Button variant="brand" asChild>
+          <Link href={ADD_CAREER_PATH}>
+            <Plus /> Agregar más carreras
+          </Link>
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarCheck, Check, CircleAlert, GraduationCap, Loader2, Plus } from "lucide-react";
+import { CalendarCheck, Check, CircleAlert, Loader2, Plus } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   recomendacionPorDia,
   todayISO,
 } from "@/features/plan/lib/plan";
+import { CareerPicker, selectableCatalog } from "@/features/escuelas/components/career-picker";
 import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
 import type { Institucion } from "@/features/escuelas/types";
 import { cn } from "@/lib/utils";
@@ -69,14 +70,13 @@ export function AddGoalDialog({
     if (catalog) return;
     getCatalogo()
       .then((c) => {
-        const active = c.filter((i) => i.activo && i.carreras.some((x) => x.activo));
+        const active = selectableCatalog(c);
         setCatalog(active);
         setUni((u) => u ?? goals[0]?.universityId ?? active[0]?.id ?? null);
       })
       .catch(() => setError("No pudimos cargar el catálogo de carreras."));
   }, [open, catalog, goals]);
 
-  const university = catalog?.find((u) => u.id === uni) ?? null;
   const taken = new Set(goals.map((g) => g.careerId));
 
   const save = async () => {
@@ -114,66 +114,18 @@ export function AddGoalDialog({
           )
         ) : (
           <>
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 text-sm font-semibold">Universidad</legend>
-              <div className="flex flex-wrap gap-2">
-                {catalog.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    aria-pressed={u.id === uni}
-                    aria-label={u.nombre}
-                    onClick={() => {
-                      setUni(u.id);
-                      setCareer(null);
-                    }}
-                    className={cn(
-                      "rounded-xl p-1 ring-2 transition-all focus-visible:ring-ring/60 focus-visible:outline-none",
-                      u.id === uni ? "ring-secondary" : "ring-transparent opacity-70 hover:opacity-100"
-                    )}
-                  >
-                    <UniversityBadge id={u.id} label={u.clave} size="sm" />
-                  </button>
-                ))}
-              </div>
-              {university && <p className="text-xs text-muted-foreground">{university.nombre}</p>}
-            </fieldset>
-
-            {university && (
-              <fieldset className="flex flex-col gap-2">
-                <legend className="mb-2 text-sm font-semibold">Carrera</legend>
-                <ul className="flex max-h-60 flex-col gap-1.5 overflow-y-auto">
-                  {university.carreras
-                    .filter((c) => c.activo)
-                    .map((c) => {
-                      const already = taken.has(c.id);
-                      const active = career === c.id;
-                      return (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            disabled={already}
-                            aria-pressed={active}
-                            onClick={() => setCareer(c.id)}
-                            className={cn(
-                              "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50",
-                              active ? "border-secondary/60 bg-secondary/10" : "hover:bg-accent"
-                            )}
-                          >
-                            <GraduationCap className="size-4 shrink-0 text-brand-light" aria-hidden />
-                            <span className="flex-1">{c.nombre}</span>
-                            {already ? (
-                              <span className="text-xs text-muted-foreground">Ya es su meta</span>
-                            ) : (
-                              active && <Check className="size-4 text-secondary" aria-hidden />
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                </ul>
-              </fieldset>
-            )}
+            <CareerPicker
+              catalog={catalog}
+              university={uni}
+              career={career}
+              taken={taken}
+              takenLabel="Ya es su meta"
+              onUniversityChange={(id) => {
+                setUni(id);
+                setCareer(null);
+              }}
+              onCareerChange={setCareer}
+            />
             <FormError text={error} />
           </>
         )}
