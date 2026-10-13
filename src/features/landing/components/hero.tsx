@@ -1,7 +1,8 @@
-import { BrainCircuit, PlayCircle } from "lucide-react";
+import { GraduationCap, PlayCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ExamMock } from "./exam-mock";
+import { HeroExamStrip, HeroHeadline } from "./hero-headline";
 import { HeroPrimaryCta, HeroTrialNote } from "./train-cta";
 
 export function Hero() {
@@ -12,19 +13,15 @@ export function Hero() {
 
       <div className="mx-auto grid max-w-7xl items-center gap-16 px-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
         <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-          <span className="inline-flex items-center gap-2 rounded-full border border-energy/40 bg-energy/10 px-3 py-1 text-xs font-semibold text-energy">
-            <BrainCircuit className="size-3.5" /> Metodología Estado Examen
+          <span className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+            <GraduationCap className="size-3.5" /> Simulador de exámenes de admisión y TOEFL
           </span>
 
-          <h1 className="mt-6 text-4xl leading-[1.08] font-bold text-balance sm:text-5xl lg:text-6xl xl:text-[4.25rem]">
-            No estudies para memorizar.{" "}
-            <span className="text-brand-gradient">Entrena para ejecutar bajo presión.</span>
-          </h1>
+          <HeroHeadline />
 
           <h2 className="mt-6 max-w-xl font-sans text-lg font-normal tracking-normal text-muted-foreground text-pretty sm:text-xl">
-            Sube tus aciertos y asegura tu lugar. Entrena en{" "}
-            <strong className="font-semibold text-cool">Estado Examen</strong>: reactivos con el reloj del examen real,
-            respuestas ponderadas y el diagnóstico de cada error.
+            Practica con exámenes de prueba con el <strong className="font-semibold text-cool">formato, el reloj y la presión</strong>{" "}
+            del día real. Al terminar sabes qué fallaste, por qué y cómo resolverlo.
           </h2>
 
           <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -36,6 +33,7 @@ export function Hero() {
             </Button>
           </div>
           <HeroTrialNote />
+          <HeroExamStrip />
         </div>
 
         <div className="px-4 sm:px-8 lg:px-0">

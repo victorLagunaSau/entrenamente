@@ -1,3 +1,4 @@
+import { BigIdea } from "@/features/landing/components/big-idea";
 import { ContactForm } from "@/features/landing/components/contact-form";
 import { Diagnosis } from "@/features/landing/components/diagnosis";
 import { ErrorGuide } from "@/features/landing/components/error-guide";
@@ -16,6 +17,7 @@ export default function LandingPage() {
       <Navbar />
       <main className="overflow-x-clip">
         <Hero />
+        <BigIdea />
         <TryQuestion />
         <Diagnosis />
         <Science />
