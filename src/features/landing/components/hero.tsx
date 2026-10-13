@@ -1,8 +1,9 @@
-import { Sparkles } from "lucide-react";
+import { FileText, GraduationCap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ExamMock } from "./exam-mock";
-import { HeroPrimaryCta } from "./train-cta";
+import { HeroExamStrip, HeroHeadline } from "./hero-headline";
+import { HeroPrimaryCta, HeroTrialNote } from "./train-cta";
 
 export function Hero() {
   return (
@@ -12,27 +13,27 @@ export function Hero() {
 
       <div className="mx-auto grid max-w-7xl items-center gap-16 px-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
         <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-          <span className="inline-flex items-center gap-2 rounded-full border border-energy/40 bg-energy/10 px-3 py-1 text-xs font-semibold text-energy">
-            <Sparkles className="size-3.5" /> Entrenamiento bajo presión real
+          <span className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+            <GraduationCap className="size-3.5" /> Simulador de exámenes de admisión y TOEFL
           </span>
 
-          <h1 className="mt-6 text-4xl leading-[1.08] font-bold text-balance sm:text-5xl lg:text-6xl xl:text-[4.25rem]">
-            ¿Sales mal en los exámenes{" "}
-            <span className="text-brand-gradient">aunque te sabes las respuestas?</span>
-          </h1>
+          <HeroHeadline />
 
           <h2 className="mt-6 max-w-xl font-sans text-lg font-normal tracking-normal text-muted-foreground text-pretty sm:text-xl">
-            No es tu capacidad, es que te falta entrenar bajo la presión del{" "}
-            <strong className="font-semibold text-cool">‘Estado Examen’</strong>. Practica con la plataforma dinámica
-            diseñada para las universidades más importantes de México.
+            Practica con exámenes de prueba con el <strong className="font-semibold text-cool">formato, el reloj y la presión</strong>{" "}
+            del día real. Al terminar sabes qué fallaste, por qué y cómo resolverlo.
           </h2>
 
           <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <HeroPrimaryCta />
             <Button asChild variant="outline" size="lg" className="h-14 border-cool/25 px-8 text-base">
-              <a href="#planes">Ver Planes</a>
+              <a href="#guia-errores">
+                <FileText className="size-5" /> Aprende de tus errores
+              </a>
             </Button>
           </div>
+          <HeroTrialNote />
+          <HeroExamStrip />
         </div>
 
         <div className="px-4 sm:px-8 lg:px-0">

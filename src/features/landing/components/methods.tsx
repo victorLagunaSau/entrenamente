@@ -64,7 +64,7 @@ function StreakVisual() {
         ))}
       </div>
       <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Moon className="size-3.5 text-gold" /> Cierra hoy a las 11:59 p. m.
+        <Moon className="size-3.5 text-gold" /> Juega antes de la medianoche
       </p>
     </div>
   );
@@ -73,9 +73,9 @@ function StreakVisual() {
 const METHODS = [
   {
     icon: CalendarCheck,
-    tag: "Plan de exámenes de práctica",
+    tag: "Plan personalizado",
     title: "Llega listo el día del examen",
-    body: "Exámenes programados automáticamente para ayudarte a estar listo antes de la fecha de tu examen.",
+    body: "Dinos la fecha de tu examen oficial y armamos tu calendario desde hoy, de 1 a 3 exámenes por día. La dificultad se ajusta sola con tus resultados y, si un examen sale bajo, te agendamos un refuerzo.",
     visual: <PlanVisual />,
     accent: "text-secondary bg-secondary/15",
     className: "lg:col-span-2",
@@ -83,8 +83,8 @@ const METHODS = [
   {
     icon: InfinityIcon,
     tag: "Exámenes libres",
-    title: "Practica sin límites",
-    body: "Cada vez que quieras realizar un examen, puedes entrar y practicar sin límites.",
+    title: "Practica cuando quieras",
+    body: "Elige tu nivel (Fácil, Medio o Difícil) y presenta un examen completo con el reloj y el diseño del examen real de tu universidad.",
     visual: <FreeVisual />,
     accent: "text-brand-light bg-brand-light/15",
     className: "",
@@ -93,7 +93,7 @@ const METHODS = [
     icon: Flame,
     tag: "Racha",
     title: "Un mini examen al día",
-    body: "Mini exámenes diarios con preguntas progresivamente más difíciles, que debes completar antes de la medianoche.",
+    body: "Dos preguntas de cada materia de tu carrera, intercaladas y contra reloj. Si aciertas el 70 % subes de nivel; si no, bajas. Juega cada día para no romper tu racha.",
     visual: <StreakVisual />,
     accent: "text-energy bg-energy/15",
     className: "lg:col-span-3 lg:grid lg:grid-cols-2 lg:items-center lg:gap-10",
@@ -107,7 +107,7 @@ export function Methods() {
       <div className="reveal mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           id="metodos"
-          eyebrow="Métodos de estudio"
+          eyebrow="Modos de entrenamiento"
           title={
             <>
               Tres formas de entrenar, <span className="text-brand-gradient">un solo objetivo: tu lugar</span>

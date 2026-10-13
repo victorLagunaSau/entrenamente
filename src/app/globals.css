@@ -197,6 +197,10 @@ html {
     animation-range: entry 5% cover 28%;
   }
 }
+/* Mientras la landing se desliza a un ancla (SmoothAnchors), las secciones que pasan no se desvanecen. */
+html[data-jumping] .reveal {
+  animation: none !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -356,5 +360,12 @@ html {
   html:has(#tutor-report),
   body:has(#tutor-report) {
     background: var(--background);
+  }
+}
+
+/* Ejemplo de Guía de errores de la landing (features/landing/components/guide-example): al imprimir solo se ve la hoja. */
+@media print {
+  body:has(> #guia-ejemplo-print) > :not(#guia-ejemplo-print) {
+    display: none !important;
   }
 }
