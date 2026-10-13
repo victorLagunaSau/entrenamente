@@ -139,6 +139,7 @@ export function FeedbackDetails({
   correct,
   steps,
   stepByStep = false,
+  revealed = false,
 }: {
   diagnostico: string | null | undefined;
   /** Letra (según el orden que vio el alumno) y texto de la opción correcta. */
@@ -146,6 +147,8 @@ export function FeedbackDetails({
   steps: string[];
   /** Muestra la solución de a un paso (reporte de estudio). */
   stepByStep?: boolean;
+  /** Con `stepByStep`, empieza con todos los pasos a la vista. */
+  revealed?: boolean;
 }) {
   return (
     <>
@@ -163,7 +166,7 @@ export function FeedbackDetails({
       {steps.length > 0 && (
         <Feedback icon={ListOrdered} title="Solución paso a paso">
           {stepByStep ? (
-            <SolutionSteps steps={steps} />
+            <SolutionSteps steps={steps} revealed={revealed} />
           ) : (
             <ol className="mt-1 flex flex-col gap-1.5">
               {steps.map((paso, i) => (
@@ -180,8 +183,8 @@ export function FeedbackDetails({
 }
 
 /** Solución que se descubre paso a paso: el alumno intenta el siguiente antes de verlo. */
-export function SolutionSteps({ steps }: { steps: string[] }) {
-  const [shown, setShown] = React.useState(1);
+export function SolutionSteps({ steps, revealed = false }: { steps: string[]; revealed?: boolean }) {
+  const [shown, setShown] = React.useState(revealed ? steps.length : 1);
   const all = shown >= steps.length;
 
   return (

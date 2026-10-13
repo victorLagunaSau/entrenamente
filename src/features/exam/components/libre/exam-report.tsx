@@ -381,8 +381,20 @@ function Aciertos({ aciertos, materias, total }: { aciertos: Numbered[]; materia
   );
 }
 
-/** Materia plegable: el encabezado (nombre, conteo, resumen) siempre a la vista; sin preguntas no se abre. */
-export function MateriaGroup({ name, count, summary, children }: { name: string; count: number; summary: React.ReactNode; children: React.ReactNode }) {
+/** Materia plegable: el encabezado (nombre, conteo, resumen) siempre a la vista; sin preguntas no se abre. `defaultOpen` la muestra abierta. */
+export function MateriaGroup({
+  name,
+  count,
+  summary,
+  children,
+  defaultOpen,
+}: {
+  name: string;
+  count: number;
+  summary: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
   const header = (
     <>
       <span className="h-6 w-1 shrink-0 rounded-full" style={{ backgroundColor: UNI_ACCENT }} />
@@ -395,7 +407,7 @@ export function MateriaGroup({ name, count, summary, children }: { name: string;
     return <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-dashed bg-background/60 px-4 py-3 opacity-80">{header}</div>;
   }
   return (
-    <details className="group/materia rounded-2xl border bg-background/60">
+    <details open={defaultOpen} className="group/materia rounded-2xl border bg-background/60">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden">
         {header}
         <ChevronDown className="size-4 text-primary transition-transform group-open/materia:rotate-180" />
@@ -405,10 +417,25 @@ export function MateriaGroup({ name, count, summary, children }: { name: string;
   );
 }
 
-/** Pregunta plegable con diagnóstico y solución. `source` antepone su origen (p. ej. "Examen 2") cuando se mezclan exámenes. */
-export function QuestionAccordion({ q, n, total, source }: { q: SnapshotQuestion; n: number; total: number; source?: string }) {
+/**
+ * Pregunta plegable con diagnóstico y solución. `source` antepone su origen (p. ej. "Examen 2") cuando se mezclan exámenes.
+ * `expanded` la muestra abierta y con todos los pasos de la solución a la vista (ejemplo de la landing).
+ */
+export function QuestionAccordion({
+  q,
+  n,
+  total,
+  source,
+  expanded,
+}: {
+  q: SnapshotQuestion;
+  n: number;
+  total: number;
+  source?: string;
+  expanded?: boolean;
+}) {
   return (
-    <details className="group rounded-2xl border bg-card open:shadow-sm">
+    <details open={expanded} className="group rounded-2xl border bg-card open:shadow-sm">
       <summary className="flex cursor-pointer list-none items-start gap-3 p-3 sm:p-4 [&::-webkit-details-marker]:hidden">
         <span className={cn("mt-0.5 shrink-0 rounded-full border px-2 py-0.5 font-mono text-xs", scoreTone(q.ponderacion_obtenida))}>
           {formatScore(q.ponderacion_obtenida)}
@@ -426,7 +453,7 @@ export function QuestionAccordion({ q, n, total, source }: { q: SnapshotQuestion
         </span>
       </summary>
       <div className="border-t p-3 sm:p-4">
-        <FrozenQuestion q={q} n={n} total={total} hidePrompt />
+        <FrozenQuestion q={q} n={n} total={total} hidePrompt allSteps={expanded} />
       </div>
     </details>
   );
@@ -469,7 +496,19 @@ function Stat({ icon: Icon, label, value }: { icon: typeof Timer; label: string;
 }
 
 /** Reactivo congelado tal como se respondió: mismas letras, respuesta elegida y retroalimentación. */
-function FrozenQuestion({ q, n, total, hidePrompt = false }: { q: SnapshotQuestion; n: number; total: number; hidePrompt?: boolean }) {
+function FrozenQuestion({
+  q,
+  n,
+  total,
+  hidePrompt = false,
+  allSteps = false,
+}: {
+  q: SnapshotQuestion;
+  n: number;
+  total: number;
+  hidePrompt?: boolean;
+  allSteps?: boolean;
+}) {
   const options = orderedOptions(q);
   const correctIndex = options.findIndex((r) => r.ponderacion === 1);
   const unanswered = q.respuesta_seleccionada_id === null;
@@ -499,6 +538,7 @@ function FrozenQuestion({ q, n, total, hidePrompt = false }: { q: SnapshotQuesti
         correct={correctIndex >= 0 ? { letter: letterAt(correctIndex), texto: options[correctIndex].texto } : null}
         steps={q.solucion_paso_a_paso}
         stepByStep
+        revealed={allSteps}
       />
     </div>
   );

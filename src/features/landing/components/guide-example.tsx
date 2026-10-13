@@ -190,12 +190,13 @@ export default function GuideExample() {
         </Button>
       </div>
 
-      {MATERIAS.map((materia) => {
+      {/* La primera falla llega abierta y con la solución completa: se entiende de inmediato qué es la guía. */}
+      {MATERIAS.map((materia, i) => {
         const list = FALLAS.filter(({ q }) => q.materia === materia);
         return (
-          <MateriaGroup key={materia} name={materia} count={list.length} summary={`${list.length} por repasar`}>
-            {list.map(({ q, n }) => (
-              <QuestionAccordion key={q.id_original} q={q} n={n} total={PREGUNTAS.length} />
+          <MateriaGroup key={materia} name={materia} count={list.length} summary={`${list.length} por repasar`} defaultOpen={i === 0}>
+            {list.map(({ q, n }, j) => (
+              <QuestionAccordion key={q.id_original} q={q} n={n} total={PREGUNTAS.length} expanded={i === 0 && j === 0} />
             ))}
           </MateriaGroup>
         );
