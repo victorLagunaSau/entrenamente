@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowRight, Check, ListOrdered, RotateCcw, Scale, SearchCheck, Timer, X } from "lucide-react";
+import { ArrowRight, Check, FileText, ListOrdered, Loader2, RotateCcw, Scale, SearchCheck, Timer, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { SectionHeading } from "./section-heading";
 import { TrainButton, useLandingSession } from "./train-cta";
@@ -71,7 +73,6 @@ function tono(puntos: number) {
 export function TryQuestion() {
   const [elegida, setElegida] = React.useState<string | null>(null);
   const opcion = OPTIONS.find((o) => o.key === elegida);
-  const { loggedIn, homePath } = useLandingSession();
 
   return (
     <section id="pruebalo" aria-labelledby="pruebalo-title" className="reveal mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
@@ -193,17 +194,52 @@ export function TryQuestion() {
               </div>
             </article>
           ))}
-          {loggedIn ? (
-            <TrainButton href={homePath} size="lg" className="mt-2 h-12" />
-          ) : (
-            <Button asChild variant="energy" size="lg" className="mt-2 h-12">
-              <Link href="/registro">
-                Quiero mi Guía de errores <ArrowRight />
-              </Link>
-            </Button>
-          )}
+          <GuideDialog />
         </div>
       </div>
     </section>
+  );
+}
+
+// El ejemplo usa los componentes del reporte real (y KaTeX): se descarga solo al abrir el diálogo.
+const GuideExample = dynamic(() => import("./guide-example"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid h-60 place-items-center text-muted-foreground">
+      <Loader2 className="size-6 animate-spin" />
+    </div>
+  ),
+});
+
+/** "Conoce la Guía de errores": ejemplo navegable y descargable sin salir de la landing. */
+function GuideDialog() {
+  const { loggedIn, homePath } = useLandingSession();
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="energy" size="lg" className="mt-2 h-12">
+          <FileText /> Conoce la Guía de errores
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="gap-4 sm:max-w-2xl sm:max-h-[90dvh]">
+        <DialogHeader>
+          <DialogTitle>Así se ve tu Guía de errores</DialogTitle>
+          <DialogDescription>
+            Ejemplo de un examen de la UNAM. Abre cada materia y cada pregunta para ver el diagnóstico y la solución paso a
+            paso, o descárgala en PDF.
+          </DialogDescription>
+        </DialogHeader>
+        <GuideExample />
+        {loggedIn ? (
+          <TrainButton href={homePath} size="lg" className="h-12 w-full" />
+        ) : (
+          <Button asChild variant="energy" size="lg" className="h-12 w-full">
+            <Link href="/registro">
+              Quiero la mía: inicia prueba gratis <ArrowRight />
+            </Link>
+          </Button>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

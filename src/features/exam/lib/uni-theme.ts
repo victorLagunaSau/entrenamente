@@ -38,7 +38,8 @@ const NEUTRAL_LIGHT: ThemeVars = {
   "--success": "#1b7a43",
 };
 
-function varsFor(key: string | null): ThemeVars {
+/** Variables del tema institucional; también sirven en un contenedor (p. ej. el ejemplo de la landing). */
+export function uniThemeVars(key: string | null): ThemeVars {
   // Sin color registrado para la institución: negro.
   const school = schoolVars(key) as ThemeVars;
   const color = school["--school-primary"];
@@ -67,7 +68,7 @@ export function useUniTheme(institucion: string | null | undefined, enabled = tr
   React.useLayoutEffect(() => {
     if (!enabled || key === undefined) return;
     const root = document.documentElement;
-    const vars = varsFor(key);
+    const vars = uniThemeVars(key);
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
     root.dataset.uniTheme = key ?? "neutral";
     return () => {

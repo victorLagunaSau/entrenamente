@@ -358,3 +358,10 @@ html {
     background: var(--background);
   }
 }
+
+/* Ejemplo de Guía de errores de la landing (features/landing/components/guide-example): al imprimir solo se ve la hoja. */
+@media print {
+  body:has(> #guia-ejemplo-print) > :not(#guia-ejemplo-print) {
+    display: none !important;
+  }
+}
