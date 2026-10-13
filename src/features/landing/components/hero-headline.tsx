@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 
 const INTERVALO_MS = 2400;
 
-/** "Entra a la UNAM", "Entra al IPN"… (Instituto / Tecnológico van con "al"). */
+/** "Rumbo a la UNAM", "Rumbo al IPN"… (Instituto / Tecnológico van con "al"). Sin prometer el ingreso. */
 function meta(i: Identidad) {
-  if (i.tipo === "examen_especial") return `Certifícate en ${i.sigla}`;
+  if (i.tipo === "examen_especial") return `Rumbo al ${i.sigla}`;
   const masculino = /^(instituto|tecnol[oó]gico)/i.test(i.nombre);
-  return `Entra ${masculino ? "al" : "a la"} ${i.sigla}`;
+  return `Rumbo ${masculino ? "al" : "a la"} ${i.sigla}`;
 }
 
 function useReducedMotion() {
@@ -31,7 +31,7 @@ function useReducedMotion() {
 export function HeroHeadline() {
   const { identidades } = useIdentidades();
   const activas = identidades.filter((i) => i.activo);
-  const metas = activas.length > 0 ? activas.map(meta) : ["Entra a la universidad"];
+  const metas = activas.length > 0 ? activas.map(meta) : ["Rumbo a la universidad"];
   const reduce = useReducedMotion();
   const [n, setN] = React.useState(0);
 
@@ -45,7 +45,7 @@ export function HeroHeadline() {
 
   return (
     <h1 className="mt-6 text-4xl leading-[1.08] font-bold text-balance sm:text-5xl lg:text-6xl xl:text-[4.25rem]">
-      <span className="sr-only">Entra a la universidad que quieres o certifícate en inglés, </span>
+      <span className="sr-only">Rumbo a la universidad que quieres o a tu certificación de inglés, </span>
       <span aria-hidden className="block min-h-[1.1em]">
         {/* La animación va en un contenedor aparte: con background-clip: text el degradado parpadea como recuadro. */}
         <span key={actual} className="inline-block motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
