@@ -197,6 +197,10 @@ html {
     animation-range: entry 5% cover 28%;
   }
 }
+/* Mientras la landing se desliza a un ancla (SmoothAnchors), las secciones que pasan no se desvanecen. */
+html[data-jumping] .reveal {
+  animation: none !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   html {

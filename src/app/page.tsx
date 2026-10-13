@@ -8,11 +8,13 @@ import { Methods } from "@/features/landing/components/methods";
 import { Navbar } from "@/features/landing/components/navbar";
 import { Plans } from "@/features/landing/components/plans";
 import { Science } from "@/features/landing/components/science";
+import { SmoothAnchors } from "@/features/landing/components/smooth-anchors";
 import { Universities } from "@/features/landing/components/universities";
 
 export default function LandingPage() {
   return (
     <>
+      <SmoothAnchors />
       <Navbar />
       <main className="overflow-x-clip">
         <Hero />
