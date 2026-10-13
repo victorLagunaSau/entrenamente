@@ -1,4 +1,4 @@
-import { GraduationCap, PlayCircle } from "lucide-react";
+import { FileText, GraduationCap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ExamMock } from "./exam-mock";
@@ -27,8 +27,8 @@ export function Hero() {
           <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <HeroPrimaryCta />
             <Button asChild variant="outline" size="lg" className="h-14 border-cool/25 px-8 text-base">
-              <a href="#pruebalo">
-                <PlayCircle className="size-5" /> Resuelve una pregunta
+              <a href="#guia-errores">
+                <FileText className="size-5" /> Aprende de tus errores
               </a>
             </Button>
           </div>
