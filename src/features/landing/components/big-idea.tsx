@@ -13,8 +13,9 @@ export function BigIdea() {
         </span>
         <h2 id="gran-idea" className="mt-8 font-display leading-[0.98] font-bold tracking-tight text-balance">
           <span className="block text-[clamp(2.25rem,7.5vw,6.5rem)] text-slate-400">No estudies para memorizar.</span>
-          <span className="mt-2 block text-[clamp(2.25rem,7.5vw,6.5rem)] text-brand-gradient">
-            Entrena para ejecutar bajo presión.
+          {/* Degradado en un span en línea: en un bloque se recorta a la caja y corta las colas de la j y la p. */}
+          <span className="mt-2 block text-[clamp(2.25rem,7.5vw,6.5rem)]">
+            <span className="text-brand-gradient">Entrena para ejecutar bajo presión.</span>
           </span>
         </h2>
         <p className="mt-8 max-w-2xl text-lg text-muted-foreground text-pretty sm:text-xl">
