@@ -15,7 +15,7 @@ const UPGRADE_PATH = "/acceso-ilimitado";
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  // Con sesión, Iniciar Sesión y Registrarme se sustituyen por "Ir a entrenar".
+  // Con sesión, Iniciar Sesión y la prueba gratis se sustituyen por "Entrenar ahora".
   const { loggedIn, homePath } = useLandingSession();
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function Navbar() {
                 <Link href="/login">Iniciar Sesión</Link>
               </Button>
               <Button asChild variant="energy">
-                <Link href="/registro">Registrarme Gratis</Link>
+                <Link href="/registro">Inicia prueba gratis</Link>
               </Button>
             </>
           )}
@@ -56,7 +56,7 @@ export function Navbar() {
           {loggedIn && <TrainButton href={homePath} size="sm" className="h-9" />}
           {loggedIn === false && (
             <Button asChild variant="energy" size="sm" className="h-9">
-              <Link href="/registro">Registrarme</Link>
+              <Link href="/registro">Prueba gratis</Link>
             </Button>
           )}
           <Button
@@ -82,7 +82,7 @@ export function Navbar() {
                 <Link href="/login">Iniciar Sesión</Link>
               </Button>
               <Button asChild variant="energy" size="lg">
-                <Link href="/registro">Registrarme Gratis</Link>
+                <Link href="/registro">Inicia prueba gratis</Link>
               </Button>
             </>
           )}

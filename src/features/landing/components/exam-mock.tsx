@@ -59,7 +59,7 @@ export function ExamMock() {
         {/* Pregunta */}
         <div className="mt-5 rounded-2xl border bg-background/60 p-4">
           <span className="inline-flex items-center gap-1 rounded-md bg-secondary/15 px-2 py-0.5 text-[11px] font-semibold text-secondary">
-            <Shuffle className="size-3" /> Variante mutada
+            <Shuffle className="size-3" /> Variante
           </span>
           <p className="mt-3 font-display text-base font-semibold text-balance sm:text-lg">
             Si 3x − 7 = 2x + 5, ¿cuál es el valor de x?
@@ -116,8 +116,8 @@ export function ExamMock() {
       <div className="animate-float-slow absolute -right-2 -bottom-6 flex items-center gap-2 rounded-2xl border border-secondary/40 bg-surface-deep/90 px-3 py-2 shadow-xl backdrop-blur sm:-right-8">
         <TrendingUp className="size-5 text-secondary" />
         <div className="leading-tight">
-          <p className="text-sm font-bold">+18% aciertos</p>
-          <p className="text-[11px] text-muted-foreground">esta semana</p>
+          <p className="text-sm font-bold">Subiste de nivel</p>
+          <p className="text-[11px] text-muted-foreground">Fácil → Medio</p>
         </div>
       </div>
     </div>

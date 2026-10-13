@@ -1,8 +1,8 @@
-import { Sparkles } from "lucide-react";
+import { BrainCircuit, PlayCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ExamMock } from "./exam-mock";
-import { HeroPrimaryCta } from "./train-cta";
+import { HeroPrimaryCta, HeroTrialNote } from "./train-cta";
 
 export function Hero() {
   return (
@@ -13,26 +13,29 @@ export function Hero() {
       <div className="mx-auto grid max-w-7xl items-center gap-16 px-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
         <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
           <span className="inline-flex items-center gap-2 rounded-full border border-energy/40 bg-energy/10 px-3 py-1 text-xs font-semibold text-energy">
-            <Sparkles className="size-3.5" /> Entrenamiento bajo presión real
+            <BrainCircuit className="size-3.5" /> Metodología Estado Examen
           </span>
 
           <h1 className="mt-6 text-4xl leading-[1.08] font-bold text-balance sm:text-5xl lg:text-6xl xl:text-[4.25rem]">
-            ¿Sales mal en los exámenes{" "}
-            <span className="text-brand-gradient">aunque te sabes las respuestas?</span>
+            No estudies para memorizar.{" "}
+            <span className="text-brand-gradient">Entrena para ejecutar bajo presión.</span>
           </h1>
 
           <h2 className="mt-6 max-w-xl font-sans text-lg font-normal tracking-normal text-muted-foreground text-pretty sm:text-xl">
-            No es tu capacidad, es que te falta entrenar bajo la presión del{" "}
-            <strong className="font-semibold text-cool">‘Estado Examen’</strong>. Practica con la plataforma dinámica
-            diseñada para las universidades más importantes de México.
+            Sube tus aciertos y asegura tu lugar. Entrena en{" "}
+            <strong className="font-semibold text-cool">Estado Examen</strong>: reactivos con el reloj del examen real,
+            respuestas ponderadas y el diagnóstico de cada error.
           </h2>
 
           <div className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <HeroPrimaryCta />
             <Button asChild variant="outline" size="lg" className="h-14 border-cool/25 px-8 text-base">
-              <a href="#planes">Ver Planes</a>
+              <a href="#pruebalo">
+                <PlayCircle className="size-5" /> Resuelve una pregunta
+              </a>
             </Button>
           </div>
+          <HeroTrialNote />
         </div>
 
         <div className="px-4 sm:px-8 lg:px-0">

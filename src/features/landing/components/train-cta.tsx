@@ -28,13 +28,13 @@ export function TrainButton({ href, className, size }: { href: string; className
   return (
     <Button asChild variant="brand" size={size} className={className}>
       <Link href={href}>
-        <Brain className={size === "lg" ? "size-5" : undefined} /> Ir a entrenar
+        <Brain className={size === "lg" ? "size-5" : undefined} /> Entrenar ahora
       </Link>
     </Button>
   );
 }
 
-/** CTA principal del Hero: "Probar Gratis Ahora" o, con sesión, "Ir a entrenar". */
+/** CTA principal del Hero: "Inicia prueba gratis" o, con sesión, "Entrenar ahora". */
 export function HeroPrimaryCta() {
   const { loggedIn, homePath } = useLandingSession();
   const className = "h-14 px-8 text-base";
@@ -43,8 +43,15 @@ export function HeroPrimaryCta() {
   return (
     <Button asChild variant="energy" size="lg" className={className}>
       <Link href="/registro">
-        Probar Gratis Ahora <ArrowRight className="size-5" />
+        Inicia prueba gratis <ArrowRight className="size-5" />
       </Link>
     </Button>
   );
+}
+
+/** Nota bajo los CTA del Hero: solo para quien aún no tiene cuenta. */
+export function HeroTrialNote() {
+  const { loggedIn } = useLandingSession();
+  if (loggedIn !== false) return null;
+  return <p className="mt-4 text-sm text-muted-foreground">Gratis · Sin tarjeta</p>;
 }
