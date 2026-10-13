@@ -67,24 +67,31 @@ export function HeroExamStrip() {
       <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">Exámenes que puedes entrenar</p>
       <ul className="flex flex-wrap justify-center gap-2 lg:justify-start">
         {activas.map((i) => (
-          <li
-            key={i.id}
-            className={cn(
-              "flex items-center gap-2 rounded-xl border bg-card/60 py-1.5 pr-3 pl-1.5 text-sm font-bold",
-              i.tipo === "examen_especial" && "border-secondary/40"
-            )}
-          >
-            <span
-              className="grid size-7 place-items-center rounded-lg"
-              style={{ background: `var(--uni-${i.id}, var(--muted))` }}
+          <li key={i.id}>
+            <a
+              href={i.tipo === "examen_especial" ? `#${i.id}` : "#universidades"}
+              className={cn(
+                "flex items-center gap-2 rounded-xl border bg-card/60 py-1.5 pr-3 pl-1.5 text-sm font-bold transition-colors hover:border-secondary/60 hover:bg-card",
+                i.tipo === "examen_especial" && "border-secondary/40"
+              )}
             >
-              <InstitucionIcon id={i.id} label="" color={`var(--uni-${i.id}-fg, #ffffff)`} className="size-4" />
-            </span>
-            {i.sigla}
+              <span
+                className="grid size-7 place-items-center rounded-lg"
+                style={{ background: `var(--uni-${i.id}, var(--muted))` }}
+              >
+                <InstitucionIcon id={i.id} label="" color={`var(--uni-${i.id}-fg, #ffffff)`} className="size-4" />
+              </span>
+              {i.sigla}
+            </a>
           </li>
         ))}
-        <li className="flex items-center gap-1.5 rounded-xl border border-dashed border-gold/40 px-3 py-1.5 text-sm font-semibold text-gold">
-          <Sparkles className="size-3.5" /> PISA · Próximamente
+        <li>
+          <a
+            href="#pisa"
+            className="flex items-center gap-1.5 rounded-xl border border-dashed border-gold/40 px-3 py-1.5 text-sm font-semibold text-gold transition-colors hover:border-gold"
+          >
+            <Sparkles className="size-3.5" /> PISA · Próximamente
+          </a>
         </li>
       </ul>
     </div>
