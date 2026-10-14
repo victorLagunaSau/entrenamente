@@ -62,7 +62,8 @@ export const TUTOR_PLANS: Record<TutorKind, TutorPlan[]> = {
       tagline: "Acceso ilimitado para tu estudiante y tú lo acompañas en su preparación.",
       seats: 1,
       perStudent: false,
-      priceMxn: 120,
+      priceMxn: 105,
+      annualDiscount: 1 - 879 / (105 * 12),
       perks: [
         "Acceso ilimitado para 1 estudiante: Plan, Examen Libre y Modo Racha",
         "Panel para monitorear su avance, materia por materia",
@@ -75,7 +76,8 @@ export const TUTOR_PLANS: Record<TutorKind, TutorPlan[]> = {
       tagline: "Extiende el acceso ilimitado a 2 estudiantes y dales seguimiento en un solo panel.",
       seats: 2,
       perStudent: false,
-      priceMxn: 170,
+      priceMxn: 169,
+      annualDiscount: 1 - 1399 / (169 * 12),
       perks: [
         "Acceso ilimitado para 2 estudiantes",
         "Monitoreo de ambos en un solo panel",
@@ -85,10 +87,12 @@ export const TUTOR_PLANS: Record<TutorKind, TutorPlan[]> = {
     {
       id: "familia",
       name: "Plan Familia",
-      tagline: "De 3 estudiantes en adelante: tú decides cuántos, al mejor precio por estudiante.",
+      tagline: "De 3 a 6 estudiantes: tú decides cuántos, al mejor precio por estudiante.",
       seats: 3,
+      maxSeats: 6,
       perStudent: true,
       priceMxn: 75,
+      annualDiscount: 1 - 629 / (75 * 12),
       perks: [
         "Acceso ilimitado para los estudiantes que elijas",
         "Grupos para organizarlos (hijos, primos, sobrinos…)",
@@ -131,16 +135,27 @@ export type BillingPeriod = "mensual" | "anual";
 export const checkoutHref = ({ plan, seats }: PlanChoice, period: BillingPeriod) =>
   `/acceso-ilimitado?plan=${plan.id}&estudiantes=${seats}&periodo=${period}`;
 
-/** Total del año con el descuento anual (Plan Tutor: $120 × 12 × 0.8 = $1,152). */
+/** Total del año con el descuento anual del plan (Plan Tutor: $879; Familia: $629 por estudiante). */
 export const annualPriceOf = (choice: PlanChoice) =>
   Math.round(priceOf(choice) * 12 * (1 - (choice.plan.annualDiscount ?? ANNUAL_DISCOUNT)));
+
+/**
+ * Precio con descuento por porcentaje (ofertas). Se redondea por unidad, como en Stripe: el plan completo o,
+ * en el Familia, cada estudiante (Familia anual con 40 %: $377 × estudiantes).
+ */
+export function salePriceOf(choice: PlanChoice, period: BillingPeriod, pct: number): number {
+  const unit: PlanChoice = choice.plan.perStudent ? { plan: choice.plan, seats: 1 } : choice;
+  const normal = period === "anual" ? annualPriceOf(unit) : priceOf(unit);
+  const off = Math.round(normal * (1 - pct / 100));
+  return choice.plan.perStudent ? off * choice.seats : off;
+}
 
 /** % de descuento anual de un plan, redondeado para mostrarse. */
 export const annualDiscountPct = (plan: TutorPlan) => Math.round((plan.annualDiscount ?? ANNUAL_DISCOUNT) * 100);
 
 /**
  * Ahorro mensual frente a pagar un Plan Tutor por cada estudiante (solo planes familiares).
- * Plan Dúo: 2 × $120 = $240 → ahorras $70. Plan Familia: $45 por estudiante.
+ * Plan Dúo: 2 × $105 = $210 → ahorras $41. Plan Familia: $30 por estudiante.
  */
 export function savingsOf(kind: TutorKind, choice: PlanChoice): number {
   if (kind !== "parent") return 0;

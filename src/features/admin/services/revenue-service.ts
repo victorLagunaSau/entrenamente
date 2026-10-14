@@ -56,10 +56,13 @@ export type AdminFlashSale = {
   id: string;
   title: string;
   target_role: PricingRole;
-  plan_id: string;
+  /** null = todos los planes del rol (solo ofertas por porcentaje). */
+  plan_id: string | null;
   billing_cycle: BillingInterval;
-  discounted_price: number;
-  duration_days: number;
+  discounted_price: number | null;
+  discount_pct: number | null;
+  /** null = los días del periodo que compre. */
+  duration_days: number | null;
   starts_at: string;
   expires_at: string;
   is_active: boolean;
@@ -131,13 +134,16 @@ export const saveExperiment = (e: { id: string | null; name: string; role: Prici
 export const setExperimentStatus = (id: string, status: ExperimentStatus) =>
   rpc<void>("admin_estado_experimento", { p_id: id, p_status: status });
 
+/** Precio fijo: planId + cycle + price. Porcentaje: pct (+ planId opcional; sin plan = todo el rol). */
 export type FlashSaleInput = {
   id: string | null;
   title: string;
-  planId: string;
+  role: PricingRole;
+  planId: string | null;
   cycle: BillingInterval;
-  price: number;
-  durationDays: number;
+  price: number | null;
+  pct: number | null;
+  durationDays: number | null;
   startsAt: string;
   expiresAt: string;
   active: boolean;
@@ -147,9 +153,11 @@ export const saveFlashSale = (f: FlashSaleInput) =>
   rpc<string>("admin_guardar_oferta", {
     p_id: f.id,
     p_title: f.title,
+    p_role: f.role,
     p_plan: f.planId,
     p_cycle: f.cycle,
     p_price: f.price,
+    p_pct: f.pct,
     p_duration_days: f.durationDays,
     p_starts_at: f.startsAt,
     p_expires_at: f.expiresAt,

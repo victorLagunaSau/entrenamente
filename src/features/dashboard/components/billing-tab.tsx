@@ -8,11 +8,11 @@ import { ArrowRight, CalendarClock, CreditCard, Sparkles, TriangleAlert, UserPlu
 import { Button } from "@/components/ui/button";
 import { ParentPlanGrid, WhyTutor, type ChooseHandler } from "@/features/pricing/components/parent-plan-cards";
 import { useImpression, usePricing } from "@/features/pricing/hooks/use-pricing";
-import { checkoutHref as pricingCheckoutHref, parentPlans } from "@/features/pricing/lib/pricing";
+import { activeFlashSales, checkoutHref as pricingCheckoutHref, parentPlans } from "@/features/pricing/lib/pricing";
 import { cn } from "@/lib/utils";
 
 import {
-  ANNUAL_DISCOUNT,
+  annualDiscountPct,
   annualPriceOf,
   checkoutHref,
   currentChoice,
@@ -46,8 +46,15 @@ export function BillingTab() {
   const showCatalog = !license || lapsed;
   useImpression(pricing, kind === "parent" && showCatalog ? "parent" : null, "billing");
   const router = useRouter();
-  const choose: ChooseHandler = ({ plan, seats }, period) => {
-    const intent = { planId: plan.id, interval: period === "anual" ? ("annual" as const) : ("monthly" as const), seats };
+  // Ofertas vigentes para padres (las de porcentaje se aplican en las tarjetas).
+  const sales = kind === "parent" && pricing.catalog ? activeFlashSales(pricing.catalog, "parent") : [];
+  const choose: ChooseHandler = ({ plan, seats }, period, sale) => {
+    const intent = {
+      planId: plan.id,
+      interval: period === "anual" ? ("annual" as const) : ("monthly" as const),
+      seats,
+      saleId: sale?.id,
+    };
     if (kind === "parent") pricing.choose("parent", intent);
     else router.push(pricingCheckoutHref(intent));
   };
@@ -130,7 +137,7 @@ export function BillingTab() {
           <h2 id="plans-title" className="text-lg font-bold">
             {license ? "Mejorar Plan / Agregar más Estudiantes" : "Elige tu plan"}
           </h2>
-          <p className="text-sm text-muted-foreground">Precios en pesos mexicanos. Paga mes a mes o por un año con {Math.round(ANNUAL_DISCOUNT * 100)} % de descuento.</p>
+          <p className="text-sm text-muted-foreground">Precios en pesos mexicanos. Paga mes a mes o por un año con hasta {Math.max(...plans.map(annualDiscountPct))} % de descuento.</p>
         </div>
         {kind === "parent" && !license && <WhyTutor />}
         <ParentPlanGrid
@@ -139,6 +146,7 @@ export function BillingTab() {
           currentId={current?.plan.id}
           recommendedId={license ? recommended?.id : undefined}
           showSavings={kind === "parent"}
+          sales={sales}
           onChoose={choose}
         />
       </section>
@@ -218,7 +226,7 @@ function UpgradeOffers() {
                   </Link>
                 </Button>
                 <Button asChild variant="ghost" className="flex-1 text-secondary hover:text-secondary">
-                  <Link href={checkoutHref(o.choice, "anual")}>Pago anual −{Math.round(ANNUAL_DISCOUNT * 100)} %</Link>
+                  <Link href={checkoutHref(o.choice, "anual")}>Pago anual −{annualDiscountPct(o.choice.plan)} %</Link>
                 </Button>
               </div>
             </li>

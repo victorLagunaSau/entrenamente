@@ -1,12 +1,21 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { CalendarClock, CalendarRange, Check, CreditCard, Rocket } from "lucide-react";
+import { CalendarClock, CalendarRange, Check, CreditCard, Rocket, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { formatMxn, INTERVAL_LABEL, INTERVAL_MONTHS, type BillingInterval, type Offer } from "../lib/pricing";
+import {
+  discounted,
+  formatMxn,
+  INTERVAL_LABEL,
+  INTERVAL_MONTHS,
+  percentSaleFor,
+  type BillingInterval,
+  type FlashSale,
+  type Offer,
+} from "../lib/pricing";
 
 const ICONS: Record<BillingInterval, LucideIcon> = {
   monthly: CreditCard,
@@ -22,21 +31,24 @@ const TAGLINES: Record<BillingInterval, string> = {
   one_time: "Un solo pago",
 };
 
-/** Mensual equivalente, redondeado hacia abajo a centavos ($750/año → $62.50). */
-const monthlyOf = (o: Offer) => Math.floor((o.price * 100) / INTERVAL_MONTHS[o.interval]) / 100;
+/** Mensual equivalente, redondeado hacia abajo a centavos ($699/año → $58.25). */
+const monthlyOf = (price: number, interval: BillingInterval) => Math.floor((price * 100) / INTERVAL_MONTHS[interval]) / 100;
 
 /**
  * Tarjetas del Plan Estudiante según la variante del usuario. La de mayor ahorro va destacada con su badge
- * ("Ahorras 30 %"). `compact` (modal): apiladas y sin la lista de beneficios.
+ * ("Ahorras 31 %"). Con una oferta por porcentaje vigente, el precio en oferta va grande y el normal tachado.
+ * `compact` (modal): apiladas y sin la lista de beneficios.
  */
 export function StudentOfferCards({
   offers,
   compact = false,
+  sales = [],
   onChoose,
 }: {
   offers: Offer[];
   compact?: boolean;
-  onChoose: (offer: Offer) => void;
+  sales?: FlashSale[];
+  onChoose: (offer: Offer, sale: FlashSale | null) => void;
 }) {
   const best = offers.reduce<Offer | null>((b, o) => (o.savingsPct > (b?.savingsPct ?? 0) ? o : b), null);
   const shortest = offers.reduce<Offer | null>(
@@ -50,6 +62,8 @@ export function StudentOfferCards({
         const featured = o === best;
         const label = INTERVAL_LABEL[o.interval];
         const Icon = ICONS[o.interval];
+        const sale = percentSaleFor(sales, o.plan.id);
+        const pay = sale?.discount_pct ? discounted(o.price, sale.discount_pct) : o.price;
         const features =
           o === shortest
             ? o.plan.features
@@ -84,17 +98,27 @@ export function StudentOfferCards({
                 <p className="text-cool">{TAGLINES[o.interval]}</p>
               </div>
               <div>
+                {sale?.discount_pct && (
+                  <p className="mb-1 inline-flex items-center gap-1 rounded-full bg-energy/15 px-2.5 py-0.5 text-xs font-bold text-energy">
+                    <Zap className="size-3 fill-current" aria-hidden /> {Math.round(sale.discount_pct)} % de descuento
+                  </p>
+                )}
                 <p className={cn("font-display font-extrabold tabular-nums", compact ? "text-4xl" : "text-5xl")}>
-                  {formatMxn(o.price)}
+                  {formatMxn(pay)}
                   <span className="text-base font-medium text-muted-foreground"> MXN / {label.per}</span>
                 </p>
+                {pay !== o.price && (
+                  <p className="text-sm text-muted-foreground">
+                    Precio normal <span className="line-through tabular-nums">{formatMxn(o.price)}</span>
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-muted-foreground text-pretty">
                   {o.interval === "monthly"
                     ? "Pago mensual."
-                    : `Equivale a ${formatMxn(monthlyOf(o))} MXN al mes. ${label.adverb}.`}
+                    : `Equivale a ${formatMxn(monthlyOf(pay, o.interval))} MXN al mes. ${label.adverb}.`}
                 </p>
               </div>
-              <Button size="lg" variant={featured ? "energy" : "brand"} className="h-12 w-full" onClick={() => onChoose(o)}>
+              <Button size="lg" variant={featured ? "energy" : "brand"} className="h-12 w-full" onClick={() => onChoose(o, sale)}>
                 <Rocket /> Pagar ahora
               </Button>
               {!compact && (
