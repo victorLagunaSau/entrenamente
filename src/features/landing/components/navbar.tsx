@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { TrainButton, useLandingSession } from "./train-cta";
 
 /** Con sesión, "Planes" lleva al módulo de pago en lugar de la sección de planes. */
-const UPGRADE_PATH = "/acceso-ilimitado";
+const UPGRADE_PATH = "/pricing";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);

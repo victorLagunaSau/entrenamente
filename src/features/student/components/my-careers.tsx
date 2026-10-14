@@ -209,7 +209,6 @@ function MyCareers() {
               open={paywall}
               focus="carreras"
               phrase={data.campaign.fraseCierre}
-              prices={{ monthly: data.campaign.precioMensualMxn, yearly: data.campaign.precioAnualMxn }}
               onOpenChange={setPaywall}
             />
           )}

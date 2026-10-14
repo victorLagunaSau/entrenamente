@@ -8,6 +8,7 @@ import { CircleAlert, Loader2, ShieldX } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/features/auth/hooks/use-session";
+import { syncVariantOnce } from "@/features/pricing/services/pricing-service";
 
 import { canViewMode, homePathFor, MODES, type Mode, ownMode } from "../modes";
 import { getViewer, type Viewer } from "../services/viewer-service";
@@ -49,7 +50,11 @@ export function ModeGuard({ mode: requested, children }: { mode?: Mode; children
     if (!userId) return;
     let active = true;
     getViewer()
-      .then((result) => active && setViewer(result))
+      .then((result) => {
+        if (active) setViewer(result);
+        // Variante A/B de por vida: se graba en el perfil la primera vez (p. ej. altas con Google).
+        if (result) syncVariantOnce(result.id);
+      })
       .catch(() => active && setViewer("error"));
     return () => {
       active = false;

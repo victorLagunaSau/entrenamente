@@ -12,6 +12,7 @@
 import { authErrorMessage } from "@/features/auth/services/auth-service";
 import { PRIVACY_VERSION } from "@/features/legal/content";
 import { inviteUrl } from "@/features/invitacion/lib/invite-link";
+import { signupPricingMetadata } from "@/features/pricing/services/pricing-service";
 import { authCallbackUrl, supabase } from "@/lib/supabase/client";
 
 import type { AccountData, ExtraData, GoalData, Invite, PlanId } from "../types";
@@ -47,6 +48,8 @@ async function signUp(
         user_type: userType,
         accepted_privacy: account.acceptedPrivacy,
         privacy_version: PRIVACY_VERSION,
+        // Variante A/B que vio como visitante (queda fija en su perfil) y el plan en el que hizo clic.
+        ...signupPricingMetadata(),
         ...metadata,
       },
     },

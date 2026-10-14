@@ -10,7 +10,9 @@ import { DemoError, type DemoCampaign, fillTemplate, type FreeExam, getDemoCampa
 import { getStudentSummary, type StudentSummary } from "../../services/student-service";
 import { DemoPath, type PathBlock } from "./demo-path";
 import { DemoGuide, DemoGuidePlaceholder, DemoStats } from "./demo-results";
-import { PlansSection } from "./demo-plans";
+import { useImpression, usePricing } from "@/features/pricing/hooks/use-pricing";
+
+import { PlansSection, priceHeadline } from "./demo-plans";
 import { PaywallBar, PlansDialog, UnlimitedSection, type UnlockFocus } from "./demo-upsell";
 
 type Goal = { careerId: string; careerName: string; universityId: string; universityShort: string; universityName: string };
@@ -27,6 +29,8 @@ export function DemoHome() {
   const [data, setData] = React.useState<DemoData | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [unlock, setUnlock] = React.useState<{ open: boolean; focus: UnlockFocus }>({ open: false, focus: null });
+  const pricing = usePricing("home-demo");
+  useImpression(pricing, data ? "student" : null, "home-demo");
 
   React.useEffect(() => {
     let active = true;
@@ -70,7 +74,7 @@ export function DemoHome() {
   const { summary, campaign, exams, goal } = data;
   const total = campaign.pruebasOtorgadas;
   const openPlans = (focus: UnlockFocus = null) => setUnlock({ open: true, focus });
-  const prices = { monthly: campaign.precioMensualMxn, yearly: campaign.precioAnualMxn };
+  const price = priceHeadline(pricing);
   const expired = campaign.pruebaTermina !== null && new Date(campaign.pruebaTermina).getTime() <= Date.now();
   const block: PathBlock = !goal ? "sin-meta" : expired ? "vencido" : !campaign.activa ? "pausa" : null;
   const texts = {
@@ -119,17 +123,16 @@ export function DemoHome() {
         <DemoGuidePlaceholder />
       )}
 
-      <UnlimitedSection prices={prices} phrase={campaign.fraseCierre} onUnlock={openPlans} />
-      <PlansSection prices={prices} />
+      <UnlimitedSection price={price} phrase={campaign.fraseCierre} onUnlock={openPlans} />
+      <PlansSection pricing={pricing} />
 
       {/* Espacio para que el muro flotante no tape el pie del home. */}
       <div aria-hidden className="h-16 sm:h-12" />
-      <PaywallBar phrase={campaign.fraseCierre} prices={prices} onUnlock={() => openPlans()} />
+      <PaywallBar phrase={campaign.fraseCierre} price={price} onUnlock={() => openPlans()} />
       <PlansDialog
         open={unlock.open}
         focus={unlock.focus}
         phrase={campaign.fraseCierre}
-        prices={prices}
         onOpenChange={(open) => setUnlock((u) => ({ ...u, open }))}
       />
     </>

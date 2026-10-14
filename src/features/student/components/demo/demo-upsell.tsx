@@ -6,8 +6,9 @@ import { ArrowRight, CalendarDays, Check, ChevronDown, Flame, Infinity as Infini
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { formatMxn } from "../../services/demo-service";
-import { type Prices, StudentPlans } from "./demo-plans";
+import { useImpression, usePricing } from "@/features/pricing/hooks/use-pricing";
+
+import { StudentPlans } from "./demo-plans";
 
 /** Qué CTA abrió el modal: ajusta su título. */
 export type UnlockFocus = "racha" | "plan" | "carreras" | null;
@@ -55,7 +56,7 @@ const BENEFITS: Benefit[] = [
  * "Entrena sin límites": letrero comercial y propuesta de valor con su porqué pedagógico (los planes van en su sección).
  * Modo Racha y Plan por fecha se ven aquí, bloqueados: su botón abre el modal de planes.
  */
-export function UnlimitedSection({ prices, phrase, onUnlock }: { prices: Prices; phrase: string; onUnlock: (focus: UnlockFocus) => void }) {
+export function UnlimitedSection({ price, phrase, onUnlock }: { price: string | null; phrase: string; onUnlock: (focus: UnlockFocus) => void }) {
   return (
     <section id="ilimitado" aria-labelledby="ilimitado-title" className="flex scroll-mt-20 flex-col gap-4">
       <div className="relative overflow-hidden rounded-3xl bg-brand-gradient p-6 text-white shadow-glow-secondary sm:p-10">
@@ -70,9 +71,11 @@ export function UnlimitedSection({ prices, phrase, onUnlock }: { prices: Prices;
           Entrena sin límites
         </h2>
         <p className="relative mt-3 max-w-xl text-base text-white/90 text-pretty sm:text-lg">{phrase}</p>
-        <p className="relative mt-5 text-sm font-semibold">
-          <span className="text-2xl font-extrabold">{formatMxn(prices.monthly)}</span> MXN al mes
-        </p>
+        {price && (
+          <p className="relative mt-5 text-sm font-semibold">
+            Desde <span className="text-2xl font-extrabold">{price}</span>
+          </p>
+        )}
       </div>
 
       <ul className="grid gap-4 sm:grid-cols-2">
@@ -111,13 +114,13 @@ export function UnlimitedSection({ prices, phrase, onUnlock }: { prices: Prices;
 }
 
 /** Letrero flotante: siempre a la vista, sobre el menú inferior en celular. */
-export function PaywallBar({ phrase, prices, onUnlock }: { phrase: string; prices: Prices; onUnlock: () => void }) {
+export function PaywallBar({ phrase, price, onUnlock }: { phrase: string; price: string | null; onUnlock: () => void }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 px-4 lg:bottom-4">
       <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-3 rounded-2xl border border-energy/40 bg-card/95 p-3 shadow-2xl backdrop-blur sm:p-4">
         <p className="hidden min-w-0 flex-1 text-sm font-medium text-pretty sm:block">{phrase}</p>
         <Button variant="energy" onClick={onUnlock} className="h-auto min-h-11 w-full py-2 whitespace-normal sm:w-auto sm:shrink-0">
-          <Rocket /> Entrena sin límites · {formatMxn(prices.monthly)} MXN/mes
+          <Rocket /> Entrena sin límites{price && ` · ${price}`}
         </Button>
       </div>
     </div>
@@ -135,20 +138,20 @@ const FOCUS_PHRASES: Partial<Record<Exclude<UnlockFocus, null>, string>> = {
   carreras: "Entrena para múltiples universidades (UNAM, IPN, UAM) desbloqueando tu Plan Estudiante Ilimitado.",
 };
 
-/** Modal de planes: la frase y los precios vienen de la campaña; el pago vive en /acceso-ilimitado. */
+/** Modal de planes: la frase viene de la campaña y los precios, del motor de planes (variante A/B del alumno). */
 export function PlansDialog({
   open,
   focus,
   phrase,
-  prices,
   onOpenChange,
 }: {
   open: boolean;
   focus: UnlockFocus;
   phrase: string;
-  prices: Prices;
   onOpenChange: (open: boolean) => void;
 }) {
+  const pricing = usePricing("plans-modal");
+  useImpression(pricing, open ? "student" : null, "plans-modal");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -169,7 +172,7 @@ export function PlansDialog({
         </ul>
 
         <div className="pt-3">
-          <StudentPlans prices={prices} compact />
+          <StudentPlans pricing={pricing} />
         </div>
         <DialogClose asChild>
           <Button variant="ghost" className="w-full">
