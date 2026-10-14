@@ -9,6 +9,8 @@ export type Pais = {
   codigo: string;
   nombre: string;
   bandera: string | null;
+  /** Lada internacional: +52, +502, +1. */
+  lada: string | null;
   activo: boolean;
 };
 
@@ -18,7 +20,7 @@ let pendiente: Promise<Pais[]> | null = null;
 export function getPaises({ force = false } = {}): Promise<Pais[]> {
   if (force || !pendiente) {
     pendiente = Promise.resolve(
-      supabase.from("paises").select("codigo, nombre, bandera, activo").order("orden"),
+      supabase.from("paises").select("codigo, nombre, bandera, lada, activo").order("orden"),
     ).then(({ data, error }) => {
       if (error) throw error;
       return data as Pais[];

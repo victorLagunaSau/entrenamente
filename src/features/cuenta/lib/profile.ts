@@ -45,7 +45,25 @@ export function ageFrom(birthDate: string | null | undefined, today = new Date()
 
 /** Solo dígitos (y + inicial); "" si queda vacío. */
 export const normalizePhone = (raw: string) => raw.trim().replace(/[\s\-()]/g, "");
-export const isValidPhone = (phone: string) => /^\+?[0-9]{10,15}$/.test(phone);
+
+/** Número local sin lada: 7 a 12 dígitos (México y EE. UU. usan 10, Guatemala 8). */
+export const isValidLocalPhone = (digits: string) => /^[0-9]{7,12}$/.test(digits);
+
+/** El teléfono se guarda con la lada del país (+52…). Para editarlo se muestra sin ella. */
+export function localPhone(stored: string | null, lada: string | null) {
+  if (!stored) return "";
+  return lada && stored.startsWith(lada) ? stored.slice(lada.length) : stored;
+}
+
+/** Lo escrito → lo que se guarda: si ya trae "+", se respeta; si no, se le pone la lada del país. */
+export function fullPhone(typed: string, lada: string | null) {
+  const clean = normalizePhone(typed);
+  if (!clean) return "";
+  return clean.startsWith("+") || !lada ? clean : `${lada}${clean}`;
+}
+
+/** Estados de la República: la lista solo aplica cuando el país es México. */
+export const PAIS_CON_ESTADOS = "MX";
 
 export const ESTADOS = [
   "Aguascalientes",
@@ -80,7 +98,6 @@ export const ESTADOS = [
   "Veracruz",
   "Yucatán",
   "Zacatecas",
-  "Fuera de México",
 ];
 
 export const USER_TYPE_LABELS: Record<string, string> = {

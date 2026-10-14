@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GRADO_ADMISION, porNivel, useGrados } from "@/features/grados/grados";
+import { getPaises, type Pais } from "@/features/grados/paises";
 import { MY_CAREERS_PATH } from "@/features/student/services/student-goals-service";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +32,11 @@ import {
   AVATAR_PRESETS,
   AVATAR_TYPES,
   ESTADOS,
-  isValidPhone,
+  fullPhone,
+  isValidLocalPhone,
+  localPhone,
   normalizePhone,
+  PAIS_CON_ESTADOS,
   PRESET_PREFIX,
   USER_TYPE_LABELS,
 } from "../lib/profile";
@@ -156,16 +160,44 @@ function DatosSection({ cuenta, reload }: CuentaContext) {
   const [fullName, setFullName] = React.useState(cuenta.fullName);
   const [alias, setAlias] = React.useState(cuenta.alias);
   const [birthDate, setBirthDate] = React.useState(cuenta.birthDate ?? "");
+  const [paises, setPaises] = React.useState<Pais[] | null>(null);
+  const [pais, setPais] = React.useState(cuenta.pais ?? "");
   const [phone, setPhone] = React.useState(cuenta.phone ?? "");
   const [estado, setEstado] = React.useState(cuenta.estado ?? "");
   const [originSchool, setOriginSchool] = React.useState(cuenta.student?.originSchool ?? "");
   const [notStudying, setNotStudying] = React.useState(cuenta.student?.notStudying ?? false);
   const [grado, setGrado] = React.useState(cuenta.student?.grado ?? GRADO_ADMISION);
-  const { grados, error: gradosError } = useGrados();
+  // Los nombres de los grados cambian con el país elegido (semestres solo en México).
+  const { grados, error: gradosError } = useGrados(pais || null);
   const [promedio, setPromedio] = React.useState(cuenta.student?.promedio?.toString() ?? "");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
   const [saved, setSaved] = React.useState(false);
+
+  React.useEffect(() => {
+    getPaises()
+      .then((list) => {
+        setPaises(list.filter((p) => p.activo));
+        // El teléfono guardado trae la lada: se edita sin ella.
+        const lada = list.find((p) => p.codigo === cuenta.pais)?.lada ?? null;
+        setPhone(localPhone(cuenta.phone, lada));
+      })
+      .catch(() => setPaises([]));
+  }, [cuenta.pais, cuenta.phone]);
+
+  // Si el grado elegido no existe en el país nuevo, vuelve a preuniversitario.
+  React.useEffect(() => {
+    if (grados && !grados.some((g) => g.codigo === grado)) setGrado(GRADO_ADMISION);
+  }, [grados, grado]);
+
+  const selectedPais = paises?.find((p) => p.codigo === pais) ?? null;
+  const lada = selectedPais?.lada ?? null;
+  const conEstados = pais === PAIS_CON_ESTADOS;
+  const changePais = (next: string) => {
+    setPais(next);
+    // La lista de estados es de México; en otro país se escribe a mano.
+    if ((next === PAIS_CON_ESTADOS) !== conEstados || !ESTADOS.includes(estado)) setEstado("");
+  };
 
   const age = ageFrom(birthDate || null);
   const adult = age !== null && age >= ADULT_AGE;
@@ -175,8 +207,10 @@ function DatosSection({ cuenta, reload }: CuentaContext) {
     e.preventDefault();
     setError("");
     setSaved(false);
-    const cleanPhone = normalizePhone(phone);
-    if (adult && cleanPhone && !isValidPhone(cleanPhone)) return setError("El teléfono debe tener 10 dígitos (o lada internacional).");
+    const typed = normalizePhone(phone);
+    if (adult && typed && !typed.startsWith("+") && !isValidLocalPhone(typed))
+      return setError("Revisa tu teléfono: solo números, sin la lada.");
+    const cleanPhone = fullPhone(typed, lada);
     const avg = promedio.trim() ? Number(promedio) : null;
     if (avg !== null && (Number.isNaN(avg) || avg < 5 || avg > 10)) return setError("El promedio va de 5 a 10.");
 
@@ -187,7 +221,8 @@ function DatosSection({ cuenta, reload }: CuentaContext) {
         alias,
         birthDate: birthDate || null,
         phone: adult && cleanPhone ? cleanPhone : null,
-        estado: estado || null,
+        estado: estado.trim() || null,
+        pais: pais || null,
         originSchool: student && !notStudying ? originSchool : null,
         notStudying: student && notStudying,
         grado: student ? grado : null,
@@ -226,19 +261,64 @@ function DatosSection({ cuenta, reload }: CuentaContext) {
         <Field label="Fecha de nacimiento" htmlFor="birth" hint={age !== null ? `${age} años` : "Opcional"}>
           <Input id="birth" type="date" value={birthDate} max={today} min="1925-01-01" onChange={(e) => setBirthDate(e.target.value)} />
         </Field>
-        <Field label="Estado" htmlFor="estado">
-          <select id="estado" value={estado} onChange={(e) => setEstado(e.target.value)} className={selectClass}>
-            <option value="">Sin especificar</option>
-            {ESTADOS.map((e) => (
-              <option key={e} value={e}>
-                {e}
+        <Field label="País" htmlFor="pais">
+          <select id="pais" value={pais} onChange={(e) => changePais(e.target.value)} disabled={!paises} className={selectClass}>
+            <option value="">{paises ? "Sin especificar" : "Cargando…"}</option>
+            {paises?.map((p) => (
+              <option key={p.codigo} value={p.codigo}>
+                {p.bandera ? `${p.bandera} ` : ""}
+                {p.nombre}
               </option>
             ))}
           </select>
         </Field>
+        <Field label={conEstados || !pais ? "Estado" : "Estado / departamento"} htmlFor="estado">
+          {conEstados ? (
+            <select id="estado" value={estado} onChange={(e) => setEstado(e.target.value)} className={selectClass}>
+              <option value="">Sin especificar</option>
+              {ESTADOS.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input
+              id="estado"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              maxLength={40}
+              disabled={!pais}
+              placeholder={pais ? "Ej. Guatemala, Texas" : "Elige primero tu país"}
+              autoComplete="address-level1"
+            />
+          )}
+        </Field>
         {adult ? (
-          <Field label="Teléfono" htmlFor="phone" hint="Opcional · 10 dígitos. Solo para avisos importantes de tu cuenta." className="sm:col-span-2">
-            <Input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={16} autoComplete="tel" placeholder="55 1234 5678" />
+          <Field
+            label="Teléfono"
+            htmlFor="phone"
+            hint={`Opcional · ${lada ? `con la lada de ${selectedPais?.nombre} (${lada})` : "elige tu país para usar su lada"}. Solo para avisos importantes de tu cuenta.`}
+            className="sm:col-span-2"
+          >
+            <div className="flex">
+              {lada && (
+                <span className="inline-flex items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-cool" aria-hidden>
+                  {selectedPais?.bandera} {lada}
+                </span>
+              )}
+              <Input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={16}
+                autoComplete="tel-national"
+                placeholder={pais === "GT" ? "5123 4567" : "55 1234 5678"}
+                className={cn(lada && "rounded-l-none")}
+              />
+            </div>
           </Field>
         ) : (
           <p className="rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground sm:col-span-2">
