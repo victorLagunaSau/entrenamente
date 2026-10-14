@@ -27,7 +27,7 @@ export type AccessStatus = "active" | "free" | "inactive";
 /** Flujo A (estudiante), B (padre/tutor) o estudiante que llega con invitación. */
 export type Flow = "student" | "parent" | "invited";
 
-export type StepId = "profile" | "name" | "account" | "university" | "career" | "extra" | "success" | "invite";
+export type StepId = "profile" | "career" | "name" | "account" | "extra" | "success" | "invite";
 
 export type AccountData = {
   fullName: string;

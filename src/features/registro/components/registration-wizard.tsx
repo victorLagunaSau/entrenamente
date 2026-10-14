@@ -19,14 +19,12 @@ import { InviteStep } from "./steps/invite-step";
 import { NameStep } from "./steps/name-step";
 import { ProfileStep } from "./steps/profile-step";
 import { SuccessStep } from "./steps/success-step";
-import { UniversityStep } from "./steps/university-step";
 import { WizardProgress } from "./wizard-progress";
 
 const STEP_COMPONENTS: Record<StepId, React.ComponentType> = {
   profile: ProfileStep,
   name: NameStep,
   account: AccountStep,
-  university: UniversityStep,
   career: CareerStep,
   extra: ExtraStep,
   success: SuccessStep,
@@ -90,7 +88,14 @@ function WizardCard() {
   const selfNav = SELF_NAV_STEPS.includes(step);
   const showBack = state.stepIndex > 0 && !isLocked;
   const flow = state.flow ?? "student";
-  const nextLabel = step === SUBMIT_STEP[flow] ? "Crear cuenta" : step === "extra" ? "Continuar" : "Siguiente";
+  const nextLabel =
+    step === SUBMIT_STEP[flow]
+      ? "Crear cuenta"
+      : step === "career"
+        ? "Continuar a mis datos"
+        : step === "extra"
+          ? "Continuar"
+          : "Siguiente";
 
   return (
     <CardFrame>

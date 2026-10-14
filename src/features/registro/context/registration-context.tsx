@@ -171,7 +171,6 @@ export function RegistrationProvider({
     profile: state.flow !== null,
     name: !accountErrors.fullName && !accountErrors.alias,
     account: !accountErrors.email && !accountErrors.password && !accountErrors.acceptedPrivacy,
-    university: !goalErrors.universityId,
     career: !goalErrors.careerId,
     extra: true,
     success: true,

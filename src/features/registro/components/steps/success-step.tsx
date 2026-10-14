@@ -5,10 +5,10 @@ import { ArrowRight, BadgeCheck, PartyPopper, Sparkles } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
+import { useOpcionCarrera } from "@/features/catalogo";
 import { STUDENT_HOMES } from "@/features/student/services/access-service";
 
 import { useRegistration } from "../../context/registration-context";
-import { findCareer, findUniversity } from "../../data/catalog";
 import { formatMxn, PLANS } from "../../data/plans";
 import { ConfirmEmailNotice } from "../confirm-email-notice";
 import { Confetti } from "../confetti";
@@ -19,8 +19,7 @@ export function SuccessStep() {
   const { state } = useRegistration();
   // Invitado con lugar pagado por su padre/tutor: ya entra activo, sin pasar por planes.
   const sponsored = state.flow === "invited" && state.invite.status === "valid" && state.invite.invite.sponsored;
-  const university = findUniversity(state.goal.universityId);
-  const career = findCareer(state.goal.universityId, state.goal.careerId);
+  const meta = useOpcionCarrera(state.goal.careerId);
   const alias = state.account.alias.trim() || state.account.fullName.split(" ")[0];
   const unlimited = PLANS.unlimited;
 
@@ -37,12 +36,12 @@ export function SuccessStep() {
 
       <ConfirmEmailNotice />
 
-      {university && career && (
+      {meta && (
         <div className="mx-auto flex w-full max-w-sm items-center gap-3 rounded-xl border bg-background/40 p-3 text-left">
-          <UniversityBadge id={university.id} label={university.short} />
+          <UniversityBadge id={meta.institucion.id} label={meta.institucion.sigla} />
           <span className="min-w-0">
             <span className="block text-xs text-muted-foreground">Tu meta</span>
-            <span className="block truncate text-sm font-semibold">{career.name}</span>
+            <span className="block truncate text-sm font-semibold">{meta.carrera.nombre}</span>
           </span>
           {sponsored && <BadgeCheck className="ml-auto size-5 shrink-0 text-secondary" aria-label="Acceso activo" />}
         </div>

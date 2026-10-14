@@ -50,6 +50,20 @@ export async function getIdentidades(): Promise<Identidad[]> {
   return (data as Row[]).map(toIdentidad);
 }
 
+// Una sola lectura por sesión, compartida por el theme engine y el catálogo de carreras.
+let pendiente: Promise<Identidad[]> | null = null;
+
+/** Como getIdentidades, pero reutiliza la lectura en curso o ya hecha. `force` vuelve a leer (admin). */
+export function cargarIdentidades({ force = false } = {}): Promise<Identidad[]> {
+  if (force || !pendiente) {
+    pendiente = getIdentidades().catch((e) => {
+      pendiente = null;
+      throw e;
+    });
+  }
+  return pendiente;
+}
+
 /** Error con mensaje listo para la UI. */
 export class IdentidadError extends Error {}
 

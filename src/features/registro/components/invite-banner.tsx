@@ -2,27 +2,30 @@
 
 import { BadgeCheck } from "lucide-react";
 
-import { useRegistration } from "../context/registration-context";
-import { findCareer, findUniversity } from "../data/catalog";
+import { useOpcionCarrera } from "@/features/catalogo";
 
-/** Aviso para el estudiante que llega con el enlace de su padre/tutor. */
+import { useRegistration } from "../context/registration-context";
+
+/** Aviso para el estudiante que llega con el enlace de su padre/tutor (ya trae su meta: se salta el buscador). */
 export function InviteBanner() {
   const { state } = useRegistration();
-  if (state.invite.status !== "valid") return null;
-  const { parentName, goal, sponsored } = state.invite.invite;
-  const university = findUniversity(goal.universityId);
-  const career = findCareer(goal.universityId, goal.careerId);
+  const invite = state.invite.status === "valid" ? state.invite.invite : null;
+  const meta = useOpcionCarrera(invite?.goal.careerId);
+  if (!invite) return null;
+  const { parentName, sponsored } = invite;
 
   return (
     <div className="flex gap-3 rounded-xl border border-secondary/30 bg-secondary/10 p-4">
       <BadgeCheck className="size-5 shrink-0 text-secondary" aria-hidden />
       <div className="text-sm">
         <p className="font-semibold text-foreground">
-          {sponsored ? `${parentName} te invitó y ya activó tu acceso.` : `${parentName} te invitó a entrenar.`}
+          ¡Bienvenido! {sponsored ? `${parentName} te asignó una licencia` : `${parentName} te invitó a entrenar`}
+          {meta ? " para preparar tu ingreso a:" : "."}
         </p>
-        {university && career && (
+        {meta && (
           <p className="mt-1 text-cool">
-            Tu meta: <span className="font-medium">{university.short}</span> · {career.name}
+            <span className="font-medium">{meta.carrera.nombre}</span> en la{" "}
+            <span className="font-medium">{meta.institucion.sigla}</span>
           </p>
         )}
       </div>

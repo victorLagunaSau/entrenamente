@@ -5,9 +5,9 @@ import { ChartLine, Clock3, Flame, HeartHandshake, ShieldCheck, Target } from "l
 
 import { Logo } from "@/components/layout/logo";
 import { UniversityBadge } from "@/components/layout/university-badge";
+import { useIdentidades } from "@/features/identidad";
 
 import { useRegistration } from "../context/registration-context";
-import { UNIVERSITIES } from "../data/catalog";
 import type { Flow } from "../types";
 
 type Pitch = {
@@ -68,6 +68,7 @@ const PITCHES: Record<Flow | "welcome", Pitch> = {
 export function BrandAside() {
   const { state, step } = useRegistration();
   const pitch = PITCHES[step === "profile" || !state.flow ? "welcome" : state.flow];
+  const universidades = useIdentidades().identidades.filter((i) => i.activo && i.tipo === "universidad");
 
   return (
     <aside className="flex flex-col items-center gap-8 text-center lg:items-start lg:text-left">
@@ -95,9 +96,9 @@ export function BrandAside() {
         <div className="flex flex-col gap-3">
           <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">Entrena para</p>
           <ul className="flex flex-wrap gap-2">
-            {UNIVERSITIES.map((u) => (
+            {universidades.map((u) => (
               <li key={u.id}>
-                <UniversityBadge id={u.id} label={u.short} size="sm" />
+                <UniversityBadge id={u.id} label={u.sigla} size="sm" />
               </li>
             ))}
           </ul>

@@ -18,6 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { AdminPageHeader } from "@/features/admin/components/admin-module";
+import { invalidarCatalogo } from "@/features/catalogo";
 import { cn } from "@/lib/utils";
 
 import { carreraLabel, carrerasLabel, carrerasPorArea, tipoNombre } from "../lib/catalogo";
@@ -51,6 +52,8 @@ export function EscuelasWorkspace() {
     try {
       setCatalogo(await getCatalogo({ incluirInactivos: true }));
       setLoadError(false);
+      // El resto de la app (registro, buscador, metas) vuelve a leer el catálogo con los cambios.
+      invalidarCatalogo();
     } catch {
       setLoadError(true);
     }
