@@ -50,7 +50,6 @@ export function validateAccount(a: AccountData, flow: Flow): FieldErrors<Account
 
 export function validateGoal(g: GoalData): FieldErrors<GoalData> {
   const e: FieldErrors<GoalData> = {};
-  if (!g.universityId) e.universityId = "Elige una institución.";
-  if (!g.careerId) e.careerId = "Elige una carrera.";
+  if (!g.careerId || !g.universityId) e.careerId = "Busca y elige tu carrera.";
   return e;
 }

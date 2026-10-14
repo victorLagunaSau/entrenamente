@@ -8,9 +8,7 @@ import { ArrowLeft, CalendarCheck, CircleAlert, GraduationCap, Loader2, Lock, Pl
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CareerPicker, selectableCatalog } from "@/features/escuelas/components/career-picker";
-import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
-import type { Institucion } from "@/features/escuelas/types";
+import { CareerSearch, ProximamenteNote } from "@/features/catalogo";
 import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 import { getMyPlans } from "@/features/plan/services/plan-service";
@@ -242,8 +240,6 @@ function AddGoalDialog({
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
 }) {
-  const [catalog, setCatalog] = React.useState<Institucion[] | null>(null);
-  const [uni, setUni] = React.useState<string | null>(null);
   const [career, setCareer] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -252,16 +248,7 @@ function AddGoalDialog({
     if (!open) return;
     setCareer(null);
     setError("");
-    setUni(careers[0]?.universityId ?? null);
-    if (catalog) return;
-    getCatalogo()
-      .then((c) => {
-        const active = selectableCatalog(c);
-        setCatalog(active);
-        setUni((u) => (u && active.some((i) => i.id === u) ? u : (active[0]?.id ?? null)));
-      })
-      .catch(() => setError("No pudimos cargar el catálogo de carreras."));
-  }, [open, catalog, careers]);
+  }, [open]);
 
   const taken = React.useMemo(() => new Set(careers.map((c) => c.id)), [careers]);
 
@@ -290,31 +277,9 @@ function AddGoalDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {!catalog ? (
-          error ? (
-            <FormError text={error} />
-          ) : (
-            <div className="grid min-h-40 place-items-center" role="status" aria-label="Cargando catálogo">
-              <Loader2 className="size-6 animate-spin text-brand-light motion-reduce:animate-none" />
-            </div>
-          )
-        ) : (
-          <>
-            <CareerPicker
-              catalog={catalog}
-              university={uni}
-              career={career}
-              taken={taken}
-              takenLabel="Ya es tu meta"
-              onUniversityChange={(id) => {
-                setUni(id);
-                setCareer(null);
-              }}
-              onCareerChange={setCareer}
-            />
-            <FormError text={error} />
-          </>
-        )}
+        <CareerSearch value={career} onChange={(c) => setCareer(c?.careerId ?? null)} taken={taken} takenLabel="Ya es tu meta" />
+        <ProximamenteNote careerId={career} />
+        <FormError text={error} />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

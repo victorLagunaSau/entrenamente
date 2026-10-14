@@ -13,65 +13,28 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { normal, useCatalogo } from "@/features/catalogo";
 import { InstitucionIcon, type Identidad } from "@/features/identidad";
-import { supabase } from "@/lib/supabase/client";
 
 import { TrainButton, useLandingSession } from "./train-cta";
 
 type Grupo = { area: string | null; carreras: string[] };
 
-/** Sin acentos ni mayúsculas, para que "computacion" encuentre "Computación". */
-const normal = (s: string) =>
-  s
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
-
-/** Carreras activas de la institución, agrupadas por área (catálogo en Supabase). Se piden al abrir. */
-function useCarreras(institucion: string | null) {
-  const [grupos, setGrupos] = React.useState<Grupo[] | null>(null);
-
-  React.useEffect(() => {
-    if (!institucion) return;
-    let vivo = true;
-    setGrupos(null);
-    Promise.all([
-      supabase
-        .from("areas")
-        .select("id, nombre, orden")
-        .eq("institucion_id", institucion)
-        .eq("activo", true)
-        .order("orden"),
-      supabase
-        .from("carreras")
-        .select("nombre, area_id, orden")
-        .eq("institucion_id", institucion)
-        .eq("activo", true)
-        .order("orden"),
-    ]).then(([areas, carreras]) => {
-      if (!vivo) return;
-      const lista = carreras.data ?? [];
-      const porArea: Grupo[] = (areas.data ?? []).map((a) => ({
-        area: a.nombre,
-        carreras: lista.filter((c) => c.area_id === a.id).map((c) => c.nombre),
-      }));
-      const conocidas = new Set((areas.data ?? []).map((a) => a.id));
-      const sueltas = lista
-        .filter((c) => !c.area_id || !conocidas.has(c.area_id))
-        .map((c) => c.nombre);
-      setGrupos(
-        [
-          ...porArea,
-          ...(sueltas.length ? [{ area: null, carreras: sueltas }] : []),
-        ].filter((g) => g.carreras.length),
-      );
-    });
-    return () => {
-      vivo = false;
-    };
-  }, [institucion]);
-
-  return grupos;
+/** Carreras activas de la institución, agrupadas por área (catálogo compartido: sin consultas al abrir). */
+function useCarreras(institucion: string | null): Grupo[] | null {
+  const { data } = useCatalogo();
+  return React.useMemo(() => {
+    if (!institucion || !data) return null;
+    const lista = data.carreras.filter((c) => c.institucionId === institucion);
+    const areas = data.areas.filter((a) => a.institucionId === institucion);
+    const porArea: Grupo[] = areas.map((a) => ({
+      area: a.nombre,
+      carreras: lista.filter((c) => c.areaId === a.id).map((c) => c.nombre),
+    }));
+    const conocidas = new Set(areas.map((a) => a.id));
+    const sueltas = lista.filter((c) => !c.areaId || !conocidas.has(c.areaId)).map((c) => c.nombre);
+    return [...porArea, ...(sueltas.length ? [{ area: null, carreras: sueltas }] : [])].filter((g) => g.carreras.length);
+  }, [data, institucion]);
 }
 
 /** Ventana con las carreras de una universidad: buscador y lista por área. */

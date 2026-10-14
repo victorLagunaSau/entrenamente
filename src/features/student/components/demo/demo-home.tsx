@@ -4,7 +4,7 @@ import * as React from "react";
 import { CircleAlert, Sparkles } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
-import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
+import { getCatalogoActivo } from "@/features/catalogo";
 
 import { DemoError, type DemoCampaign, fillTemplate, type FreeExam, getDemoCampaign, getFreeExams } from "../../services/demo-service";
 import { getStudentSummary, type StudentSummary } from "../../services/student-service";
@@ -33,7 +33,7 @@ export function DemoHome() {
     (async () => {
       const summary = await getStudentSummary();
       if (!summary) throw new DemoError("Inicia sesión para ver tu prueba gratuita.");
-      const [campaign, exams, catalogo] = await Promise.all([getDemoCampaign(), getFreeExams(summary.id), getCatalogo()]);
+      const [campaign, exams, catalogo] = await Promise.all([getDemoCampaign(), getFreeExams(summary.id), getCatalogoActivo()]);
 
       const inst = catalogo.find((i) => i.id === summary.goal?.universityId);
       const carrera = inst?.carreras.find((c) => c.id === summary.goal?.careerId);

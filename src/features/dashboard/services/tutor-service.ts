@@ -7,7 +7,6 @@ import type { ExamRecord, Nivel } from "@/features/exam/lib/libre";
 import type { PlanDraft, PlanSession, StudentPlan } from "@/features/plan/lib/plan";
 import { toExamRecord } from "@/features/exam/services/libre-service";
 import { inviteUrl } from "@/features/invitacion/lib/invite-link";
-import { findCareer, findUniversity } from "@/features/registro/data/catalog";
 import { supabase } from "@/lib/supabase/client";
 
 export type LicensePlan = "individual" | "family_2" | "family_5" | "school" | "promo";
@@ -134,18 +133,18 @@ export async function getTutorPanel(): Promise<TutorPanel> {
       fullName: s.nombre,
       groupId: s.grupo_id,
       linkedAt: s.vinculado,
-      // Si la meta ya no está en el catálogo oficial, se toma del catálogo del registro.
-      career: s.carrera ?? findCareer(s.universidad_id, s.carrera_id)?.name ?? null,
-      university: s.universidad ?? findUniversity(s.universidad_id)?.short ?? null,
+      // El servidor ya trae los nombres del catálogo oficial; si la carrera salió del catálogo queda su id.
+      career: s.carrera ?? s.carrera_id,
+      university: s.universidad ?? s.universidad_id?.toUpperCase() ?? null,
       active: s.activo,
       access: s.acceso ?? (s.activo ? "tutor" : "inactivo"),
       registeredAt: s.registrado ?? null,
       trial: s.prueba ? { endsAt: s.prueba.termina, granted: s.prueba.otorgadas, used: s.prueba.usadas } : null,
       goals: (s.metas ?? (s.carrera_id ? [{ carrera_id: s.carrera_id, universidad_id: s.universidad_id ?? "", carrera: s.carrera, universidad: s.universidad, inicial: true }] : [])).map((m) => ({
         careerId: m.carrera_id,
-        career: m.carrera ?? findCareer(m.universidad_id, m.carrera_id)?.name ?? m.carrera_id,
+        career: m.carrera ?? m.carrera_id,
         universityId: m.universidad_id,
-        university: m.universidad ?? findUniversity(m.universidad_id)?.short ?? m.universidad_id.toUpperCase(),
+        university: m.universidad ?? m.universidad_id.toUpperCase(),
         main: m.inicial,
       })),
     })),

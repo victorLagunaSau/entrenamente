@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { identidadCss } from "../lib/css";
-import { getIdentidades } from "../services/identidad-service";
+import { cargarIdentidades } from "../services/identidad-service";
 import type { Identidad } from "../types";
 
 type Ctx = {
@@ -42,9 +42,9 @@ export function IdentidadProvider({ children }: { children: React.ReactNode }) {
   const [identidades, setIdentidades] = React.useState<Identidad[]>([]);
   const [ready, setReady] = React.useState(false);
 
-  const refresh = React.useCallback(async () => {
+  const refresh = React.useCallback(async (force = true) => {
     try {
-      const list = await getIdentidades();
+      const list = await cargarIdentidades({ force });
       setIdentidades(list);
       try {
         localStorage.setItem(CACHE_KEY, JSON.stringify(list));
@@ -60,7 +60,7 @@ export function IdentidadProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     setIdentidades(readCache());
-    refresh();
+    refresh(false);
   }, [refresh]);
 
   const value = React.useMemo<Ctx>(() => {

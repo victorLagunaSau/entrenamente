@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight, FlaskConical } from "lucide-react";
 
-import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
+import { getCatalogoActivo } from "@/features/catalogo";
 import { getStudentSummary } from "@/features/student/services/student-service";
 import type { Dificultad } from "@/features/exam/types";
 
@@ -23,7 +23,7 @@ export type ResolvedTarget =
  */
 export async function resolveTarget(carreraParam: string | null): Promise<ResolvedTarget> {
   const [catalogo, disponibles, summary] = await Promise.all([
-    getCatalogo(),
+    getCatalogoActivo(),
     getDisponibles(),
     carreraParam ? Promise.resolve(null) : getStudentSummary(),
   ]);

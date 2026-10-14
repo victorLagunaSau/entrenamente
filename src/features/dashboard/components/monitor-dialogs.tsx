@@ -19,9 +19,7 @@ import {
   recomendacionPorDia,
   todayISO,
 } from "@/features/plan/lib/plan";
-import { CareerPicker, selectableCatalog } from "@/features/escuelas/components/career-picker";
-import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
-import type { Institucion } from "@/features/escuelas/types";
+import { CareerSearch, ProximamenteNote } from "@/features/catalogo";
 import { cn } from "@/lib/utils";
 
 import {
@@ -57,8 +55,6 @@ export function AddGoalDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { reload } = useTutor();
-  const [catalog, setCatalog] = React.useState<Institucion[] | null>(null);
-  const [uni, setUni] = React.useState<string | null>(null);
   const [career, setCareer] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -67,15 +63,7 @@ export function AddGoalDialog({
     if (!open) return;
     setCareer(null);
     setError("");
-    if (catalog) return;
-    getCatalogo()
-      .then((c) => {
-        const active = selectableCatalog(c);
-        setCatalog(active);
-        setUni((u) => u ?? goals[0]?.universityId ?? active[0]?.id ?? null);
-      })
-      .catch(() => setError("No pudimos cargar el catálogo de carreras."));
-  }, [open, catalog, goals]);
+  }, [open]);
 
   const taken = new Set(goals.map((g) => g.careerId));
 
@@ -104,31 +92,9 @@ export function AddGoalDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {!catalog ? (
-          error ? (
-            <FormError text={error} />
-          ) : (
-            <div className="grid min-h-40 place-items-center" role="status" aria-label="Cargando catálogo">
-              <Loader2 className="size-6 animate-spin text-brand-light motion-reduce:animate-none" />
-            </div>
-          )
-        ) : (
-          <>
-            <CareerPicker
-              catalog={catalog}
-              university={uni}
-              career={career}
-              taken={taken}
-              takenLabel="Ya es su meta"
-              onUniversityChange={(id) => {
-                setUni(id);
-                setCareer(null);
-              }}
-              onCareerChange={setCareer}
-            />
-            <FormError text={error} />
-          </>
-        )}
+        <CareerSearch value={career} onChange={(c) => setCareer(c?.careerId ?? null)} taken={taken} takenLabel="Ya es su meta" />
+        <ProximamenteNote careerId={career} />
+        <FormError text={error} />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

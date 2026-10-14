@@ -7,8 +7,8 @@ import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CareerSearch, ProximamenteNote, useOpcionCarrera } from "@/features/catalogo";
 import { ShareInvite } from "@/features/invitacion";
-import { findCareer, findUniversity, UNIVERSITIES } from "@/features/registro/data/catalog";
 import { cn } from "@/lib/utils";
 
 import { TUTOR_COPY } from "../lib/tutor-plans";
@@ -170,8 +170,7 @@ function InviteRow({ invite, onChange }: { invite: PendingInvite; onChange: () =
   const [confirming, setConfirming] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
-  const university = findUniversity(invite.universityId);
-  const career = findCareer(invite.universityId, invite.careerId);
+  const meta = useOpcionCarrera(invite.careerId);
 
   const cancel = async () => {
     setBusy(true);
@@ -188,8 +187,8 @@ function InviteRow({ invite, onChange }: { invite: PendingInvite; onChange: () =
   return (
     <li className="flex flex-col gap-3 rounded-xl border bg-background/40 p-3">
       <div className="flex items-center gap-3">
-        {university ? (
-          <UniversityBadge id={university.id} label={university.short} size="sm" />
+        {meta ? (
+          <UniversityBadge id={meta.institucion.id} label={meta.institucion.sigla} size="sm" />
         ) : (
           <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
             <Shuffle className="size-4" aria-hidden />
@@ -198,7 +197,7 @@ function InviteRow({ invite, onChange }: { invite: PendingInvite; onChange: () =
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{invite.label ?? "Invitación sin nombre"}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {career ? career.name : "Elegirá su universidad y carrera"} ·{" "}
+            {meta ? meta.carrera.nombre : invite.careerId ? "Carrera elegida" : "Elegirá su universidad y carrera"} ·{" "}
             <span className="font-mono tracking-wider">{invite.code}</span>
           </p>
         </div>
@@ -237,9 +236,6 @@ function InviteRow({ invite, onChange }: { invite: PendingInvite; onChange: () =
   );
 }
 
-const selectClass =
-  "border-input flex h-11 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 disabled:opacity-50";
-
 function NewInviteForm({
   studentWord,
   free,
@@ -257,7 +253,6 @@ function NewInviteForm({
   const [careerId, setCareerId] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
-  const university = findUniversity(universityId || null);
   const missingGoal = chooseGoal && (!universityId || !careerId);
 
   const submit = async (e: React.FormEvent) => {
@@ -314,47 +309,19 @@ function NewInviteForm({
       </fieldset>
 
       {chooseGoal && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="invite-university" className="text-sm font-medium text-cool">
-              Universidad
-            </label>
-            <select
-              id="invite-university"
-              className={selectClass}
-              value={universityId}
-              onChange={(e) => {
-                setUniversityId(e.target.value);
-                setCareerId("");
-              }}
-            >
-              <option value="">Elige una</option>
-              {UNIVERSITIES.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.short} · {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="invite-career" className="text-sm font-medium text-cool">
-              Carrera
-            </label>
-            <select
-              id="invite-career"
-              className={selectClass}
-              value={careerId}
-              disabled={!university}
-              onChange={(e) => setCareerId(e.target.value)}
-            >
-              <option value="">{university ? "Elige una" : "Primero la universidad"}</option>
-              {university?.careers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="invite-career" className="text-sm font-medium text-cool">
+            Carrera y universidad
+          </label>
+          <CareerSearch
+            id="invite-career"
+            value={careerId || null}
+            onChange={(c) => {
+              setUniversityId(c?.universityId ?? "");
+              setCareerId(c?.careerId ?? "");
+            }}
+          />
+          <ProximamenteNote careerId={careerId || null} />
         </div>
       )}
 

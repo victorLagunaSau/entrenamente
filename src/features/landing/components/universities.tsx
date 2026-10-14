@@ -10,37 +10,25 @@ import {
   Target,
 } from "lucide-react";
 
+import { useCatalogo } from "@/features/catalogo";
 import {
   InstitucionIcon,
   useIdentidades,
   type Identidad,
 } from "@/features/identidad";
-import { supabase } from "@/lib/supabase/client";
 
 import { CareersDialog } from "./careers-dialog";
 import { SectionHeading } from "./section-heading";
 
-/** Carreras activas por institución, para mostrar la cobertura real del catálogo. */
+/** Carreras activas por institución (catálogo compartido), para mostrar la cobertura real. */
 function useCarrerasPorInstitucion() {
-  const [conteo, setConteo] = React.useState<Record<string, number>>({});
-  React.useEffect(() => {
-    let vivo = true;
-    supabase
-      .from("carreras")
-      .select("institucion_id")
-      .eq("activo", true)
-      .then(({ data }) => {
-        if (!vivo || !data) return;
-        const c: Record<string, number> = {};
-        for (const r of data)
-          c[r.institucion_id] = (c[r.institucion_id] ?? 0) + 1;
-        setConteo(c);
-      });
-    return () => {
-      vivo = false;
-    };
-  }, []);
-  return conteo;
+  const { data } = useCatalogo();
+  return React.useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const r of data?.carreras ?? [])
+      c[r.institucionId] = (c[r.institucionId] ?? 0) + 1;
+    return c;
+  }, [data]);
 }
 
 const VENTAJAS = [

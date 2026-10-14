@@ -2,10 +2,10 @@
 
 import * as React from "react";
 
-import { getCatalogo } from "@/features/escuelas/services/catalogo-service";
+import { getCatalogoActivo } from "@/features/catalogo";
 import type { Institucion } from "@/features/escuelas/types";
 
-// Una sola lectura por sesión: el catálogo cambia poco y lo usan todas las pestañas.
+// Mismo catálogo compartido de toda la app (features/catalogo): sin lecturas repetidas.
 let cache: Promise<Institucion[]> | null = null;
 
 /** Catálogo activo de instituciones › áreas › carreras (Supabase). */
@@ -16,7 +16,7 @@ export function useCatalogo() {
   const load = React.useCallback((force = false) => {
     if (force) cache = null;
     setError(null);
-    (cache ??= getCatalogo()).then(setCatalogo).catch((e: unknown) => {
+    (cache ??= getCatalogoActivo()).then(setCatalogo).catch((e: unknown) => {
       cache = null;
       setError(e instanceof Error ? e.message : "No se pudo cargar el catálogo de escuelas.");
     });
