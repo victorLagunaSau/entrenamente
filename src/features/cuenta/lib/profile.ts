@@ -83,20 +83,6 @@ export const ESTADOS = [
   "Fuera de México",
 ];
 
-/** Mismos valores que el CHECK de student_profiles.grado. */
-export const GRADOS: { id: string; label: string }[] = [
-  { id: "secundaria_3", label: "3.º de secundaria" },
-  { id: "bachillerato_1", label: "1.er semestre de bachillerato" },
-  { id: "bachillerato_2", label: "2.º semestre de bachillerato" },
-  { id: "bachillerato_3", label: "3.er semestre de bachillerato" },
-  { id: "bachillerato_4", label: "4.º semestre de bachillerato" },
-  { id: "bachillerato_5", label: "5.º semestre de bachillerato" },
-  { id: "bachillerato_6", label: "6.º semestre de bachillerato" },
-  { id: "egresado", label: "Ya terminé el bachillerato" },
-  { id: "universidad", label: "Estudio la universidad" },
-  { id: "otro", label: "Otro" },
-];
-
 export const USER_TYPE_LABELS: Record<string, string> = {
   student: "Estudiante",
   parent: "Padre / Tutor",
