@@ -154,7 +154,7 @@ function Ficha({
             {formatScore(record.score)}
             <span className="text-lg font-medium text-muted-foreground"> / {formatScore(record.maxScore)}</span>
           </p>
-          <p className="text-sm text-muted-foreground">Calificación bruta</p>
+          <p className="text-sm text-muted-foreground">Calificación final</p>
         </div>
       </div>
 
