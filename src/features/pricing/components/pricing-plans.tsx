@@ -11,6 +11,7 @@ import { activeFlashSales, parentPlans, studentOffers, type PricingRole } from "
 import { FlashSaleBanner } from "./flash-sale-banner";
 import { ParentPlanGrid, WhyTutor } from "./parent-plan-cards";
 import { StudentOfferCards } from "./student-plan-cards";
+import { VariantPreviewSwitch } from "./variant-preview-switch";
 
 const TABS: { role: PricingRole; label: string; icon: typeof GraduationCap }[] = [
   { role: "student", label: "Estudiantes", icon: GraduationCap },
@@ -102,6 +103,7 @@ export function RolePlans({ pricing, role, compact = false }: { pricing: Pricing
           onChoose={(s) => choose(role, { planId: s.plan_id, interval: s.billing_cycle, saleId: s.id })}
         />
       ))}
+      {role === "student" && <VariantPreviewSwitch pricing={pricing} />}
       {role === "student" ? (
         <StudentOfferCards
           offers={studentOffers(catalog, variant)}
