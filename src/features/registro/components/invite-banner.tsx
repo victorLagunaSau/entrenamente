@@ -19,7 +19,7 @@ export function InviteBanner() {
       <BadgeCheck className="size-5 shrink-0 text-secondary" aria-hidden />
       <div className="text-sm">
         <p className="font-semibold text-foreground">
-          ¡Bienvenido! {sponsored ? `${parentName} te asignó una licencia` : `${parentName} te invitó a entrenar`}
+          ¡Hola! {sponsored ? `${parentName} te asignó una licencia` : `${parentName} te invitó a entrenar`}
           {meta ? " para preparar tu ingreso a:" : "."}
         </p>
         {meta && (
