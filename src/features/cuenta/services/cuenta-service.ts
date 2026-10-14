@@ -31,6 +31,8 @@ export type MiCuenta = {
   edad: number | null;
   phone: string | null;
   estado: string | null;
+  /** Código de `paises` (MX, GT, US); null = sin especificar. */
+  pais: string | null;
   notificationPrefs: NotificationPrefs;
   createdAt: string;
   privacyAcceptedAt: string | null;
@@ -51,6 +53,7 @@ type Row = {
   edad: number | null;
   phone: string | null;
   estado: string | null;
+  pais: string | null;
   notification_prefs: NotificationPrefs;
   created_at: string;
   privacy_accepted_at: string | null;
@@ -62,7 +65,7 @@ type Row = {
 
 function fail(error: { code?: string; message?: string }): never {
   if (error.code === "PGRST202" || error.code === "42883")
-    throw new CuentaError("Falta correr en Supabase la migración 20261004020000_perfil_configuracion.sql.");
+    throw new CuentaError("Falta correr en Supabase la migración 20261016000000_perfil_pais.sql.");
   throw new CuentaError(error.message || "Algo salió mal. Intenta de nuevo.");
 }
 
@@ -82,6 +85,7 @@ export async function getMiCuenta(): Promise<MiCuenta> {
     edad: r.edad,
     phone: r.phone,
     estado: r.estado,
+    pais: r.pais?.trim() || null,
     notificationPrefs: r.notification_prefs,
     createdAt: r.created_at,
     privacyAcceptedAt: r.privacy_accepted_at,
@@ -107,6 +111,7 @@ export type PerfilInput = {
   birthDate: string | null;
   phone: string | null;
   estado: string | null;
+  pais: string | null;
   originSchool: string | null;
   notStudying: boolean;
   grado: string | null;
@@ -124,6 +129,7 @@ export async function savePerfil(input: PerfilInput) {
     p_not_studying: input.notStudying,
     p_grado: input.grado,
     p_promedio: input.promedio,
+    p_pais: input.pais,
   });
   if (error) fail(error);
 }
