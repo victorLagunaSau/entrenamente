@@ -17,7 +17,8 @@ export type CareerChoice = { universityId: string; careerId: string };
 /**
  * Buscador global Carrera → Universidad (registro de estudiante y padre, invitaciones, metas).
  * Tolera errores de dedo y acentos; busca desde 3 letras, tras una pausa al dejar de escribir.
- * Las carreras sin reactivos se ven como "Próximamente" y sí se pueden elegir.
+ * Las carreras sin reactivos se ven como "Próximamente" y sí se pueden elegir; las de una institución
+ * en Próximamente se ven, pero no se eligen.
  */
 export function CareerSearch({
   value,
@@ -168,7 +169,12 @@ export function CareerSearch({
                 const ya = taken?.has(o.carrera.id) ?? false;
                 return (
                   <li key={o.carrera.id}>
-                    <OpcionCard opcion={o} disabled={ya} note={ya ? takenLabel : undefined} onClick={() => choose(o)} />
+                    <OpcionCard
+                      opcion={o}
+                      disabled={ya || o.bloqueada}
+                      note={ya ? takenLabel : undefined}
+                      onClick={() => choose(o)}
+                    />
                   </li>
                 );
               })}
@@ -182,7 +188,7 @@ export function CareerSearch({
 
 /** Tarjeta "Carrera · Universidad" con el color e ícono de la institución. */
 export function OpcionCard({
-  opcion: { carrera, institucion, area },
+  opcion: { carrera, institucion, area, bloqueada },
   selected,
   disabled,
   note,
@@ -194,7 +200,7 @@ export function OpcionCard({
   note?: string;
   onClick?: () => void;
 }) {
-  const proximamente = carrera.conReactivos === false;
+  const proximamente = bloqueada || carrera.conReactivos === false;
   const body = (
     <>
       <span
@@ -216,7 +222,7 @@ export function OpcionCard({
         </span>
         {proximamente && (
           <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold">
-            <Clock className="size-3" aria-hidden /> Próximamente
+            <Clock className="size-3" aria-hidden /> {bloqueada ? `Próximamente en ${institucion.sigla}` : "Próximamente"}
           </span>
         )}
       </span>

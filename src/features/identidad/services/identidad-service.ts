@@ -22,11 +22,25 @@ type Row = {
   icono_svg: string | null;
   logo_url: string | null;
   activo: boolean;
+  /** Pueden faltar mientras no se corre 20261015000000_escuelas_pais_estado.sql. */
+  proximamente?: boolean;
+  pais?: string | null;
   orden: number;
 };
 
-export const IDENTIDAD_COLUMNS =
+const COLUMNAS_BASE =
   "id, clave, sigla, nombre, tipo, examen, color_primario, color_secundario, color_acento, icono_svg, logo_url, activo, orden";
+
+/** Lee `instituciones` con las columnas de identidad (RLS: activas y próximamente; el admin ve todas). */
+export async function selectInstituciones(): Promise<Row[]> {
+  const res = await supabase.from("instituciones").select(`${COLUMNAS_BASE}, proximamente, pais`).order("orden");
+  if (!res.error) return res.data as Row[];
+  // Sin la migración del país y estado: se lee lo de antes y todo cuenta como Activa / Inactiva.
+  if (res.error.code !== "42703") throw res.error;
+  const base = await supabase.from("instituciones").select(COLUMNAS_BASE).order("orden");
+  if (base.error) throw base.error;
+  return base.data as Row[];
+}
 
 export const toIdentidad = (r: Row): Identidad => ({
   id: r.id,
@@ -41,13 +55,13 @@ export const toIdentidad = (r: Row): Identidad => ({
   iconoSvg: r.icono_svg,
   logoUrl: r.logo_url,
   activo: r.activo,
+  proximamente: !r.activo && (r.proximamente ?? false),
+  pais: r.pais ?? null,
   orden: r.orden,
 });
 
 export async function getIdentidades(): Promise<Identidad[]> {
-  const { data, error } = await supabase.from("instituciones").select(IDENTIDAD_COLUMNS).order("orden");
-  if (error) throw error;
-  return (data as Row[]).map(toIdentidad);
+  return (await selectInstituciones()).map(toIdentidad);
 }
 
 // Una sola lectura por sesión, compartida por el theme engine y el catálogo de carreras.

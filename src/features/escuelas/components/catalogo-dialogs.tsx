@@ -6,6 +6,7 @@ import { ChevronDown, CircleAlert, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { Pais } from "@/features/grados/paises";
 import { FormField, invalidClass } from "@/features/registro/components/form-field";
 import { cn } from "@/lib/utils";
 
@@ -90,16 +91,20 @@ export function InstitucionDialog({
   open,
   institucion,
   catalogo,
+  paises,
   onClose,
   onSaved,
 }: {
   open: boolean;
   institucion: Institucion | null;
   catalogo: Institucion[];
+  /** null mientras cargan o si no se pudieron leer. */
+  paises: Pais[] | null;
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
   const [clave, setClave] = React.useState("");
+  const [pais, setPais] = React.useState("");
   const [nombre, setNombre] = React.useState("");
   const [tipo, setTipo] = React.useState<TipoInstitucion>("universidad");
   const [examen, setExamen] = React.useState("");
@@ -112,11 +117,16 @@ export function InstitucionDialog({
     setNombre(institucion?.nombre ?? "");
     setTipo(institucion?.tipo ?? "universidad");
     setExamen(institucion?.examen ?? "");
+    setPais(institucion ? (institucion.pais ?? "") : "MX");
   }, [open, institucion]);
+
+  // El país guardado sigue en la lista aunque esté desactivado en `paises`.
+  const opcionesPais = (paises ?? []).filter((p) => p.activo || p.codigo === pais);
+  const paisDesconocido = pais && !opcionesPais.some((p) => p.codigo === pais);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const input = { clave, nombre, tipo, examen: examen || null };
+    const input = { clave, nombre, tipo, examen: examen || null, pais: pais || null };
     run(async () => {
       savedId.current = institucion
         ? (await actualizarInstitucion(institucion.id, input, catalogo), institucion.id)
@@ -166,6 +176,25 @@ export function InstitucionDialog({
           </FormField>
           <FormField id="inst-nombre" label="Nombre">
             {(a11y) => <Input {...a11y} value={nombre} onChange={(e) => setNombre(e.target.value)} required />}
+          </FormField>
+          <FormField
+            id="inst-pais"
+            label="País"
+            optional
+            hint={tipo === "examen_especial" ? "Déjalo sin país si el examen es internacional." : "Servirá para filtrar por país."}
+          >
+            {(a11y) => (
+              <NativeSelect {...a11y} value={pais} onChange={(e) => setPais(e.target.value)}>
+                <option value="">Sin país (internacional)</option>
+                {paisDesconocido && <option value={pais}>{pais}</option>}
+                {opcionesPais.map((p) => (
+                  <option key={p.codigo} value={p.codigo}>
+                    {[p.bandera, p.nombre, `(${p.codigo})`].filter(Boolean).join(" ")}
+                    {p.activo ? "" : " · inactivo"}
+                  </option>
+                ))}
+              </NativeSelect>
+            )}
           </FormField>
           {tipo === "universidad" && (
             <FormField id="inst-examen" label="Examen de admisión" optional hint="Solo si no es el genérico (ej. PAA en el TEC).">

@@ -17,11 +17,13 @@ export const normal = (s: string) =>
     .toLowerCase()
     .trim();
 
-/** Una combinación Carrera → Universidad que se puede elegir. */
+/** Una combinación Carrera → Universidad. */
 export type OpcionCarrera = {
   carrera: CarreraCatalogo;
   institucion: Identidad;
   area: string | null;
+  /** La institución está en Próximamente: se ve, pero no se puede elegir. */
+  bloqueada: boolean;
 };
 
 export type IndiceCarreras = {
@@ -35,11 +37,13 @@ export type IndiceCarreras = {
 };
 
 export function crearIndice(catalogo: CatalogoData, identidades: Identidad[]): IndiceCarreras {
-  const inst = new Map(identidades.filter((i) => i.activo).map((i) => [i.id, i]));
+  const inst = new Map(identidades.filter((i) => i.activo || i.proximamente).map((i) => [i.id, i]));
   const areas = new Map(catalogo.areas.map((a) => [a.id, a.nombre]));
   const opciones: OpcionCarrera[] = catalogo.carreras.flatMap((c) => {
     const institucion = inst.get(c.institucionId);
-    return institucion ? [{ carrera: c, institucion, area: c.areaId ? (areas.get(c.areaId) ?? null) : null }] : [];
+    if (!institucion) return [];
+    const area = c.areaId ? (areas.get(c.areaId) ?? null) : null;
+    return [{ carrera: c, institucion, area, bloqueada: !institucion.activo }];
   });
 
   const instituciones = new Map<string, string>();
@@ -55,8 +59,11 @@ export function crearIndice(catalogo: CatalogoData, identidades: Identidad[]): I
   return { opciones, nombres, fuse, instituciones };
 }
 
+// Las de instituciones en Próximamente van al final.
 const porOrden = (a: OpcionCarrera, b: OpcionCarrera) =>
-  a.institucion.orden - b.institucion.orden || a.carrera.orden - b.carrera.orden;
+  Number(a.bloqueada) - Number(b.bloqueada) ||
+  a.institucion.orden - b.institucion.orden ||
+  a.carrera.orden - b.carrera.orden;
 
 /**
  * "derecho" → todas las Derecho; "derecho unam" o "unam derecho" → solo las de la UNAM; "unam" → toda la UNAM.
@@ -86,7 +93,7 @@ export function buscarCarreras(indice: IndiceCarreras, consulta: string): Opcion
   const ranking = candidatas
     .filter((o) => porPalabra.every((m) => m.has(o.carrera.id)))
     .map((o) => ({ o, s: porPalabra.reduce((t, m) => t + m.get(o.carrera.id)!, 0) }))
-    .sort((a, b) => a.s - b.s || porOrden(a.o, b.o));
+    .sort((a, b) => Number(a.o.bloqueada) - Number(b.o.bloqueada) || a.s - b.s || porOrden(a.o, b.o));
   if (ranking.length === 0) return [];
   // Solo las cercanas a la mejor: "sicologia" trae Psicología, no todo lo que termina en "-logía".
   const tope = ranking[0].s + 0.15 * buscables.length;

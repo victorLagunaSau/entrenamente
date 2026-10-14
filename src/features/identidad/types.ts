@@ -16,7 +16,11 @@ export type Identidad = {
   /** Vector lineal en blanco. Se pinta como máscara CSS (ver SchoolIcon). */
   iconoSvg: string | null;
   logoUrl: string | null;
+  /** activo → Activa (exámenes y metas). Si no está activa, `proximamente` la muestra bloqueada en buscador y landing. */
   activo: boolean;
+  proximamente: boolean;
+  /** Código de `paises` (MX, GT, US); null en exámenes internacionales. */
+  pais: string | null;
   orden: number;
 };
 

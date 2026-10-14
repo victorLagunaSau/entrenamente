@@ -8,11 +8,11 @@
 
 import type { PostgrestError } from "@supabase/supabase-js";
 
-import { IDENTIDAD_COLUMNS, toIdentidad } from "@/features/identidad/services/identidad-service";
+import { selectInstituciones, toIdentidad } from "@/features/identidad/services/identidad-service";
 import { supabase } from "@/lib/supabase/client";
 
 import { byOrden, normalizeName, slugify, uniqueId } from "../lib/catalogo";
-import type { Area, AreaInput, Carrera, CarreraInput, Institucion, InstitucionInput } from "../types";
+import type { Area, AreaInput, Carrera, CarreraInput, EstadoInstitucion, Institucion, InstitucionInput } from "../types";
 
 type InstitucionRow = Parameters<typeof toIdentidad>[0];
 type AreaRow = { id: string; institucion_id: string; codigo: string; nombre: string; activo: boolean; orden: number };
@@ -50,16 +50,24 @@ function fail(error: PostgrestError): never {
     const hit = DUPLICATE_MESSAGES.find(([constraint]) => error.message.includes(constraint));
     throw new CatalogoError(hit?.[1] ?? "Ya existe un registro con esos datos.");
   }
-  if (error.code === "23503") throw new CatalogoError("El área elegida no pertenece a esta institución.");
+  if (error.code === "23503")
+    throw new CatalogoError(
+      error.message.includes("pais") ? "Ese país no está en el catálogo." : "El área elegida no pertenece a esta institución.",
+    );
   if (error.code === "42501") throw new CatalogoError("No tienes permiso para modificar el catálogo.");
   if (error.code === "23514") throw new CatalogoError("Algún dato no tiene el formato esperado.");
+  if (error.code === "42703")
+    throw new CatalogoError("Falta correr en Supabase la migración 20261015000000_escuelas_pais_estado.sql.");
   throw new CatalogoError(error.message);
 }
 
 /** Instituciones con sus áreas y carreras, ordenadas. */
 export async function getCatalogo({ incluirInactivos = false } = {}): Promise<Institucion[]> {
   const [inst, areas, carreras] = await Promise.all([
-    supabase.from("instituciones").select(IDENTIDAD_COLUMNS),
+    selectInstituciones().then(
+      (data) => ({ data, error: null }),
+      (error: PostgrestError) => ({ data: null, error }),
+    ),
     supabase.from("areas").select("id, institucion_id, codigo, nombre, activo, orden"),
     supabase.from("carreras").select("id, institucion_id, area_id, nombre, activo, orden"),
   ]);
@@ -93,7 +101,9 @@ function cleanInstitucion(input: InstitucionInput, catalogo: Institucion[], self
   if (!/^[A-Z0-9]{2,12}$/.test(clave)) throw new CatalogoError("La clave lleva de 2 a 12 letras o números, sin espacios.");
   if (!nombre) throw new CatalogoError("Escribe el nombre.");
   if (catalogo.some((i) => i.id !== selfId && i.clave === clave)) throw new CatalogoError("Ya existe una institución con esa clave.");
-  return { clave, nombre, tipo: input.tipo, examen: input.examen?.trim() || null };
+  const pais = input.pais?.trim().toUpperCase() || null;
+  if (pais && !/^[A-Z]{2}$/.test(pais)) throw new CatalogoError("El país es un código de 2 letras (MX, GT, US).");
+  return { clave, nombre, tipo: input.tipo, examen: input.examen?.trim() || null, pais };
 }
 
 export async function crearInstitucion(input: InstitucionInput, catalogo: Institucion[]) {
@@ -105,6 +115,7 @@ export async function crearInstitucion(input: InstitucionInput, catalogo: Instit
     nombre: v.nombre,
     tipo: v.tipo,
     examen: v.examen,
+    pais: v.pais,
     sigla: v.clave,
     orden: nextOrden(catalogo, 10),
   });
@@ -116,13 +127,17 @@ export async function actualizarInstitucion(id: string, input: InstitucionInput,
   const v = cleanInstitucion(input, catalogo, id);
   const { error } = await supabase
     .from("instituciones")
-    .update({ clave: v.clave, nombre: v.nombre, tipo: v.tipo, examen: v.examen })
+    .update({ clave: v.clave, nombre: v.nombre, tipo: v.tipo, examen: v.examen, pais: v.pais })
     .eq("id", id);
   if (error) fail(error);
 }
 
-export async function setInstitucionActiva(id: string, activo: boolean) {
-  const { error } = await supabase.from("instituciones").update({ activo }).eq("id", id);
+/** Activa, Inactiva o Próximamente (se guardan `activo` y `proximamente` juntos). */
+export async function setInstitucionEstado(id: string, estado: EstadoInstitucion) {
+  const { error } = await supabase
+    .from("instituciones")
+    .update({ activo: estado === "activa", proximamente: estado === "proximamente" })
+    .eq("id", id);
   if (error) fail(error);
 }
 
