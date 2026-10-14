@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CircleAlert, Loader2 } from "lucide-react";
 
 import { useMode } from "@/features/modes/components/mode-guard";
+import { cn } from "@/lib/utils";
 
 import { getMyAccess, STUDENT_HOMES, tierFor, type StudentTier } from "../services/access-service";
 
@@ -73,5 +75,39 @@ export function StudentHomeRedirect() {
     <div className="grid min-h-dvh place-items-center" role="status" aria-label="Abriendo tu home">
       <Loader2 className="size-6 animate-spin text-brand-light motion-reduce:animate-none" />
     </div>
+  );
+}
+
+/** Solo administradores: salta entre los dos homes del estudiante (Demo y Pro) para revisar ambas experiencias. */
+export function TierSwitcher({ tier }: { tier: StudentTier }) {
+  const { viewer } = useMode();
+  if (viewer.userType !== "admin") return null;
+  return (
+    <nav
+      aria-label="Pruebas: home del estudiante"
+      className="flex w-fit items-center gap-2 rounded-full border border-dashed border-gold/50 bg-gold/5 py-1 pr-1 pl-3 text-xs print:hidden"
+    >
+      <span className="font-semibold text-gold">Pruebas</span>
+      <span className="flex rounded-full bg-muted p-0.5">
+        {(
+          [
+            ["demo", "Home Demo"],
+            ["pro", "Home Pro"],
+          ] as const
+        ).map(([id, label]) => (
+          <Link
+            key={id}
+            href={STUDENT_HOMES[id]}
+            aria-current={tier === id ? "page" : undefined}
+            className={cn(
+              "rounded-full px-2.5 py-1 font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+              tier === id ? "bg-secondary text-secondary-foreground" : "text-cool hover:text-foreground"
+            )}
+          >
+            {label}
+          </Link>
+        ))}
+      </span>
+    </nav>
   );
 }

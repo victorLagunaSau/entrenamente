@@ -21,7 +21,7 @@ import { FreeExamModule, StreaksModule, StudyPlanModule } from "./home-modules";
 import { DemoHome } from "./demo/demo-home";
 import { DEMO_NAV, PRO_NAV, StudentNav, StudentTopNav } from "./student-nav";
 import { StudentWelcome } from "./student-welcome";
-import { TierGuard } from "./tier-guard";
+import { TierGuard, TierSwitcher } from "./tier-guard";
 import { AddSchoolMenuItem } from "./add-school-menu-item";
 
 /**
@@ -40,7 +40,10 @@ export function StudentPanel({ tier }: { tier: StudentTier }) {
           accountExtra={<AddSchoolMenuItem />}
         >
           <div className="flex flex-col gap-8">
-            <ModeSwitcher />
+            <div className="flex flex-wrap items-center gap-3">
+              <ModeSwitcher />
+              <TierSwitcher tier={tier} />
+            </div>
             {tier === "demo" ? <DemoHome /> : <StudentHome />}
           </div>
         </PanelShell>
@@ -85,10 +88,7 @@ function StudentHome() {
   }, [loadPlans]);
 
   // Carreras del perfil sin plan activo: las únicas que ofrece el wizard.
-  const planCareers = React.useMemo(
-    () => profileCareers.filter((c) => !plans?.some((p) => p.careerId === c.id)),
-    [profileCareers, plans]
-  );
+  const planCareers = React.useMemo(() => profileCareers.filter((c) => !plans?.some((p) => p.careerId === c.id)), [profileCareers, plans]);
 
   if (failed) {
     return (
