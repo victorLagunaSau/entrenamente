@@ -44,6 +44,10 @@ export type TutorPlan = {
   perks: string[];
   /** Etiqueta destacada en la tarjeta. */
   badge?: string;
+  /** Tope de estudiantes del plan por estudiante (catálogo); sin él, MAX_FAMILY_SEATS. */
+  maxSeats?: number;
+  /** Descuento del pago anual de este plan (catálogo); sin él, ANNUAL_DISCOUNT. */
+  annualDiscount?: number;
 };
 
 /** Plan elegido con sus cupos (en los de precio fijo, `seats` = los del plan). */
@@ -128,7 +132,11 @@ export const checkoutHref = ({ plan, seats }: PlanChoice, period: BillingPeriod)
   `/acceso-ilimitado?plan=${plan.id}&estudiantes=${seats}&periodo=${period}`;
 
 /** Total del año con el descuento anual (Plan Tutor: $120 × 12 × 0.8 = $1,152). */
-export const annualPriceOf = (choice: PlanChoice) => Math.round(priceOf(choice) * 12 * (1 - ANNUAL_DISCOUNT));
+export const annualPriceOf = (choice: PlanChoice) =>
+  Math.round(priceOf(choice) * 12 * (1 - (choice.plan.annualDiscount ?? ANNUAL_DISCOUNT)));
+
+/** % de descuento anual de un plan, redondeado para mostrarse. */
+export const annualDiscountPct = (plan: TutorPlan) => Math.round((plan.annualDiscount ?? ANNUAL_DISCOUNT) * 100);
 
 /**
  * Ahorro mensual frente a pagar un Plan Tutor por cada estudiante (solo planes familiares).

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileJson, School, Sparkles, Users } from "lucide-react";
+import { BarChart3, FileJson, School, Sparkles, Users } from "lucide-react";
 
 import { HomeTools } from "@/features/modes/components/home-tools";
 import { useMode } from "@/features/modes/components/mode-guard";
@@ -38,8 +38,14 @@ export function AdminHome() {
             href: "/admin/escuelas",
           },
           {
+            label: "Ingresos y A/B",
+            description: "Embudo por variante, recibos, planes y ofertas flash.",
+            icon: BarChart3,
+            href: "/admin/revenue-analytics",
+          },
+          {
             label: "Campaña Demo",
-            description: "Textos, precio y exámenes gratis del Home Demo.",
+            description: "Textos y exámenes gratis del Home Demo.",
             icon: Sparkles,
             href: "/admin/demo",
           },

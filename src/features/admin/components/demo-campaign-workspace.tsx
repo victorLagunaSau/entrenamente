@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { CircleAlert, CircleCheck, Loader2, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,6 @@ import {
   DemoError,
   type DemoCampaignInput,
   fillTemplate,
-  formatMxn,
-  monthlyOfYearly,
   getDemoCampaign,
   saveDemoCampaign,
 } from "@/features/student/services/demo-service";
@@ -21,7 +20,7 @@ import { AdminPageHeader } from "./admin-module";
 
 const SAMPLE = { alias: "Sofi", carrera: "Medicina (UNAM)", universidad: "Universidad Nacional Autónoma de México" };
 
-/** Textos, precio, pruebas gratis y estado de la campaña del Home Demo (demo_campaign_config). */
+/** Textos, pruebas gratis y estado de la campaña del Home Demo (demo_campaign_config). */
 export function DemoCampaignWorkspace() {
   const [form, setForm] = React.useState<DemoCampaignInput | null>(null);
   const [status, setStatus] = React.useState<{ kind: "idle" | "saving" | "saved" } | { kind: "error"; text: string }>({ kind: "idle" });
@@ -124,28 +123,13 @@ export function DemoCampaignWorkspace() {
           </Field>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field id="precio" label="Plan mensual (MXN)" hint="Precio base para descuentos futuros.">
-              <Input
-                id="precio"
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.precioMensualMxn}
-                required
-                onChange={(e) => set("precioMensualMxn", Number(e.target.value))}
-              />
-            </Field>
-            <Field id="anual" label="Plan anual (MXN)" hint={`Equivale a ${formatMxn(monthlyOfYearly(form.precioAnualMxn || 0))} / mes.`}>
-              <Input
-                id="anual"
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.precioAnualMxn}
-                required
-                onChange={(e) => set("precioAnualMxn", Number(e.target.value))}
-              />
-            </Field>
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              Los precios del Plan Estudiante (y su prueba A/B) se administran en{" "}
+              <Link href="/admin/revenue-analytics" className="font-semibold text-brand-light hover:underline">
+                Ingresos y A/B
+              </Link>
+              .
+            </p>
             <Field id="dias" label="Días de prueba" hint="Solo para registros nuevos.">
               <Input
                 id="dias"
@@ -193,9 +177,6 @@ export function DemoCampaignWorkspace() {
           <p className="text-lg font-bold text-balance">{fillTemplate(form.tituloBienvenida, preview)}</p>
           <p className="text-sm text-cool text-pretty">{fillTemplate(form.subtitulo, preview)}</p>
           <p className="border-t pt-3 text-sm text-muted-foreground text-pretty">{form.fraseCierre}</p>
-          <p className="text-sm font-semibold text-energy">
-            {formatMxn(form.precioMensualMxn || 0)} / mes · {formatMxn(form.precioAnualMxn || 0)} / año
-          </p>
           <p className="text-xs text-muted-foreground">
             {form.pruebasAlRegistrarse} exámenes gratis durante {form.diasPrueba} días
           </p>

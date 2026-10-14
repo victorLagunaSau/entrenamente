@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { UnlimitedAccessPage } from "@/features/acceso-ilimitado/components/unlimited-access-page";
@@ -8,7 +9,9 @@ export const metadata: Metadata = { title: "Acceso ilimitado", robots: { index: 
 export default function AccesoIlimitadoPage() {
   return (
     <AuthGuard>
-      <UnlimitedAccessPage />
+      <Suspense>
+        <UnlimitedAccessPage />
+      </Suspense>
     </AuthGuard>
   );
 }
