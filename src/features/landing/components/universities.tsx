@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ArrowRight,
   BookOpenCheck,
+  Clock,
   Gauge,
   MessageSquarePlus,
   Palette,
@@ -58,10 +59,13 @@ const VENTAJAS = [
 export function Universities() {
   const { identidades, ready } = useIdentidades();
   const carreras = useCarrerasPorInstitucion();
-  const universities = identidades.filter(
-    (i) => i.activo && i.tipo === "universidad",
-  );
-  const total = universities.reduce((s, u) => s + (carreras[u.id] ?? 0), 0);
+  // Activas primero; las de Próximamente se muestran con su etiqueta.
+  const universities = identidades
+    .filter((i) => (i.activo || i.proximamente) && i.tipo === "universidad")
+    .sort((a, b) => Number(a.proximamente) - Number(b.proximamente));
+  const total = universities
+    .filter((u) => u.activo)
+    .reduce((s, u) => s + (carreras[u.id] ?? 0), 0);
   const [abierta, setAbierta] = React.useState<Identidad | null>(null);
 
   return (
@@ -134,7 +138,7 @@ export function Universities() {
               <button
                 type="button"
                 onClick={() => setAbierta(u)}
-                aria-label={`Ver carreras de ${u.nombre}`}
+                aria-label={`Ver carreras de ${u.nombre}${u.proximamente ? " (próximamente)" : ""}`}
                 className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-card/60 p-5 text-left transition-all duration-300 outline-none hover:-translate-y-1 hover:border-secondary/50 hover:shadow-glow-secondary focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:p-7"
               >
                 <div
@@ -169,9 +173,15 @@ export function Universities() {
                   {u.nombre}
                 </p>
                 <span className="mt-auto flex items-center justify-between gap-2 pt-4 text-xs font-semibold text-secondary">
-                  {carreras[u.id] > 0
-                    ? `${carreras[u.id]} ${carreras[u.id] === 1 ? "carrera" : "carreras"}`
-                    : "Carreras"}
+                  {u.proximamente ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold">
+                      <Clock className="size-3" aria-hidden /> Próximamente
+                    </span>
+                  ) : carreras[u.id] > 0 ? (
+                    `${carreras[u.id]} ${carreras[u.id] === 1 ? "carrera" : "carreras"}`
+                  ) : (
+                    "Carreras"
+                  )}
                   <span className="flex items-center gap-1 transition-transform group-hover:translate-x-0.5">
                     Ver <ArrowRight className="size-3.5" />
                   </span>

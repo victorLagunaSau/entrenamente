@@ -1,4 +1,4 @@
-import type { Area, Carrera, Institucion, TipoInstitucion } from "../types";
+import type { Area, Carrera, EstadoInstitucion, Institucion, TipoInstitucion } from "../types";
 
 export const TIPOS: { value: TipoInstitucion; nombre: string }[] = [
   { value: "universidad", nombre: "Universidad" },
@@ -6,6 +6,15 @@ export const TIPOS: { value: TipoInstitucion; nombre: string }[] = [
 ];
 
 export const tipoNombre = (tipo: TipoInstitucion) => TIPOS.find((t) => t.value === tipo)?.nombre ?? tipo;
+
+export const ESTADOS: { value: EstadoInstitucion; nombre: string }[] = [
+  { value: "activa", nombre: "Activa" },
+  { value: "inactiva", nombre: "Inactiva" },
+  { value: "proximamente", nombre: "Próximamente" },
+];
+
+export const estadoDe = (i: Pick<Institucion, "activo" | "proximamente">): EstadoInstitucion =>
+  i.activo ? "activa" : i.proximamente ? "proximamente" : "inactiva";
 
 /** "Carrera" o "Edición" según el tipo de institución. */
 export const carreraLabel = (tipo: TipoInstitucion) => (tipo === "examen_especial" ? "Edición" : "Carrera");

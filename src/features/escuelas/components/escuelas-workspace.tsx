@@ -19,17 +19,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { AdminPageHeader } from "@/features/admin/components/admin-module";
 import { invalidarCatalogo } from "@/features/catalogo";
+import { getPaises, type Pais } from "@/features/grados/paises";
 import { cn } from "@/lib/utils";
 
-import { carreraLabel, carrerasLabel, carrerasPorArea, tipoNombre } from "../lib/catalogo";
+import { ESTADOS, carreraLabel, carrerasLabel, carrerasPorArea, estadoDe, tipoNombre } from "../lib/catalogo";
 import {
   getCatalogo,
   intercambiarOrdenAreas,
   setAreaActiva,
   setCarreraActiva,
-  setInstitucionActiva,
+  setInstitucionEstado,
 } from "../services/catalogo-service";
-import type { Area, Carrera, Institucion } from "../types";
+import type { Area, Carrera, EstadoInstitucion, Institucion } from "../types";
 import { AreaDialog, CarreraDialog, ConfirmDialog, InstitucionDialog, type ConfirmRequest } from "./catalogo-dialogs";
 import { IdentidadSection } from "./identidad-section";
 
@@ -47,6 +48,9 @@ export function EscuelasWorkspace() {
   const [dialog, setDialog] = React.useState<DialogState>(null);
   const [confirm, setConfirm] = React.useState<ConfirmRequest | null>(null);
   const [confirmKey, setConfirmKey] = React.useState(0);
+  const [paises, setPaises] = React.useState<Pais[] | null>(null);
+  const [estadoBusy, setEstadoBusy] = React.useState<string | null>(null);
+  const [estadoError, setEstadoError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     try {
@@ -61,6 +65,9 @@ export function EscuelasWorkspace() {
 
   React.useEffect(() => {
     load();
+    getPaises()
+      .then(setPaises)
+      .catch(() => setPaises([]));
   }, [load]);
 
   const selected = catalogo?.find((i) => i.id === selectedId) ?? null;
@@ -68,6 +75,36 @@ export function EscuelasWorkspace() {
   const askConfirm = (req: ConfirmRequest) => {
     setConfirmKey((k) => k + 1);
     setConfirm(req);
+  };
+
+  /** Salir de Activa se confirma (deja de dar exámenes); lo demás se guarda directo. */
+  const cambiarEstado = (inst: Institucion, estado: EstadoInstitucion) => {
+    setEstadoError(null);
+    if (estadoDe(inst) === "activa") {
+      askConfirm(
+        estado === "proximamente"
+          ? {
+              title: `¿Pasar ${inst.clave} a Próximamente?`,
+              description:
+                "Se verá en el buscador y en el landing con la etiqueta Próximamente, pero nadie podrá elegirla ni hacer exámenes. Quienes ya la tienen como meta la conservan.",
+              confirmLabel: "Pasar a Próximamente",
+              action: () => setInstitucionEstado(inst.id, estado),
+            }
+          : {
+              title: `¿Desactivar ${inst.clave}?`,
+              description:
+                "Dejará de mostrarse en el registro junto con sus áreas y carreras. Los estudiantes que ya la tienen como meta la conservan. Puedes reactivarla cuando quieras.",
+              confirmLabel: "Desactivar",
+              action: () => setInstitucionEstado(inst.id, estado),
+            }
+      );
+      return;
+    }
+    setEstadoBusy(inst.id);
+    setInstitucionEstado(inst.id, estado)
+      .then(load)
+      .catch((e: unknown) => setEstadoError(e instanceof Error ? e.message : "No se pudo guardar."))
+      .finally(() => setEstadoBusy(null));
   };
 
   const closeDialog = () => setDialog(null);
@@ -81,8 +118,14 @@ export function EscuelasWorkspace() {
       <AdminPageHeader
         eyebrow="/admin/escuelas"
         title="Escuelas, exámenes y carreras"
-        description="Universidades y exámenes especiales con sus áreas y carreras. Lo que desactives deja de verse en el registro, pero no se borra."
+        description="Universidades y exámenes especiales con sus áreas y carreras. Lo inactivo deja de verse en el registro y lo que está en Próximamente se ve pero no se puede elegir; nada se borra."
       />
+
+      {estadoError && (
+        <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
+          <CircleAlert className="size-4" /> {estadoError}
+        </p>
+      )}
 
       {loadError ? (
         <div role="alert" className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-5 text-sm">
@@ -100,6 +143,9 @@ export function EscuelasWorkspace() {
       ) : selected ? (
         <InstitucionDetail
           institucion={selected}
+          paises={paises}
+          estadoBusy={estadoBusy === selected.id}
+          onEstado={cambiarEstado}
           onBack={() => setSelectedId(null)}
           onDialog={setDialog}
           onConfirm={askConfirm}
@@ -108,6 +154,9 @@ export function EscuelasWorkspace() {
       ) : (
         <InstitucionesList
           catalogo={catalogo}
+          paises={paises}
+          estadoBusy={estadoBusy}
+          onEstado={cambiarEstado}
           onOpen={setSelectedId}
           onNew={() => setDialog({ kind: "institucion", institucion: null })}
         />
@@ -118,6 +167,7 @@ export function EscuelasWorkspace() {
           open={dialog?.kind === "institucion"}
           institucion={dialog?.kind === "institucion" ? dialog.institucion : null}
           catalogo={catalogo}
+          paises={paises}
           onClose={closeDialog}
           onSaved={async (id) => {
             await saved();
@@ -179,6 +229,59 @@ function InactiveBadge({ label = "Inactiva" }: { label?: string }) {
   );
 }
 
+const TONO_ESTADO: Record<EstadoInstitucion, string> = {
+  activa: "bg-primary text-primary-foreground",
+  inactiva: "bg-muted text-foreground",
+  proximamente: "bg-gold/20 text-gold",
+};
+
+/** Activa / Inactiva / Próximamente de una institución. */
+function EstadoSwitch({
+  inst,
+  disabled,
+  onChange,
+}: {
+  inst: Institucion;
+  disabled?: boolean;
+  onChange: (inst: Institucion, estado: EstadoInstitucion) => void;
+}) {
+  const actual = estadoDe(inst);
+  return (
+    <div role="group" aria-label={`Estado de ${inst.clave}`} className="inline-flex shrink-0 rounded-lg border bg-background/40 p-0.5">
+      {ESTADOS.map((e) => {
+        const on = e.value === actual;
+        return (
+          <button
+            key={e.value}
+            type="button"
+            aria-pressed={on}
+            disabled={disabled}
+            onClick={() => !on && onChange(inst, e.value)}
+            className={cn(
+              "rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50",
+              on ? TONO_ESTADO[e.value] : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            {e.nombre}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** "🇲🇽 MX" o "Internacional". */
+function PaisLabel({ codigo, paises }: { codigo: string | null; paises: Pais[] | null }) {
+  if (!codigo) return <span>Internacional</span>;
+  const p = paises?.find((x) => x.codigo === codigo);
+  return (
+    <span title={p?.nombre}>
+      {p?.bandera && <span aria-hidden>{p.bandera} </span>}
+      {codigo}
+    </span>
+  );
+}
+
 function IconAction({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
     <Button variant="ghost" size="icon" className="size-9" onClick={onClick} disabled={disabled} aria-label={label} title={label}>
@@ -191,16 +294,23 @@ function IconAction({ label, onClick, disabled, children }: { label: string; onC
 
 function InstitucionesList({
   catalogo,
+  paises,
+  estadoBusy,
+  onEstado,
   onOpen,
   onNew,
 }: {
   catalogo: Institucion[];
+  paises: Pais[] | null;
+  estadoBusy: string | null;
+  onEstado: (inst: Institucion, estado: EstadoInstitucion) => void;
   onOpen: (id: string) => void;
   onNew: () => void;
 }) {
   const [verInactivas, setVerInactivas] = React.useState(true);
-  const visibles = verInactivas ? catalogo : catalogo.filter((i) => i.activo);
-  const inactivas = catalogo.length - catalogo.filter((i) => i.activo).length;
+  const esInactiva = (i: Institucion) => estadoDe(i) === "inactiva";
+  const visibles = verInactivas ? catalogo : catalogo.filter((i) => !esInactiva(i));
+  const inactivas = catalogo.filter(esInactiva).length;
 
   return (
     <section aria-labelledby="inst-title" className="flex flex-col gap-4">
@@ -227,13 +337,13 @@ function InstitucionesList({
           {visibles.map((inst) => {
             const carrerasActivas = inst.carreras.filter((c) => c.activo).length;
             return (
-              <li key={inst.id}>
+              <li key={inst.id} className="flex flex-col gap-2 rounded-2xl border bg-card p-2 sm:flex-row sm:items-center">
                 <button
                   type="button"
                   onClick={() => onOpen(inst.id)}
                   className={cn(
-                    "group flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left transition-colors",
-                    "hover:border-brand-light/50 hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                    "group flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 text-left transition-colors",
+                    "hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
                     !inst.activo && "opacity-70"
                   )}
                 >
@@ -245,6 +355,7 @@ function InstitucionesList({
                     </span>
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span>{tipoNombre(inst.tipo)}</span>
+                      <PaisLabel codigo={inst.pais} paises={paises} />
                       <span>
                         {inst.areas.length} {inst.areas.length === 1 ? "área" : "áreas"}
                       </span>
@@ -252,11 +363,13 @@ function InstitucionesList({
                         {carrerasActivas} {carrerasActivas === 1 ? carreraLabel(inst.tipo).toLowerCase() : carrerasLabel(inst.tipo)}
                         {carrerasActivas !== inst.carreras.length && ` (+${inst.carreras.length - carrerasActivas} inactivas)`}
                       </span>
-                      {!inst.activo && <InactiveBadge />}
                     </span>
                   </span>
                   <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </button>
+                <div className="px-2 pb-1 sm:px-0 sm:pr-2 sm:pb-0">
+                  <EstadoSwitch inst={inst} disabled={estadoBusy === inst.id} onChange={onEstado} />
+                </div>
               </li>
             );
           })}
@@ -270,12 +383,18 @@ function InstitucionesList({
 
 function InstitucionDetail({
   institucion: inst,
+  paises,
+  estadoBusy,
+  onEstado,
   onBack,
   onDialog,
   onConfirm,
   onChanged,
 }: {
   institucion: Institucion;
+  paises: Pais[] | null;
+  estadoBusy: boolean;
+  onEstado: (inst: Institucion, estado: EstadoInstitucion) => void;
   onBack: () => void;
   onDialog: (d: DialogState) => void;
   onConfirm: (req: ConfirmRequest) => void;
@@ -305,17 +424,6 @@ function InstitucionDetail({
       setBusy(false);
     }
   };
-
-  const toggleInstitucion = () =>
-    inst.activo
-      ? onConfirm({
-          title: `¿Desactivar ${inst.clave}?`,
-          description:
-            "Dejará de mostrarse en el registro junto con sus áreas y carreras. Los estudiantes que ya la tienen como meta la conservan. Puedes reactivarla cuando quieras.",
-          confirmLabel: "Desactivar",
-          action: () => setInstitucionActiva(inst.id, false),
-        })
-      : quick(() => setInstitucionActiva(inst.id, true));
 
   const toggleArea = (a: Area) =>
     a.activo
@@ -357,19 +465,17 @@ function InstitucionDetail({
             </h2>
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <span>{tipoNombre(inst.tipo)}</span>
+              <PaisLabel codigo={inst.pais} paises={paises} />
               {inst.examen && <span>Examen: {inst.examen}</span>}
               <span>
                 ID: <code className="font-mono">{inst.id}</code>
               </span>
-              {!inst.activo && <InactiveBadge />}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <EstadoSwitch inst={inst} disabled={estadoBusy} onChange={onEstado} />
             <Button variant="outline" size="sm" onClick={() => onDialog({ kind: "institucion", institucion: inst })}>
               <Pencil /> Editar
-            </Button>
-            <Button variant="outline" size="sm" onClick={toggleInstitucion} disabled={busy}>
-              {inst.activo ? <Power /> : <RotateCcw />} {inst.activo ? "Desactivar" : "Reactivar"}
             </Button>
           </div>
         </div>

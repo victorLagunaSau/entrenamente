@@ -2,6 +2,9 @@
 
 export type TipoInstitucion = "universidad" | "examen_especial";
 
+/** Activa: exámenes y metas. Próximamente: se ve bloqueada en buscador y landing. Inactiva: solo admin. */
+export type EstadoInstitucion = "activa" | "proximamente" | "inactiva";
+
 export type Area = {
   id: string;
   institucionId: string;
@@ -39,11 +42,14 @@ export type Institucion = {
   iconoSvg: string | null;
   logoUrl: string | null;
   activo: boolean;
+  proximamente: boolean;
+  /** Código de `paises` (MX, GT, US); null en exámenes internacionales. */
+  pais: string | null;
   orden: number;
   areas: Area[];
   carreras: Carrera[];
 };
 
-export type InstitucionInput = Pick<Institucion, "clave" | "nombre" | "tipo" | "examen">;
+export type InstitucionInput = Pick<Institucion, "clave" | "nombre" | "tipo" | "examen" | "pais">;
 export type AreaInput = Pick<Area, "codigo" | "nombre">;
 export type CarreraInput = Pick<Carrera, "nombre" | "areaId">;
