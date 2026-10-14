@@ -19,6 +19,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GRADO_ADMISION, porNivel, useGrados } from "@/features/grados/grados";
 import { MY_CAREERS_PATH } from "@/features/student/services/student-goals-service";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +31,6 @@ import {
   AVATAR_PRESETS,
   AVATAR_TYPES,
   ESTADOS,
-  GRADOS,
   isValidPhone,
   normalizePhone,
   PRESET_PREFIX,
@@ -160,7 +160,8 @@ function DatosSection({ cuenta, reload }: CuentaContext) {
   const [estado, setEstado] = React.useState(cuenta.estado ?? "");
   const [originSchool, setOriginSchool] = React.useState(cuenta.student?.originSchool ?? "");
   const [notStudying, setNotStudying] = React.useState(cuenta.student?.notStudying ?? false);
-  const [grado, setGrado] = React.useState(cuenta.student?.grado ?? "");
+  const [grado, setGrado] = React.useState(cuenta.student?.grado ?? GRADO_ADMISION);
+  const { grados, error: gradosError } = useGrados();
   const [promedio, setPromedio] = React.useState(cuenta.student?.promedio?.toString() ?? "");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -189,7 +190,7 @@ function DatosSection({ cuenta, reload }: CuentaContext) {
         estado: estado || null,
         originSchool: student && !notStudying ? originSchool : null,
         notStudying: student && notStudying,
-        grado: student ? grado || null : null,
+        grado: student ? grado : null,
         promedio: student ? avg : null,
       });
       await reload();
@@ -250,13 +251,26 @@ function DatosSection({ cuenta, reload }: CuentaContext) {
           <>
             <h3 className="mt-2 text-sm font-semibold sm:col-span-2">Datos escolares</h3>
             <Field label="Grado actual" htmlFor="grado">
-              <select id="grado" value={grado} onChange={(e) => setGrado(e.target.value)} className={selectClass}>
-                <option value="">Sin especificar</option>
-                {GRADOS.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.label}
-                  </option>
-                ))}
+              <select
+                id="grado"
+                value={grado}
+                onChange={(e) => setGrado(e.target.value)}
+                disabled={!grados}
+                className={selectClass}
+              >
+                {!grados ? (
+                  <option value={grado}>{gradosError ? "No pudimos cargar los grados" : "Cargando…"}</option>
+                ) : (
+                  porNivel(grados).map((n) => (
+                    <optgroup key={n.nivel} label={n.nivel}>
+                      {n.grados.map((g) => (
+                        <option key={g.codigo} value={g.codigo}>
+                          {g.nombre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))
+                )}
               </select>
             </Field>
             <Field label="Promedio" htmlFor="promedio" hint="De 5 a 10. Algunas universidades lo piden para el pase.">
