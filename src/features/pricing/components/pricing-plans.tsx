@@ -100,7 +100,7 @@ export function RolePlans({ pricing, role, compact = false }: { pricing: Pricing
           key={sale.id}
           catalog={catalog}
           sale={sale}
-          onChoose={(s) => choose(role, { planId: s.plan_id, interval: s.billing_cycle, saleId: s.id })}
+          onChoose={(s) => s.plan_id && choose(role, { planId: s.plan_id, interval: s.billing_cycle, saleId: s.id })}
         />
       ))}
       {role === "student" && <VariantPreviewSwitch pricing={pricing} />}
@@ -108,15 +108,17 @@ export function RolePlans({ pricing, role, compact = false }: { pricing: Pricing
         <StudentOfferCards
           offers={studentOffers(catalog, variant)}
           compact={compact}
-          onChoose={(o) => choose("student", { planId: o.plan.id, interval: o.interval })}
+          sales={sales}
+          onChoose={(o, sale) => choose("student", { planId: o.plan.id, interval: o.interval, saleId: sale?.id })}
         />
       ) : (
         <>
           {!compact && <WhyTutor />}
           <ParentPlanGrid
             plans={parentPlans(catalog)}
-            onChoose={({ plan, seats }, period) =>
-              choose("parent", { planId: plan.id, interval: period === "anual" ? "annual" : "monthly", seats })
+            sales={sales}
+            onChoose={({ plan, seats }, period, sale) =>
+              choose("parent", { planId: plan.id, interval: period === "anual" ? "annual" : "monthly", seats, saleId: sale?.id })
             }
           />
         </>

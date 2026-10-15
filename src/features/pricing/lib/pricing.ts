@@ -36,14 +36,19 @@ export type Experiment = {
   variant_b: VariantConfig;
 };
 
+/**
+ * Oferta temporal. Dos tipos: precio fijo (plan_id + billing_cycle + discounted_price) o porcentaje
+ * (discount_pct; sin plan_id aplica a todos los planes del rol). duration_days null = los días del periodo.
+ */
 export type FlashSale = {
   id: string;
   title: string;
   target_role: PricingRole;
-  plan_id: string;
+  plan_id: string | null;
   billing_cycle: BillingInterval;
-  discounted_price: number;
-  duration_days: number;
+  discounted_price: number | null;
+  discount_pct: number | null;
+  duration_days: number | null;
   starts_at: string;
   expires_at: string;
 };
@@ -61,8 +66,8 @@ export const FALLBACK_CATALOG: PricingCatalog = {
       target_role: "student",
       name: "Plan Estudiante",
       description: "Entrena sin límites hasta el día de tu examen.",
-      base_price_monthly: 89,
-      base_price_annual: 750,
+      base_price_monthly: 85,
+      base_price_annual: 699,
       features: [
         "Exámenes ilimitados en todas tus carreras",
         "Modo Racha: mini-exámenes diarios de 10 minutos",
@@ -87,10 +92,10 @@ export const FALLBACK_CATALOG: PricingCatalog = {
         name: p.name,
         description: p.tagline,
         base_price_monthly: monthly,
-        base_price_annual: Math.round(monthly * 12 * 0.8),
+        base_price_annual: Math.round(monthly * 12 * (1 - (p.annualDiscount ?? 0))),
         features: p.perks,
         min_students: p.seats,
-        max_students: p.perStudent ? 30 : p.seats,
+        max_students: p.maxSeats ?? p.seats,
         extra_student_price_monthly: p.perStudent ? p.priceMxn : 0,
         badge: p.badge ?? null,
       };
@@ -103,14 +108,14 @@ export const FALLBACK_CATALOG: PricingCatalog = {
       target_role: "student",
       variant_a: {
         offers: [
-          { plan_id: "student", interval: "monthly", price: 89 },
-          { plan_id: "student", interval: "annual", price: 750 },
+          { plan_id: "student", interval: "monthly", price: 85 },
+          { plan_id: "student", interval: "annual", price: 699 },
         ],
       },
       variant_b: {
         offers: [
-          { plan_id: "student", interval: "quarterly", price: 250 },
-          { plan_id: "student", interval: "annual", price: 750 },
+          { plan_id: "student", interval: "quarterly", price: 219 },
+          { plan_id: "student", interval: "annual", price: 699 },
         ],
       },
     },
@@ -123,7 +128,7 @@ export type Offer = {
   plan: CatalogPlan;
   interval: BillingInterval;
   price: number;
-  /** % que se ahorra frente a pagar el periodo más corto de la misma variante durante el mismo tiempo. */
+  /** % que se ahorra frente a pagar el precio mensual del plan durante el mismo tiempo. */
   savingsPct: number;
 };
 
@@ -148,7 +153,8 @@ export const experimentFor = (catalog: PricingCatalog, role: PricingRole) =>
 
 /**
  * Ofertas del Plan Estudiante para una variante. Sin experimento activo: mensual + anual con los precios base.
- * Variante A (semilla): $89/mes y $750/año (ahorras 30 %). Variante B: $250/trimestre y $750/año (ahorras 25 %).
+ * Variante A: $85/mes y $699/año (ahorras 31 %). Variante B: $219/trimestre (ahorras 14 %) y $699/año (31 %).
+ * El ahorro siempre se mide contra el precio mensual del plan, como en la lista de precios.
  */
 export function studentOffers(catalog: PricingCatalog, variant: Variant): Offer[] {
   const plans = new Map(catalog.plans.map((p) => [p.id, p]));
@@ -167,14 +173,10 @@ export function studentOffers(catalog: PricingCatalog, variant: Variant): Offer[
     const plan = plans.get(c.plan_id);
     return plan ? [{ plan, interval: c.interval, price: Number(c.price) }] : [];
   });
-  // Referencia del ahorro: el precio mensual equivalente del periodo más corto.
-  const ref = offers.reduce<{ months: number; monthly: number } | null>((best, o) => {
-    const months = INTERVAL_MONTHS[o.interval];
-    return !best || months < best.months ? { months, monthly: o.price / months } : best;
-  }, null);
   return offers.map((o) => {
     const monthly = o.price / INTERVAL_MONTHS[o.interval];
-    const savingsPct = ref && monthly < ref.monthly ? Math.round((1 - monthly / ref.monthly) * 100) : 0;
+    const ref = Number(o.plan.base_price_monthly);
+    const savingsPct = ref > 0 && monthly < ref ? Math.round((1 - monthly / ref) * 100) : 0;
     return { ...o, savingsPct };
   });
 }
@@ -210,7 +212,17 @@ export const activeFlashSales = (catalog: PricingCatalog, role: PricingRole, now
     (f) => f.target_role === role && new Date(f.starts_at).getTime() <= now && now <= new Date(f.expires_at).getTime()
   );
 
-/** Precio regular de referencia de una oferta flash (para tacharlo). */
+/** Oferta por porcentaje que aplica a un plan (la de ese plan o la de todo el rol); null si no hay. */
+export function percentSaleFor(sales: FlashSale[], planId: string): FlashSale | null {
+  return (
+    sales.find((s) => s.discount_pct && s.plan_id === planId) ?? sales.find((s) => s.discount_pct && s.plan_id === null) ?? null
+  );
+}
+
+/** Precio con descuento por porcentaje, redondeado a pesos (igual que Stripe y la base). */
+export const discounted = (price: number, pct: number) => Math.round(price * (1 - pct / 100));
+
+/** Precio regular de referencia de una oferta de precio fijo (para tacharlo). */
 export function regularPriceOf(catalog: PricingCatalog, sale: FlashSale): number | null {
   const plan = catalog.plans.find((p) => p.id === sale.plan_id);
   if (!plan) return null;

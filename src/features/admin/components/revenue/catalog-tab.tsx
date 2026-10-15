@@ -17,7 +17,15 @@ import {
   savePlan,
   setFlashSaleActive,
 } from "@/features/admin/services/revenue-service";
-import { formatMxn, INTERVAL_LABEL, VARIANT_LABEL, type BillingInterval, type Variant, type VariantConfig } from "@/features/pricing/lib/pricing";
+import {
+  formatMxn,
+  INTERVAL_LABEL,
+  VARIANT_LABEL,
+  type BillingInterval,
+  type PricingRole,
+  type Variant,
+  type VariantConfig,
+} from "@/features/pricing/lib/pricing";
 import { cn } from "@/lib/utils";
 
 import { ErrorLine, errorText, formatDateTime } from "./revenue-workspace";
@@ -80,11 +88,14 @@ function saleState(s: AdminFlashSale, now: number) {
 function FlashSales({ plans, sales, onChange }: { plans: AdminPlan[]; sales: AdminFlashSale[]; onChange: () => void }) {
   const now = Date.now();
   const [form, setForm] = React.useState(() => ({
+    kind: "pct" as "pct" | "fixed",
     title: "Especial Fin de Semana",
-    planId: plans[0]?.id ?? "",
+    role: "student" as PricingRole,
+    planId: "",
     cycle: "monthly" as BillingInterval,
     price: "",
-    durationDays: "30",
+    pct: "40",
+    durationDays: "",
     startsAt: toLocalInput(new Date()),
     expiresAt: toLocalInput(new Date(Date.now() + 3 * 86_400_000)),
   }));
@@ -92,6 +103,8 @@ function FlashSales({ plans, sales, onChange }: { plans: AdminPlan[]; sales: Adm
   const [error, setError] = React.useState<string | null>(null);
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const plan = plans.find((p) => p.id === form.planId);
+  const fixed = form.kind === "fixed";
+  const rolePlans = plans.filter((p) => p.target_role === form.role);
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,10 +114,12 @@ function FlashSales({ plans, sales, onChange }: { plans: AdminPlan[]; sales: Adm
       await saveFlashSale({
         id: null,
         title: form.title,
-        planId: form.planId,
+        role: form.role,
+        planId: form.planId || null,
         cycle: form.cycle,
-        price: Number(form.price),
-        durationDays: Number(form.durationDays),
+        price: fixed ? Number(form.price) : null,
+        pct: fixed ? null : Number(form.pct),
+        durationDays: form.durationDays ? Number(form.durationDays) : null,
         startsAt: new Date(form.startsAt).toISOString(),
         expiresAt: new Date(form.expiresAt).toISOString(),
         active: true,
@@ -134,8 +149,9 @@ function FlashSales({ plans, sales, onChange }: { plans: AdminPlan[]; sales: Adm
           <Zap className="size-5 text-energy" aria-hidden /> Ofertas flash
         </h2>
         <p className="text-sm text-muted-foreground">
-          Se muestran como banner sobre los planes del rol mientras estén en curso. Nunca cambian la variante A/B del usuario:
-          al terminar, cada quien vuelve a ver sus precios de siempre.
+          Se muestran como banner sobre los planes del rol mientras estén en curso. Por porcentaje, el descuento se aplica a
+          los precios de las tarjetas (redondeado a pesos por plan o por estudiante, como en Stripe). Nunca cambian la variante
+          A/B del usuario: al terminar, cada quien vuelve a ver sus precios de siempre.
         </p>
       </div>
 
@@ -143,37 +159,65 @@ function FlashSales({ plans, sales, onChange }: { plans: AdminPlan[]; sales: Adm
         <Field label="Título" className="sm:col-span-2">
           <Input value={form.title} onChange={(e) => set("title", e.target.value)} className="h-11" required />
         </Field>
-        <Field label="Plan (define el rol)">
-          <NativeSelect value={form.planId} onChange={(e) => set("planId", e.target.value)}>
-            {plans.map((p) => (
+        <Field label="Tipo">
+          <NativeSelect value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as "pct" | "fixed", planId: "" }))}>
+            <option value="pct">% de descuento</option>
+            <option value="fixed">Precio fijo de un plan</option>
+          </NativeSelect>
+        </Field>
+        <Field label="Para">
+          <NativeSelect value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as PricingRole, planId: "" }))}>
+            <option value="student">{ROLE_LABEL.student}</option>
+            <option value="parent">{ROLE_LABEL.parent}</option>
+          </NativeSelect>
+        </Field>
+        <Field label="Plan">
+          <NativeSelect value={form.planId} onChange={(e) => set("planId", e.target.value)} required={fixed}>
+            {fixed ? <option value="">Elige…</option> : <option value="">Todos los planes</option>}
+            {rolePlans.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} · {ROLE_LABEL[p.target_role]}
+                {p.name}
               </option>
             ))}
           </NativeSelect>
         </Field>
-        <Field label="Periodo">
-          <NativeSelect value={form.cycle} onChange={(e) => set("cycle", e.target.value)}>
-            {CYCLES.map((c) => (
-              <option key={c} value={c}>
-                {INTERVAL_LABEL[c].name}
-              </option>
-            ))}
-          </NativeSelect>
-        </Field>
-        <Field label="Precio de oferta (MXN)">
+        {fixed ? (
+          <>
+            <Field label="Periodo">
+              <NativeSelect value={form.cycle} onChange={(e) => set("cycle", e.target.value)}>
+                {CYCLES.map((c) => (
+                  <option key={c} value={c}>
+                    {INTERVAL_LABEL[c].name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Precio de oferta (MXN)">
+              <Input
+                type="number"
+                min={0}
+                value={form.price}
+                onChange={(e) => set("price", e.target.value)}
+                placeholder={plan ? `Normal ${formatMxn(Number(plan.base_price_monthly))}/mes` : undefined}
+                className="h-11"
+                required
+              />
+            </Field>
+          </>
+        ) : (
+          <Field label="Descuento (%)">
+            <Input type="number" min={1} max={99} value={form.pct} onChange={(e) => set("pct", e.target.value)} className="h-11" required />
+          </Field>
+        )}
+        <Field label="Días de licencia">
           <Input
             type="number"
-            min={0}
-            value={form.price}
-            onChange={(e) => set("price", e.target.value)}
-            placeholder={plan ? `Normal ${formatMxn(Number(plan.base_price_monthly))}/mes` : undefined}
+            min={1}
+            value={form.durationDays}
+            onChange={(e) => set("durationDays", e.target.value)}
+            placeholder="Los del periodo"
             className="h-11"
-            required
           />
-        </Field>
-        <Field label="Días de licencia">
-          <Input type="number" min={1} value={form.durationDays} onChange={(e) => set("durationDays", e.target.value)} className="h-11" required />
         </Field>
         <Field label="Inicio">
           <Input type="datetime-local" value={form.startsAt} onChange={(e) => set("startsAt", e.target.value)} className="h-11" required />
@@ -199,9 +243,11 @@ function FlashSales({ plans, sales, onChange }: { plans: AdminPlan[]; sales: Adm
                 <span className="min-w-0 flex-1">
                   <span className="font-semibold">{s.title}</span>{" "}
                   <span className="text-muted-foreground">
-                    · {plans.find((p) => p.id === s.plan_id)?.name ?? s.plan_id} {formatMxn(Number(s.discounted_price))} /{" "}
-                    {INTERVAL_LABEL[s.billing_cycle].per} · {s.duration_days} días · {formatDateTime(s.starts_at)} →{" "}
-                    {formatDateTime(s.expires_at)}
+                    · {ROLE_LABEL[s.target_role]} · {s.plan_id ? plans.find((p) => p.id === s.plan_id)?.name ?? s.plan_id : "todos los planes"}{" "}
+                    {s.discount_pct
+                      ? `−${Math.round(Number(s.discount_pct))} %`
+                      : `${formatMxn(Number(s.discounted_price))} / ${INTERVAL_LABEL[s.billing_cycle].per}`}
+                    {s.duration_days && ` · ${s.duration_days} días`} · {formatDateTime(s.starts_at)} → {formatDateTime(s.expires_at)}
                   </span>
                 </span>
                 <Button size="sm" variant="ghost" onClick={() => void toggle(s)}>

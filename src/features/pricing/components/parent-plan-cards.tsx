@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Eye, HeartHandshake, Minus, PiggyBank, Plus, Sparkles, Star } from "lucide-react";
+import { Check, Eye, HeartHandshake, Minus, PiggyBank, Plus, Sparkles, Star, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,7 @@ import {
   annualPriceOf,
   formatMxn,
   priceOf,
+  salePriceOf,
   type BillingPeriod,
   type PlanChoice,
   type TutorPlan,
@@ -16,8 +17,10 @@ import {
 import type { TutorLicense } from "@/features/dashboard/services/tutor-service";
 import { cn } from "@/lib/utils";
 
-// Tope del selector del Plan Familia cuando el plan no trae el suyo (más estudiantes: plan a la medida).
-const MAX_FAMILY_SEATS = 30;
+import { percentSaleFor, type FlashSale } from "../lib/pricing";
+
+// Tope del selector del Plan Familia cuando el plan no trae el suyo.
+const MAX_FAMILY_SEATS = 6;
 
 /** Ahorro mensual frente a pagar el plan de 1 estudiante (el primero de la lista) por cada uno. */
 export function savingsVs(plans: TutorPlan[], choice: PlanChoice): number {
@@ -25,7 +28,8 @@ export function savingsVs(plans: TutorPlan[], choice: PlanChoice): number {
   return single ? Math.max(single.priceMxn * choice.seats - priceOf(choice), 0) : 0;
 }
 
-export type ChooseHandler = (choice: PlanChoice, period: BillingPeriod) => void;
+/** `sale`: la oferta por porcentaje que aplica a ese plan (para mandarla al pago). */
+export type ChooseHandler = (choice: PlanChoice, period: BillingPeriod, sale: FlashSale | null) => void;
 
 /** Rejilla de planes de Padres/Tutores: Tutor, Dúo y Familia (calculadora). */
 export function ParentPlanGrid({
@@ -35,8 +39,11 @@ export function ParentPlanGrid({
   currentId,
   recommendedId,
   showSavings = true,
+  sales = [],
 }: {
   plans: TutorPlan[];
+  /** Ofertas vigentes del rol; las de porcentaje se aplican a las tarjetas. */
+  sales?: FlashSale[];
   onChoose: ChooseHandler;
   license?: TutorLicense | null;
   currentId?: string;
@@ -54,6 +61,7 @@ export function ParentPlanGrid({
           license={license}
           isCurrent={currentId === p.id}
           recommended={recommendedId === p.id && currentId !== p.id}
+          sale={percentSaleFor(sales, p.id)}
           onChoose={onChoose}
         />
       ))}
@@ -67,6 +75,7 @@ export function ParentPlanCard({
   license,
   isCurrent,
   recommended,
+  sale = null,
   onChoose,
 }: {
   plan: TutorPlan;
@@ -74,6 +83,7 @@ export function ParentPlanCard({
   license: TutorLicense | null;
   isCurrent: boolean;
   recommended: boolean;
+  sale?: FlashSale | null;
   onChoose: ChooseHandler;
 }) {
   // Plan por estudiante: por defecto uno más de los que ya tiene (nunca menos del mínimo del plan).
@@ -81,6 +91,11 @@ export function ParentPlanCard({
   const [seats, setSeats] = React.useState(minSeats);
   const choice: PlanChoice = { plan, seats: plan.perStudent ? Math.max(seats, minSeats) : plan.seats };
   const total = priceOf(choice);
+  const annual = annualPriceOf(choice);
+  const pct = sale?.discount_pct ?? null;
+  // Con oferta, lo que paga (redondeado por unidad, como en Stripe).
+  const payMonthly = pct ? salePriceOf(choice, "mensual", pct) : total;
+  const payAnnual = pct ? salePriceOf(choice, "anual", pct) : annual;
   const saving = savingsVs(plans, choice);
   const single = plans.find((p) => !p.perStudent && p.seats === 1);
   const discount = annualDiscountPct(plan);
@@ -116,20 +131,29 @@ export function ParentPlanCard({
         {plan.perStudent && (
           <>
             <p className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-sm text-pretty text-cool">
-              <strong className="text-gold">+{plan.seats} estudiantes:</strong> paga solo{" "}
-              <strong className="text-foreground">{formatMxn(plan.priceMxn)}</strong> por estudiante al mes
+              <strong className="text-gold">De {plan.seats} a {plan.maxSeats ?? MAX_FAMILY_SEATS} estudiantes:</strong> paga solo{" "}
+              <strong className="text-foreground">{formatMxn(pct ? salePriceOf({ plan, seats: 1 }, "mensual", pct) : plan.priceMxn)}</strong>{" "}
+              por estudiante al mes
+              {pct && <span className="text-muted-foreground line-through"> {formatMxn(plan.priceMxn)}</span>}
             </p>
             <SeatStepper value={choice.seats} min={minSeats} max={plan.maxSeats ?? MAX_FAMILY_SEATS} onChange={setSeats} />
           </>
         )}
+        {pct && (
+          <p className="inline-flex w-fit items-center gap-1 rounded-full bg-energy/15 px-2.5 py-0.5 text-xs font-bold text-energy">
+            <Zap className="size-3 fill-current" aria-hidden /> {Math.round(pct)} % de descuento por tiempo limitado
+          </p>
+        )}
         {/* El total es el protagonista: en los planes por estudiante se recalcula con cada cambio. */}
         <p>
-          <span className="text-4xl font-bold tabular-nums">{formatMxn(total)}</span>
+          <span className="text-4xl font-bold tabular-nums">{formatMxn(payMonthly)}</span>
           <span className="text-sm text-muted-foreground">/mes</span>
+          {pct && <span className="ml-2 text-base text-muted-foreground line-through tabular-nums">{formatMxn(total)}</span>}
         </p>
         <p className="text-sm text-cool">
-          Pagas {formatMxn(total)} al mes o <strong className="text-foreground tabular-nums">{formatMxn(annualPriceOf(choice))}</strong>{" "}
-          por un año{" "}
+          Pagas {formatMxn(payMonthly)} al mes o <strong className="text-foreground tabular-nums">{formatMxn(payAnnual)}</strong>{" "}
+          por un año
+          {pct && <span className="text-muted-foreground line-through tabular-nums"> {formatMxn(annual)}</span>}{" "}
           {discount > 0 && (
             <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-secondary">
               {discount} % de descuento
@@ -167,17 +191,17 @@ export function ParentPlanCard({
               Pasas de {license.seats} a {choice.seats} estudiantes; los actuales conservan su cupo.
             </p>
           )}
-          <Button variant="brand" className="h-auto min-h-11 py-2 whitespace-normal" onClick={() => onChoose(choice, "mensual")}>
+          <Button variant="brand" className="h-auto min-h-11 py-2 whitespace-normal" onClick={() => onChoose(choice, "mensual", sale)}>
             <span className="flex flex-col items-center leading-tight">
               Pagar suscripción mensual
-              <span className="text-xs font-medium opacity-90 tabular-nums">{formatMxn(total)} al mes</span>
+              <span className="text-xs font-medium opacity-90 tabular-nums">{formatMxn(payMonthly)} al mes</span>
             </span>
           </Button>
-          <Button variant="outline" className="h-auto min-h-11 py-2 whitespace-normal" onClick={() => onChoose(choice, "anual")}>
+          <Button variant="outline" className="h-auto min-h-11 py-2 whitespace-normal" onClick={() => onChoose(choice, "anual", sale)}>
             <span className="flex flex-col items-center leading-tight">
               Pago anual
               <span className="text-xs font-medium text-secondary tabular-nums">
-                {formatMxn(annualPriceOf(choice))} por un año{discount > 0 && ` · ahorras ${discount} %`}
+                {formatMxn(payAnnual)} por un año{discount > 0 && ` · ahorras ${discount} %`}
               </span>
             </span>
           </Button>

@@ -210,7 +210,7 @@ function IssueReceipt({ onIssued }: { onIssued: (r: Receipt) => void }) {
   const role = user ? (user.user_type === "student" ? "student" : "parent") : null;
   const plans = catalog?.plans.filter((p) => p.target_role === role && p.is_active) ?? [];
   const plan = plans.find((p) => p.id === planId) ?? null;
-  const sales = catalog?.sales.filter((s) => s.plan_id === planId) ?? [];
+  const sales = catalog?.sales.filter((s) => s.target_role === role && (s.plan_id === planId || (s.plan_id === null && !!planId))) ?? [];
 
   const findUsers = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,7 +304,7 @@ function IssueReceipt({ onIssued }: { onIssued: (r: Receipt) => void }) {
               </NativeSelect>
             </Field>
             <Field label="Periodo">
-              <NativeSelect value={cycle} onChange={(e) => setCycle(e.target.value as BillingInterval)} disabled={!!saleId}>
+              <NativeSelect value={cycle} onChange={(e) => setCycle(e.target.value as BillingInterval)} disabled={sales.some((s) => s.id === saleId && !s.discount_pct)}>
                 {CYCLES.map((c) => (
                   <option key={c} value={c}>
                     {INTERVAL_LABEL[c].name}
@@ -323,7 +323,7 @@ function IssueReceipt({ onIssued }: { onIssued: (r: Receipt) => void }) {
                   <option value="">Sin oferta</option>
                   {sales.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.title} · {formatMxn(Number(s.discounted_price))}
+                      {s.title} · {s.discount_pct ? `−${Math.round(Number(s.discount_pct))} %` : formatMxn(Number(s.discounted_price))}
                     </option>
                   ))}
                 </NativeSelect>

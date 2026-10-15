@@ -5,7 +5,7 @@ import { ArrowRight, Gift, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { ANNUAL_DISCOUNT, formatMxn, TUTOR_PLANS } from "../lib/tutor-plans";
+import { annualDiscountPct, formatMxn, TUTOR_PLANS } from "../lib/tutor-plans";
 import { trialDaysLeft } from "./student-trial";
 import { useTutor } from "./tutor-context";
 
@@ -132,7 +132,7 @@ export function NoPlanHero({ scroll, compact }: { scroll?: boolean; compact?: bo
               </Button>
             )}
             <p className="text-xs text-muted-foreground">
-              Desde {formatMxn(from)} al mes · ahorra {Math.round(ANNUAL_DISCOUNT * 100)} % pagando el año
+              Desde {formatMxn(from)} al mes · ahorra hasta {Math.max(...plans.map(annualDiscountPct))} % pagando el año
             </p>
           </div>
         </div>

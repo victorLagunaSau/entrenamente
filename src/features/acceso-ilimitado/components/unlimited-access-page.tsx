@@ -7,9 +7,10 @@ import { ArrowLeft, CalendarClock, CreditCard, Loader2, ShieldCheck, Users, Zap 
 
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
-import { annualPriceOf, priceOf } from "@/features/dashboard/lib/tutor-plans";
+import { annualPriceOf, priceOf, salePriceOf } from "@/features/dashboard/lib/tutor-plans";
 import { usePricing } from "@/features/pricing/hooks/use-pricing";
 import {
+  discounted,
   formatMxn,
   INTERVAL_LABEL,
   parentPlans,
@@ -28,7 +29,15 @@ const PERIODS: Record<string, BillingInterval> = {
   annual: "annual",
 };
 
-type Summary = { planName: string; interval: BillingInterval; price: number; seats: number | null; sale: string | null };
+type Summary = {
+  planName: string;
+  interval: BillingInterval;
+  price: number;
+  /** Precio normal cuando hay oferta (para tacharlo). */
+  regular: number | null;
+  seats: number | null;
+  sale: string | null;
+};
 
 /** Lo que va a pagar, recalculado con el catálogo y su variante (nunca con precios de la URL). */
 function summarize(catalog: PricingCatalog, variant: Variant, params: URLSearchParams): Summary | null {
@@ -37,25 +46,42 @@ function summarize(catalog: PricingCatalog, variant: Variant, params: URLSearchP
   const plan = catalog.plans.find((p) => p.id === planId);
   if (!plan || !interval) return null;
 
-  const sale = catalog.flash_sales.find((f) => f.id === params.get("oferta") && f.plan_id === plan.id);
-  if (sale) return { planName: plan.name, interval: sale.billing_cycle, price: sale.discounted_price, seats: null, sale: sale.title };
+  // Solo ofertas vigentes (el catálogo trae solo esas) y que apliquen a este plan.
+  const sale =
+    catalog.flash_sales.find(
+      (f) => f.id === params.get("oferta") && f.target_role === plan.target_role && (f.plan_id === null || f.plan_id === plan.id)
+    ) ?? null;
+  if (sale?.discounted_price != null) {
+    return { planName: plan.name, interval: sale.billing_cycle, price: sale.discounted_price, regular: null, seats: null, sale: sale.title };
+  }
+  const pct = sale?.discount_pct ?? null;
 
   if (plan.target_role === "student") {
     const offer = studentOffers(catalog, variant).find((o) => o.plan.id === plan.id && o.interval === interval);
-    return offer ? { planName: plan.name, interval, price: offer.price, seats: null, sale: null } : null;
+    if (!offer) return null;
+    return {
+      planName: plan.name,
+      interval,
+      price: pct ? discounted(offer.price, pct) : offer.price,
+      regular: pct ? offer.price : null,
+      seats: null,
+      sale: pct ? sale!.title : null,
+    };
   }
 
   const tutorPlan = parentPlans(catalog).find((p) => p.id === plan.id);
   if (!tutorPlan || (interval !== "monthly" && interval !== "annual")) return null;
   const asked = Number(params.get("estudiantes")) || tutorPlan.seats;
-  const seats = tutorPlan.perStudent ? Math.min(Math.max(asked, tutorPlan.seats), tutorPlan.maxSeats ?? 30) : tutorPlan.seats;
+  const seats = tutorPlan.perStudent ? Math.min(Math.max(asked, tutorPlan.seats), tutorPlan.maxSeats ?? 6) : tutorPlan.seats;
   const choice = { plan: tutorPlan, seats };
+  const normal = interval === "annual" ? annualPriceOf(choice) : priceOf(choice);
   return {
     planName: plan.name,
     interval,
-    price: interval === "annual" ? annualPriceOf(choice) : priceOf(choice),
+    price: pct ? salePriceOf(choice, interval === "annual" ? "anual" : "mensual", pct) : normal,
+    regular: pct ? normal : null,
     seats,
-    sale: null,
+    sale: pct ? sale!.title : null,
   };
 }
 
@@ -117,6 +143,9 @@ export function UnlimitedAccessPage() {
           <dl className="flex flex-col gap-3 text-sm">
             <Row icon={CalendarClock} label="Periodo" value={INTERVAL_LABEL[summary.interval].name} />
             {summary.seats && <Row icon={Users} label="Estudiantes" value={String(summary.seats)} />}
+            {summary.regular && (
+              <Row icon={CreditCard} label="Precio normal" value={`${formatMxn(summary.regular)} MXN`} />
+            )}
             <Row icon={CreditCard} label="Total" value={`${formatMxn(summary.price)} MXN / ${INTERVAL_LABEL[summary.interval].per}`} strong />
           </dl>
           <p className="flex gap-3 rounded-xl bg-secondary/10 p-4 text-sm text-cool">
