@@ -7,7 +7,7 @@ import { getViewer } from "@/features/modes/services/viewer-service";
 import { cn } from "@/lib/utils";
 
 import { useImpression, usePricing, type PricingState } from "../hooks/use-pricing";
-import { activeFlashSales, parentPlans, studentOffers, type PricingRole } from "../lib/pricing";
+import { activeFlashSales, experimentFor, parentPlans, studentOffers, type PricingRole } from "../lib/pricing";
 import { FlashSaleBanner } from "./flash-sale-banner";
 import { ParentPlanGrid, WhyTutor } from "./parent-plan-cards";
 import { StudentOfferCards } from "./student-plan-cards";
@@ -103,7 +103,8 @@ export function RolePlans({ pricing, role, compact = false }: { pricing: Pricing
           onChoose={(s) => s.plan_id && choose(role, { planId: s.plan_id, interval: s.billing_cycle, saleId: s.id })}
         />
       ))}
-      {role === "student" && <VariantPreviewSwitch pricing={pricing} />}
+      {/* Padres: solo si hay A/B de padres activo (sin él, A y B ven lo mismo). */}
+      {(role === "student" || experimentFor(catalog, role)) && <VariantPreviewSwitch pricing={pricing} />}
       {role === "student" ? (
         <StudentOfferCards
           offers={studentOffers(catalog, variant)}
@@ -115,7 +116,7 @@ export function RolePlans({ pricing, role, compact = false }: { pricing: Pricing
         <>
           {!compact && <WhyTutor />}
           <ParentPlanGrid
-            plans={parentPlans(catalog)}
+            plans={parentPlans(catalog, variant)}
             sales={sales}
             onChoose={({ plan, seats }, period, sale) =>
               choose("parent", { planId: plan.id, interval: period === "anual" ? "annual" : "monthly", seats, saleId: sale?.id })

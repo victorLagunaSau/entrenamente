@@ -42,7 +42,7 @@ export function BillingTab() {
   const current = currentChoice(kind, license);
   // Padres: precios del catálogo de Supabase (los mismos de /pricing). Maestros: catálogo provisional en código.
   const pricing = usePricing("billing");
-  const plans = kind === "parent" ? parentPlans(pricing.catalog) : TUTOR_PLANS[kind];
+  const plans = kind === "parent" ? parentPlans(pricing.catalog, pricing.variant) : TUTOR_PLANS[kind];
   const showCatalog = !license || lapsed;
   useImpression(pricing, kind === "parent" && showCatalog ? "parent" : null, "billing");
   const router = useRouter();

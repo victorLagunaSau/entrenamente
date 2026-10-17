@@ -28,6 +28,7 @@ import {
   INTERVAL_MONTHS,
   VARIANT_LABEL,
   type BillingInterval,
+  type OfferConfig,
   type PricingRole,
   type Variant,
   type VariantConfig,
@@ -39,7 +40,7 @@ import { ErrorLine, errorText, formatDateTime } from "./revenue-workspace";
 const CYCLES: BillingInterval[] = ["monthly", "quarterly", "annual"];
 const VARIANTS: Variant[] = ["variant_a", "variant_b"];
 
-const SECTION: Record<PricingRole, { title: string; subtitle: string }> = {
+const SECTION: Record<PricingRole, { title: string; subtitle: string; subtitleAb?: string }> = {
   student: {
     title: "Plan Estudiante",
     subtitle: "Un solo plan. Cada estudiante ve los periodos y precios de su variante A/B.",
@@ -47,8 +48,12 @@ const SECTION: Record<PricingRole, { title: string; subtitle: string }> = {
   parent: {
     title: "Planes Padre / Tutor",
     subtitle: "Tutor, Dúo y Familia. Todos los padres y tutores ven los mismos precios.",
+    subtitleAb: "Tutor, Dúo y Familia. Cada padre o tutor ve los precios de su variante A/B; lo que el A/B no cambia, al precio base.",
   },
 };
+
+/** Padres: solo mensual y anual (como en sus tarjetas y en Stripe). */
+const PARENT_CYCLES: BillingInterval[] = ["monthly", "annual"];
 
 /** Pestaña 3: un bloque por rol con su oferta, sus precios reales, sus ventas y las acciones de cada plan. */
 export function CatalogTab() {
@@ -140,6 +145,14 @@ const activeExperiment = (data: PricingAdmin, role: PricingRole) =>
 
 const isPerStudent = (p: AdminPlan) => p.max_students > p.min_students && p.extra_student_price_monthly > 0;
 
+/** Precio que una variante del A/B define para un plan y periodo (null: no lo cambia). */
+function variantPrice(exp: AdminExperiment, v: Variant, planId: string, cycle: BillingInterval) {
+  const o = (v === "variant_a" ? exp.variant_a_config : exp.variant_b_config).offers.find(
+    (x) => x.plan_id === planId && x.interval === cycle
+  );
+  return o ? Number(o.price) : null;
+}
+
 /** Precio normal por unidad (por estudiante en Familia), igual que `stripe_cotizar`. */
 function basePrice(p: AdminPlan, cycle: BillingInterval) {
   const annual = Number(p.base_price_annual ?? Number(p.base_price_monthly) * 12);
@@ -150,7 +163,38 @@ function basePrice(p: AdminPlan, cycle: BillingInterval) {
 function rowsFor(role: PricingRole, data: PricingAdmin, sales: PlanSales[], now: number): PriceRow[] {
   const plans = data.plans.filter((p) => p.target_role === role).sort((a, b) => a.sort_order - b.sort_order);
   const roleSales = data.flash_sales.filter((s) => s.target_role === role);
-  const exp = role === "student" ? activeExperiment(data, role) : null;
+  const exp = activeExperiment(data, role);
+
+  if (exp && role === "parent") {
+    // Padres: todos los planes y periodos; el A/B solo cambia los precios que define. Si A y B pagan lo mismo, un renglón.
+    return plans.flatMap((plan) =>
+      PARENT_CYCLES.flatMap((cycle) => {
+        const base = basePrice(plan, cycle);
+        const prices = VARIANTS.map((v) => variantPrice(exp, v, plan.id, cycle) ?? base);
+        const groups: { variants: Variant[]; price: number }[] =
+          prices[0] === prices[1]
+            ? [{ variants: VARIANTS, price: prices[0] }]
+            : VARIANTS.map((v, i) => ({ variants: [v], price: prices[i] }));
+        return groups.map(({ variants, price }) => {
+          const both = variants.length === 2;
+          return {
+            key: `${plan.id}:${cycle}:${variants.join("+")}`,
+            plan,
+            cycle,
+            who: both ? "A y B" : `Solo ${variants[0] === "variant_a" ? "A" : "B"}`,
+            perStudent: isPerStudent(plan),
+            normal: price,
+            today: todayPrice(roleSales, plan.id, cycle, price, now),
+            totals: sumSales(
+              sales.filter(
+                (s) => s.plan_id === plan.id && s.billing_cycle === cycle && (s.variant ? variants.includes(s.variant) : both)
+              )
+            ),
+          };
+        });
+      })
+    );
+  }
 
   if (exp) {
     // Un renglón por precio real: si A y B ven el mismo plan, periodo y precio, se juntan.
@@ -212,7 +256,8 @@ function rowsFor(role: PricingRole, data: PricingAdmin, sales: PlanSales[], now:
 type DialogState =
   | { kind: "offer"; sale: AdminFlashSale | null }
   | { kind: "plan"; plan: AdminPlan }
-  | { kind: "experiment"; experiment: AdminExperiment; asNew: boolean }
+  /** experiment null: primer A/B del rol (se arma desde los precios base). */
+  | { kind: "experiment"; experiment: AdminExperiment | null; asNew: boolean }
   | null;
 
 function RoleSection({
@@ -232,7 +277,7 @@ function RoleSection({
   const rows = rowsFor(role, data, sales, now);
   // Lo vendido de planes que ya no tienen renglón (p. ej. un periodo que salió del A/B) también cuenta en el total.
   const total = sumSales(sales.filter((s) => plans.some((p) => p.id === s.plan_id)));
-  const exp = role === "student" ? activeExperiment(data, role) : null;
+  const exp = activeExperiment(data, role);
   const latestExp = data.experiments.find((e) => e.target_role === role) ?? null;
   const roleSales = data.flash_sales.filter((s) => s.target_role === role);
   const current = roleSales.filter((s) => saleState(s, now).key !== "ended");
@@ -250,43 +295,43 @@ function RoleSection({
           <h2 id={`role-${role}`} className="text-xl font-bold">
             {SECTION[role].title}
           </h2>
-          <p className="text-sm text-muted-foreground">{SECTION[role].subtitle}</p>
+          <p className="text-sm text-muted-foreground">{(exp && SECTION[role].subtitleAb) || SECTION[role].subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="brand" onClick={() => setDialog({ kind: "offer", sale: null })}>
             <Zap /> Aplicar oferta
           </Button>
-          {role === "student" && (
-            <Button
-              variant="outline"
-              disabled={!latestExp}
-              onClick={() => latestExp && setDialog({ kind: "experiment", experiment: exp ?? latestExp, asNew: true })}
-            >
-              <FlaskConical /> Nuevo A/B test
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            // Estudiantes: el nuevo parte del último A/B. Padres: también puede ser el primero.
+            disabled={role === "student" && !latestExp}
+            onClick={() => setDialog({ kind: "experiment", experiment: exp ?? latestExp, asNew: true })}
+          >
+            <FlaskConical /> Nuevo A/B test
+          </Button>
         </div>
       </header>
 
       <Offers sales={current} ended={ended} plans={plans} now={now} onEdit={(s) => setDialog({ kind: "offer", sale: s })} onChange={onChange} />
 
-      {role === "student" && (
-        <p className="flex flex-wrap items-center gap-2 text-sm">
-          <FlaskConical className="size-4 text-brand-light" aria-hidden />
-          {exp ? (
-            <>
-              <span>
-                A/B en curso: <span className="font-semibold">{exp.experiment_name}</span>
-              </span>
-              <Button size="sm" variant="ghost" onClick={() => setDialog({ kind: "experiment", experiment: exp, asNew: false })}>
-                <Pencil /> Editar precios A/B
-              </Button>
-            </>
-          ) : (
-            <span className="text-muted-foreground">Sin A/B en curso: todos ven el precio base del plan. Actívalo en Funnel y A/B.</span>
-          )}
-        </p>
-      )}
+      <p className="flex flex-wrap items-center gap-2 text-sm">
+        <FlaskConical className="size-4 text-brand-light" aria-hidden />
+        {exp ? (
+          <>
+            <span>
+              A/B en curso: <span className="font-semibold">{exp.experiment_name}</span>
+            </span>
+            <Button size="sm" variant="ghost" onClick={() => setDialog({ kind: "experiment", experiment: exp, asNew: false })}>
+              <Pencil /> Editar precios A/B
+            </Button>
+          </>
+        ) : (
+          <span className="text-muted-foreground">
+            Sin A/B en curso: todos ven el precio base {role === "student" ? "del plan" : "de cada plan"}.
+            {latestExp && " Actívalo en Funnel y A/B."}
+          </span>
+        )}
+      </p>
 
       <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <table className="w-full min-w-[46rem] text-sm">
@@ -370,14 +415,13 @@ function RoleSection({
             <Pencil /> {p.name}
           </Button>
         ))}
-        {role === "parent" && <span className="text-xs text-muted-foreground">A/B para padres: próximamente.</span>}
       </div>
 
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && close()}>
         {dialog?.kind === "offer" && <OfferDialog role={role} plans={plans} sale={dialog.sale} onSaved={saved} />}
         {dialog?.kind === "plan" && <PlanDialog plan={dialog.plan} experimentActive={!!exp} onSaved={saved} />}
         {dialog?.kind === "experiment" && (
-          <ExperimentDialog experiment={dialog.experiment} asNew={dialog.asNew} plans={plans} onSaved={saved} />
+          <ExperimentDialog role={role} experiment={dialog.experiment} asNew={dialog.asNew} plans={plans} onSaved={saved} />
         )}
       </Dialog>
     </section>
@@ -643,7 +687,7 @@ function OfferDialog({
                 <li key={line}>{line}</li>
               ))}
             </ul>
-            {role === "student" && <p className="mt-1">Con A/B en curso, el descuento se aplica al precio de la variante de cada quien.</p>}
+            <p className="mt-1">Con A/B en curso, el descuento se aplica al precio de la variante de cada quien.</p>
           </div>
         )}
         <div className="flex flex-col gap-2 sm:col-span-2">
@@ -667,7 +711,7 @@ function PlanDialog({ plan, experimentActive, onSaved }: { plan: AdminPlan; expe
   const [error, setError] = React.useState<string | null>(null);
   const set = <K extends keyof AdminPlan>(k: K, v: AdminPlan[K]) => setP((x) => ({ ...x, [k]: v }));
   const perStudent = isPerStudent(p);
-  const abNote = plan.target_role === "student" && experimentActive;
+  const abNote = experimentActive;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -726,7 +770,9 @@ function PlanDialog({ plan, experimentActive, onSaved }: { plan: AdminPlan; expe
         </div>
         {abNote && (
           <p className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
-            Hay un A/B en curso: los estudiantes ven los precios de su variante, no estos. Estos se usan cuando no hay A/B.
+            {plan.target_role === "student"
+              ? "Hay un A/B en curso: los estudiantes ven los precios de su variante, no estos. Estos se usan cuando no hay A/B."
+              : "Hay un A/B en curso: donde el A/B define precio para este plan, los padres ven el de su variante; en lo demás, estos."}
           </p>
         )}
         {perStudent && (
@@ -764,38 +810,67 @@ function PlanDialog({ plan, experimentActive, onSaved }: { plan: AdminPlan; expe
 // ───────────────────────── A/B ─────────────────────────
 
 function ExperimentDialog({
+  role,
   experiment,
   asNew,
   plans,
   onSaved,
 }: {
-  experiment: AdminExperiment;
+  role: PricingRole;
+  experiment: AdminExperiment | null;
   asNew: boolean;
   plans: AdminPlan[];
   onSaved: () => void;
 }) {
-  const [name, setName] = React.useState(asNew ? "" : experiment.experiment_name);
+  const parent = role === "parent";
+  // Padres: cada renglón es plan + periodo (mensual o anual). Estudiantes: un solo plan, cualquier periodo.
+  const slots = parent ? plans.flatMap((p) => PARENT_CYCLES.map((cycle) => ({ plan: p, cycle }))) : [];
+  const maxOffers = parent ? slots.length : CYCLES.length;
+  const firstConfig = (): VariantConfig => {
+    const p = plans[0];
+    return { offers: p ? [{ plan_id: p.id, interval: "monthly", price: basePrice(p, "monthly") }] : [] };
+  };
+  const [name, setName] = React.useState(asNew || !experiment ? "" : experiment.experiment_name);
   const [configs, setConfigs] = React.useState<Record<Variant, VariantConfig>>({
-    variant_a: experiment.variant_a_config,
-    variant_b: experiment.variant_b_config,
+    variant_a: experiment?.variant_a_config ?? firstConfig(),
+    variant_b: experiment?.variant_b_config ?? firstConfig(),
   });
   const [activate, setActivate] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const planId = plans[0]?.id ?? "student";
+  const planOf = (id: string) => plans.find((p) => p.id === id);
 
   const setOffers = (v: Variant, fn: (offers: VariantConfig["offers"]) => VariantConfig["offers"]) =>
     setConfigs((c) => ({ ...c, [v]: { ...c[v], offers: fn(c[v].offers) } }));
 
+  /** Siguiente periodo (o plan + periodo, en padres) que la variante aún no tiene, con su precio base. */
+  const nextOffer = (offers: VariantConfig["offers"]): OfferConfig => {
+    if (parent) {
+      const free = slots.find((s) => !offers.some((o) => o.plan_id === s.plan.id && o.interval === s.cycle)) ?? slots[0];
+      return { plan_id: free.plan.id, interval: free.cycle, price: basePrice(free.plan, free.cycle) };
+    }
+    return { plan_id: planId, interval: CYCLES.find((c) => !offers.some((x) => x.interval === c)) ?? "monthly", price: 0 };
+  };
+
+  const repeated = VARIANTS.some((v) => {
+    const keys = configs[v].offers.map((o) => `${o.plan_id}:${o.interval}`);
+    return new Set(keys).size !== keys.length;
+  });
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (repeated) {
+      setError(parent ? "Cada plan y periodo va una sola vez por variante." : "Cada periodo va una sola vez por variante.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const id = await saveExperiment({
-        id: asNew ? null : experiment.id,
+        id: asNew || !experiment ? null : experiment.id,
         name: name.trim() || "A/B de precios",
-        role: experiment.target_role,
+        role,
         a: configs.variant_a,
         b: configs.variant_b,
       });
@@ -810,73 +885,104 @@ function ExperimentDialog({
   return (
     <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
-        <DialogTitle>{asNew ? "Nuevo A/B test" : "Editar precios A/B"}</DialogTitle>
+        <DialogTitle>{asNew ? `Nuevo A/B test · ${SECTION[role].title}` : "Editar precios A/B"}</DialogTitle>
         <DialogDescription>
-          {asNew
-            ? "Define qué periodos y precios ve cada variante. Cada estudiante conserva para siempre la variante que le tocó."
-            : "Cambiar precios de un A/B que ya corre mezcla sus métricas. Para comparar precios nuevos, mejor crea un A/B nuevo."}
+          {!asNew
+            ? "Cambiar precios de un A/B que ya corre mezcla sus métricas. Para comparar precios nuevos, mejor crea un A/B nuevo."
+            : parent
+              ? "Elige qué plan, periodo y precio ve cada variante. Lo que no pongas se cobra al precio base. Cada padre o tutor conserva para siempre la variante que le tocó."
+              : "Define qué periodos y precios ve cada variante. Cada estudiante conserva para siempre la variante que le tocó."}
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={save} className="flex flex-col gap-3">
         <Field label="Nombre del A/B">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Mensual vs Trimestral" className="h-11" required />
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={parent ? "Ej. Plan Tutor $105 vs $119" : "Ej. Mensual vs Trimestral"}
+            className="h-11"
+            required
+          />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
           {VARIANTS.map((v) => (
-            <div key={v} className="flex flex-col gap-2 rounded-xl bg-muted/40 p-3">
+            <div key={v} className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted/40 p-3">
               <p className="font-semibold">{VARIANT_LABEL[v]}</p>
-              {configs[v].offers.map((o, i) => (
-                <div key={i} className="grid grid-cols-[1fr_6rem_auto] gap-2">
-                  <NativeSelect
-                    value={o.interval}
-                    onChange={(e) =>
-                      setOffers(v, (offers) => offers.map((x, j) => (j === i ? { ...x, interval: e.target.value as BillingInterval } : x)))
-                    }
-                    aria-label="Periodo"
-                    className="h-10"
-                  >
-                    {CYCLES.map((c) => (
-                      <option key={c} value={c}>
-                        {INTERVAL_LABEL[c].name}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={o.price}
-                    onChange={(e) =>
-                      setOffers(v, (offers) => offers.map((x, j) => (j === i ? { ...x, price: Number(e.target.value) } : x)))
-                    }
-                    aria-label="Precio MXN"
-                    className="h-10"
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Quitar periodo"
-                    disabled={configs[v].offers.length <= 1}
-                    onClick={() => setOffers(v, (offers) => offers.filter((_, j) => j !== i))}
-                  >
-                    <Minus />
-                  </Button>
-                </div>
-              ))}
-              {configs[v].offers.length < CYCLES.length && (
+              {configs[v].offers.map((o, i) => {
+                const plan = planOf(o.plan_id);
+                const update = (patch: Partial<OfferConfig>) =>
+                  setOffers(v, (offers) => offers.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+                return (
+                  <div key={i} className="flex flex-col gap-1">
+                    {parent && (
+                      <NativeSelect
+                        value={o.plan_id}
+                        onChange={(e) => {
+                          const p = planOf(e.target.value);
+                          update({ plan_id: e.target.value, ...(p && { price: basePrice(p, o.interval) }) });
+                        }}
+                        aria-label="Plan"
+                        className="h-10"
+                      >
+                        {plans.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    )}
+                    <div className="grid grid-cols-[1fr_6rem_auto] gap-2">
+                      <NativeSelect
+                        value={o.interval}
+                        onChange={(e) => {
+                          const cycle = e.target.value as BillingInterval;
+                          update({ interval: cycle, ...(parent && plan && { price: basePrice(plan, cycle) }) });
+                        }}
+                        aria-label="Periodo"
+                        className="h-10"
+                      >
+                        {(parent ? PARENT_CYCLES : CYCLES).map((c) => (
+                          <option key={c} value={c}>
+                            {INTERVAL_LABEL[c].name}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={o.price}
+                        onChange={(e) => update({ price: Number(e.target.value) })}
+                        aria-label={plan && isPerStudent(plan) ? "Precio MXN por estudiante" : "Precio MXN"}
+                        className="h-10"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Quitar"
+                        disabled={configs[v].offers.length <= 1}
+                        onClick={() => setOffers(v, (offers) => offers.filter((_, j) => j !== i))}
+                      >
+                        <Minus />
+                      </Button>
+                    </div>
+                    {parent && plan && (
+                      <p className="mb-1 text-xs text-muted-foreground">
+                        {isPerStudent(plan) ? "Por estudiante · " : ""}base {formatMxn(basePrice(plan, o.interval))}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+              {configs[v].offers.length < maxOffers && (
                 <Button
                   type="button"
                   size="sm"
                   variant="ghost"
                   className="w-fit"
-                  onClick={() =>
-                    setOffers(v, (offers) => [
-                      ...offers,
-                      { plan_id: planId, interval: CYCLES.find((c) => !offers.some((x) => x.interval === c)) ?? "monthly", price: 0 },
-                    ])
-                  }
+                  onClick={() => setOffers(v, (offers) => [...offers, nextOffer(offers)])}
                 >
-                  <Plus /> Agregar periodo
+                  <Plus /> {parent ? "Agregar precio" : "Agregar periodo"}
                 </Button>
               )}
             </div>
@@ -885,7 +991,7 @@ function ExperimentDialog({
         {asNew && (
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={activate} onChange={(e) => setActivate(e.target.checked)} className="size-4 accent-[var(--secondary)]" />
-            Activarlo ya (el A/B actual se pausa y conserva sus métricas)
+            {experiment ? "Activarlo ya (el A/B actual se pausa y conserva sus métricas)" : "Activarlo ya"}
           </label>
         )}
         {error && <ErrorLine text={error} />}
