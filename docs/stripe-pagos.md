@@ -19,7 +19,7 @@ datos fiscales. Para cobrar de verdad, Stripe pide **Activar pagos**:
 | Domicilio | Domicilio fiscal en México |
 | Cuenta bancaria | CLABE en pesos **a nombre del mismo RFC** |
 | Persona moral | Acta constitutiva, poder del representante y socios con 25 % o más |
-| Sitio web | `entrenamente.vercel.app` (o el dominio propio): precios visibles, términos, aviso de privacidad, política de cancelación y reembolso, correo de contacto |
+| Sitio web | `www.entrenamente.io`: precios visibles, términos, aviso de privacidad, política de cancelación y reembolso, correo de contacto |
 | Nombre en el estado de cuenta | `ENTRENAMENTE` (máximo 22 caracteres) |
 
 Después, en el Dashboard:
