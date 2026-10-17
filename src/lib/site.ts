@@ -1,7 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 
-/** Dirección pública del sitio. Cambiarla aquí (o con NEXT_PUBLIC_SITE_URL) al tener dominio propio. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://entrenamente.vercel.app").replace(/\/$/, "");
+/** Dirección pública del sitio. Dominio oficial; se puede sobrescribir con NEXT_PUBLIC_SITE_URL. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.entrenamente.io").replace(/\/$/, "");
 
 /**
  * Origen para los enlaces que salen de la app (invitaciones, correos de Supabase).
