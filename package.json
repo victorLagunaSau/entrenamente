@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "build:mobile": "CAPACITOR_BUILD=1 next build && cap sync",
-    "build:export": "CAPACITOR_BUILD=1 next build",
+    "build:mobile": "node scripts/build-export.mjs && cap sync",
+    "build:export": "node scripts/build-export.mjs",
     "cap:ios": "cap open ios",
     "cap:android": "cap open android"
   },
