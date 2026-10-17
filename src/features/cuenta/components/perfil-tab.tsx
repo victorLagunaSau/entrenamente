@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GRADO_ADMISION, porNivel, useGrados } from "@/features/grados/grados";
 import { getPaises, type Pais } from "@/features/grados/paises";
+import { SubscriptionSection } from "@/features/pagos/components/subscription-section";
 import { MY_CAREERS_PATH } from "@/features/student/services/student-goals-service";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,7 @@ export function PerfilTab({ cuenta, providers, reload }: CuentaContext) {
       <DatosSection cuenta={cuenta} providers={providers} reload={reload} />
       {cuenta.userType === "student" && <StudentSection cuenta={cuenta} />}
       {(cuenta.userType === "parent" || cuenta.userType === "teacher") && <TutorSection cuenta={cuenta} />}
+      <SubscriptionSection />
       <AccountSection cuenta={cuenta} providers={providers} />
     </div>
   );

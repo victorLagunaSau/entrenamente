@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ModeGuard, useMode } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
+import { RenewalNotice } from "@/features/pagos/components/renewal-notice";
 import { cn } from "@/lib/utils";
 
 import { TUTOR_COPY } from "../lib/tutor-plans";
@@ -33,6 +34,7 @@ export function TutorDashboard({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col gap-6">
             <ModeSwitcher />
             <TutorHeader />
+            <RenewalNotice />
             <TutorTabs />
             <TutorBody>{children}</TutorBody>
           </div>

@@ -8,6 +8,7 @@ import { ModeGuard } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 
+import { RenewalNotice } from "@/features/pagos/components/renewal-notice";
 import { PlanWizard } from "@/features/plan/components/plan-wizard";
 import type { StudentPlan } from "@/features/plan/lib/plan";
 import { getMyPlans } from "@/features/plan/services/plan-service";
@@ -44,6 +45,7 @@ export function StudentPanel({ tier }: { tier: StudentTier }) {
               <ModeSwitcher />
               <TierSwitcher tier={tier} />
             </div>
+            {tier === "pro" && <RenewalNotice />}
             {tier === "demo" ? <DemoHome /> : <StudentHome />}
           </div>
         </PanelShell>
