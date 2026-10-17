@@ -883,7 +883,7 @@ function ExperimentDialog({
   };
 
   return (
-    <DialogContent className={parent ? "sm:max-w-3xl" : "sm:max-w-2xl"}>
+    <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>{asNew ? `Nuevo A/B test · ${SECTION[role].title}` : "Editar precios A/B"}</DialogTitle>
         <DialogDescription>
@@ -914,24 +914,24 @@ function ExperimentDialog({
                   setOffers(v, (offers) => offers.map((x, j) => (j === i ? { ...x, ...patch } : x)));
                 return (
                   <div key={i} className="flex flex-col gap-1">
-                    <div className={cn("grid gap-2", parent ? "grid-cols-[1fr_6.5rem_5.5rem_auto]" : "grid-cols-[1fr_6rem_auto]")}>
-                      {parent && (
-                        <NativeSelect
-                          value={o.plan_id}
-                          onChange={(e) => {
-                            const p = planOf(e.target.value);
-                            update({ plan_id: e.target.value, ...(p && { price: basePrice(p, o.interval) }) });
-                          }}
-                          aria-label="Plan"
-                          className="h-10 min-w-0"
-                        >
-                          {plans.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name.replace(/^Plan /, "")}
-                            </option>
-                          ))}
-                        </NativeSelect>
-                      )}
+                    {parent && (
+                      <NativeSelect
+                        value={o.plan_id}
+                        onChange={(e) => {
+                          const p = planOf(e.target.value);
+                          update({ plan_id: e.target.value, ...(p && { price: basePrice(p, o.interval) }) });
+                        }}
+                        aria-label="Plan"
+                        className="h-10"
+                      >
+                        {plans.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    )}
+                    <div className="grid grid-cols-[1fr_6rem_auto] gap-2">
                       <NativeSelect
                         value={o.interval}
                         onChange={(e) => {
@@ -967,7 +967,7 @@ function ExperimentDialog({
                       </Button>
                     </div>
                     {parent && plan && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="mb-1 text-xs text-muted-foreground">
                         {isPerStudent(plan) ? "Por estudiante · " : ""}base {formatMxn(basePrice(plan, o.interval))}
                       </p>
                     )}
