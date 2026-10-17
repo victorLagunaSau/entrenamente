@@ -73,13 +73,33 @@ export type PricingAdmin = { plans: AdminPlan[]; experiments: AdminExperiment[];
 export type VariantMetrics = {
   variant: Variant;
   impressions: number;
+  /** Vistas mientras había una oferta en curso (migración 20261022000000; 0 antes de correrla). */
+  impressions_offer?: number;
   visitors: number;
   click_intents: number;
+  click_intents_offer?: number;
   registrations: number;
   receipts: number;
+  receipts_offer?: number;
+  /** Total = normal + oferta. */
   revenue: number;
+  revenue_offer?: number;
+  revenue_normal?: number;
   by_plan: Record<string, number>;
+  by_plan_offer?: Record<string, number>;
   mobile_share: number | null;
+};
+
+/** Ventas (recibos no reembolsados) de un plan, periodo y variante. */
+export type PlanSales = {
+  plan_id: string;
+  billing_cycle: BillingInterval;
+  variant: Variant | null;
+  receipts: number;
+  receipts_offer: number;
+  revenue: number;
+  revenue_offer: number;
+  revenue_normal: number;
 };
 
 export type AbMetrics = {
@@ -124,6 +144,13 @@ export const getPricingAdmin = () => rpc<PricingAdmin>("admin_precios");
 
 export const getAbMetrics = (experimentId: string | null) =>
   rpc<AbMetrics>("admin_metricas_ab", { p_experiment: experimentId });
+
+/** Sin la migración 20261022000000 regresa [] para que la pestaña de planes siga funcionando. */
+export const getPlanSales = () =>
+  rpc<PlanSales[]>("admin_ventas_planes").catch((e: unknown) => {
+    if (e instanceof RevenueError && /admin_ventas_planes|migración/.test(e.message)) return [];
+    throw e;
+  });
 
 export const savePlan = (p: AdminPlan) =>
   rpc<void>("admin_guardar_plan", {

@@ -135,7 +135,8 @@ export function FunnelTab() {
           </div>
           <p className="text-xs text-muted-foreground">
             Ganadora: mayor ingreso por visitante; mientras no haya recibos, mayor tasa de intención (clics ÷ impresiones).
-            Las ofertas flash no cambian la variante de nadie.
+            &ldquo;Con oferta&rdquo; = había una oferta en curso cuando se tocó el plan o se pagó. Las ofertas no cambian la
+            variante de nadie.
           </p>
         </>
       )}
@@ -147,11 +148,22 @@ function VariantCard({ metrics: m, config, winner }: { metrics: VariantMetrics; 
   const base = Math.max(m.impressions, 1);
   const steps = [
     { label: "Impresiones", value: m.impressions, note: `${m.visitors.toLocaleString("es-MX")} visitantes únicos` },
-    { label: "Clics de intención", value: m.click_intents, note: `CTR ${pct(rate(m.click_intents, m.impressions))}` },
+    {
+      label: "Clics de intención",
+      value: m.click_intents,
+      note: `CTR ${pct(rate(m.click_intents, m.impressions))}${withOffer(m.click_intents_offer)}`,
+    },
     { label: "Registros", value: m.registrations, note: `${pct(rate(m.registrations, m.click_intents))} de los clics` },
-    { label: "Recibos", value: m.receipts, note: `Conversión total ${pct(rate(m.receipts, m.visitors || m.impressions))}` },
+    {
+      label: "Recibos",
+      value: m.receipts,
+      note: `Conversión total ${pct(rate(m.receipts, m.visitors || m.impressions))}${withOffer(m.receipts_offer)}`,
+    },
   ];
   const clicks = Object.entries(m.by_plan).sort((a, b) => b[1] - a[1]);
+  const revenue = Number(m.revenue);
+  const offer = Number(m.revenue_offer ?? 0);
+  const normal = Number(m.revenue_normal ?? revenue - offer);
 
   return (
     <article
@@ -190,14 +202,13 @@ function VariantCard({ metrics: m, config, winner }: { metrics: VariantMetrics; 
         ))}
       </ol>
 
-      <dl className="grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-xl bg-muted/50 px-3 py-2">
-          <dt className="text-xs text-muted-foreground">Ingresos</dt>
-          <dd className="text-lg font-bold tabular-nums">{formatMxn(Number(m.revenue))}</dd>
-        </div>
-        <div className="rounded-xl bg-muted/50 px-3 py-2">
-          <dt className="text-xs text-muted-foreground">Ingreso por visitante</dt>
-          <dd className="text-lg font-bold tabular-nums">{formatMxn(Math.round(rate(Number(m.revenue), m.visitors || m.impressions) * 100) / 100)}</dd>
+      <dl className="grid grid-cols-3 gap-2 text-sm">
+        <Money label="Ingreso normal" value={normal} />
+        <Money label="Ingreso con oferta" value={offer} />
+        <Money label="Total" value={revenue} strong />
+        <div className="col-span-3 rounded-xl bg-muted/50 px-3 py-2">
+          <dt className="text-xs text-muted-foreground">Ingreso por visitante (total ÷ visitantes únicos)</dt>
+          <dd className="text-lg font-bold tabular-nums">{formatMxn(Math.round(rate(revenue, m.visitors || m.impressions) * 100) / 100)}</dd>
         </div>
       </dl>
 
@@ -210,7 +221,8 @@ function VariantCard({ metrics: m, config, winner }: { metrics: VariantMetrics; 
                 .map(([k, n]) => {
                   const [plan, cycle] = k.split(":");
                   const per = INTERVAL_LABEL[cycle as keyof typeof INTERVAL_LABEL]?.name ?? cycle;
-                  return `${plan} ${per.toLowerCase()} (${n})`;
+                  const sale = m.by_plan_offer?.[k] ?? 0;
+                  return `${plan} ${per.toLowerCase()} (${n}${sale ? `, ${sale} con oferta` : ""})`;
                 })
                 .join(" · ")}
             </p>
@@ -219,5 +231,16 @@ function VariantCard({ metrics: m, config, winner }: { metrics: VariantMetrics; 
         </div>
       )}
     </article>
+  );
+}
+
+const withOffer = (n: number | undefined) => (n ? ` · ${n.toLocaleString("es-MX")} con oferta` : "");
+
+function Money({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
+  return (
+    <div className="rounded-xl bg-muted/50 px-3 py-2">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={cn("text-base tabular-nums", strong ? "font-bold" : "font-semibold")}>{formatMxn(value)}</dd>
+    </div>
   );
 }
