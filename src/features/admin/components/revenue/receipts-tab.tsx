@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarPlus, Loader2, Power, ReceiptText, Search, X } from "lucide-react";
+import { CalendarPlus, ExternalLink, Loader2, Power, ReceiptText, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   setReceiptStatus,
 } from "@/features/admin/services/revenue-service";
 import { searchUsers, type UserHit, userTypeLabel } from "@/features/admin/services/users-service";
+import { payCode } from "@/features/pagos/lib/pay-code";
 import { formatMxn, INTERVAL_LABEL, VARIANT_LABEL, type BillingInterval } from "@/features/pricing/lib/pricing";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +53,7 @@ export function ReceiptsTab() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Correo, apodo, nombre o código REC-…"
+            placeholder="Correo, apodo, nombre, REC-… o ID de Stripe (pi_…, in_…)"
             aria-label="Buscar recibos"
             className="h-11"
           />
@@ -77,7 +78,8 @@ export function ReceiptsTab() {
 
       {rows === null ? (
         <p className="rounded-2xl border bg-card p-5 text-sm text-muted-foreground">
-          Busca por correo, apodo o código; con el buscador vacío, Buscar muestra los 50 recibos más recientes.
+          Busca por correo, apodo, código REC-… o un ID de Stripe (pi_…, in_…, sub_…); con el buscador vacío, Buscar
+          muestra los 50 recibos más recientes.
         </p>
       ) : rows.length === 0 ? (
         <p className="rounded-2xl border bg-card p-5 text-sm text-muted-foreground">Sin recibos.</p>
@@ -143,6 +145,7 @@ function ReceiptRow({ receipt: r, onChange }: { receipt: Receipt; onChange: (r: 
         <Cell label="Expira" value={formatDay(r.license_expires_at)} />
         <Cell label="Variante" value={r.assigned_variant ? VARIANT_LABEL[r.assigned_variant] : "—"} />
       </dl>
+      <PaymentLine receipt={r} />
       {r.notes && <p className="text-xs text-muted-foreground">Notas: {r.notes}</p>}
 
       <div className="flex flex-wrap items-center gap-2 border-t pt-3">
@@ -161,6 +164,7 @@ function ReceiptRow({ receipt: r, onChange }: { receipt: Receipt; onChange: (r: 
           variant="ghost"
           className={r.status === "refunded" ? "text-success" : "text-destructive"}
           disabled={busy}
+          title={r.payment_provider === "stripe" ? "Quita el acceso; no devuelve el dinero (eso se hace en Stripe)." : undefined}
           onClick={() => void run(() => setReceiptStatus(r.id, r.status === "refunded" ? "active" : "refunded"))}
         >
           <Power /> {r.status === "refunded" ? "Reactivar" : "Desactivar recibo"}
@@ -169,6 +173,48 @@ function ReceiptRow({ receipt: r, onChange }: { receipt: Receipt; onChange: (r: 
       </div>
       {error && <ErrorLine text={error} />}
     </li>
+  );
+}
+
+const METHOD_LABEL = { card: "Tarjeta", oxxo: "Efectivo en OXXO", spei: "Transferencia SPEI" } as const;
+
+// Las claves de prueba abren el Dashboard de prueba; las reales, el de producción.
+const STRIPE_DASHBOARD = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_test_")
+  ? "https://dashboard.stripe.com/test"
+  : "https://dashboard.stripe.com";
+
+/** Cómo se pagó: método, renovación, clave del pago (la misma que en Stripe) y enlace al pago en Stripe. */
+function PaymentLine({ receipt: r }: { receipt: Receipt }) {
+  if (r.payment_provider !== "stripe") {
+    return <p className="text-xs text-muted-foreground">Emitido manualmente desde el admin.</p>;
+  }
+  const href = r.stripe_payment_intent_id
+    ? `${STRIPE_DASHBOARD}/payments/${r.stripe_payment_intent_id}`
+    : r.stripe_invoice_id
+      ? `${STRIPE_DASHBOARD}/invoices/${r.stripe_invoice_id}`
+      : null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+      <span className="font-mono text-xs font-semibold" title="Clave del pago (igual que en Stripe)">
+        {payCode(r)}
+      </span>
+      <span className="text-muted-foreground">
+        {r.payment_method ? METHOD_LABEL[r.payment_method] : "Stripe"}
+        {r.payment_method === "card" && (r.auto_renew ? " · Se renueva sola" : " · Sin renovación automática")}
+        {r.sale_title && ` · Oferta: ${r.sale_title}`}
+      </span>
+      {href && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 font-medium text-brand-light underline-offset-4 hover:underline"
+        >
+          Ver en Stripe <ExternalLink className="size-3.5" aria-hidden />
+        </a>
+      )}
+    </div>
   );
 }
 

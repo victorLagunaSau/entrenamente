@@ -6,6 +6,9 @@ const isCapacitor = process.env.CAPACITOR_BUILD === "1";
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Las rutas de servidor (/api/stripe/*) se llaman route.api.ts: existen en Vercel y quedan fuera del export
+  // estático, donde no hay servidor (la app llamará a las de la web).
+  pageExtensions: isCapacitor ? ["tsx", "ts"] : ["tsx", "ts", "api.ts"],
   ...(isCapacitor && {
     output: "export",
     trailingSlash: true,

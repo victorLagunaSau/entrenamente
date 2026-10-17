@@ -107,6 +107,16 @@ export type Receipt = {
   notes: string | null;
   created_at: string;
   vigente: boolean;
+  /** admin = emitido a mano; stripe = pagado en línea. */
+  payment_provider: "admin" | "stripe";
+  payment_method: "card" | "oxxo" | "spei" | null;
+  auto_renew: boolean;
+  stripe_checkout_session_id: string | null;
+  stripe_invoice_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_subscription_id: string | null;
+  sale_title: string | null;
+  discount_pct: number | null;
   user: { id: string; alias: string; email: string; full_name: string; user_type: UserType } | null;
 };
 

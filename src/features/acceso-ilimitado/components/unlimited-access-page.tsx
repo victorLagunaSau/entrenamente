@@ -3,10 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CalendarClock, CreditCard, Loader2, ShieldCheck, Users, Zap } from "lucide-react";
+import { ArrowLeft, CalendarClock, CreditCard, Loader2, Users, Zap } from "lucide-react";
 
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
+import { CheckoutPanel } from "@/features/pagos/components/checkout-panel";
+import type { Quote } from "@/features/pagos/lib/types";
 import { annualPriceOf, priceOf, salePriceOf } from "@/features/dashboard/lib/tutor-plans";
 import { usePricing } from "@/features/pricing/hooks/use-pricing";
 import {
@@ -87,13 +89,15 @@ function summarize(catalog: PricingCatalog, variant: Variant, params: URLSearchP
 
 /**
  * Pago del acceso ilimitado. Llega desde "Pagar / Contratar" (el clic ya quedó registrado como intención).
- * Fase previa a la pasarela: muestra el resumen; el cobro con Stripe / tiendas se conecta aquí después.
+ * Muestra el resumen y cobra con Stripe en un modal (tarjeta con renovación automática, OXXO o SPEI).
  */
 export function UnlimitedAccessPage() {
   const params = useSearchParams();
   const router = useRouter();
   const pricing = usePricing("checkout");
   const hasPlan = params.has("plan");
+  // Lo que cotizó el servidor (manda sobre el cálculo local: p. ej. un descuento que el usuario conserva).
+  const [quote, setQuote] = React.useState<Quote | null>(null);
 
   React.useEffect(() => {
     if (!hasPlan) router.replace("/pricing");
@@ -146,18 +150,22 @@ export function UnlimitedAccessPage() {
             {summary.regular && (
               <Row icon={CreditCard} label="Precio normal" value={`${formatMxn(summary.regular)} MXN`} />
             )}
-            <Row icon={CreditCard} label="Total" value={`${formatMxn(summary.price)} MXN / ${INTERVAL_LABEL[summary.interval].per}`} strong />
+            <Row
+              icon={CreditCard}
+              label="Total"
+              value={`${formatMxn(quote ? Number(quote.total) : summary.price)} MXN / ${INTERVAL_LABEL[summary.interval].per}`}
+              strong
+            />
           </dl>
-          <p className="flex gap-3 rounded-xl bg-secondary/10 p-4 text-sm text-cool">
-            <ShieldCheck className="size-5 shrink-0 text-secondary" aria-hidden />
-            <span>
-              <strong className="text-foreground">El pago en línea se habilita muy pronto.</strong> Ya guardamos tu elección;
-              te avisaremos en cuanto puedas completar tu compra.
-            </span>
-          </p>
-          <Button variant="brand" size="lg" disabled>
-            Pagar {formatMxn(summary.price)}
-          </Button>
+          <CheckoutPanel
+            request={{
+              plan: params.get("plan") ?? "",
+              periodo: summary.interval,
+              estudiantes: summary.seats,
+              oferta: params.get("oferta"),
+            }}
+            onQuote={setQuote}
+          />
         </section>
       )}
     </main>
