@@ -184,14 +184,24 @@ export function studentOffers(catalog: PricingCatalog, variant: Variant): Offer[
 /**
  * Planes de Padres/Tutores con los precios del catálogo, en el formato de las tarjetas del panel familiar.
  * Plan Familia: precio por estudiante = extra_student_price_monthly y mínimo = min_students ($225 = 3 × $75).
+ * Con A/B de padres activo, cada plan y periodo que define la variante usa ese precio (en Familia, por estudiante);
+ * lo que no define se queda con el precio base, igual que `stripe_cotizar`.
  */
-export function parentPlans(catalog: PricingCatalog | null): TutorPlan[] {
+export function parentPlans(catalog: PricingCatalog | null, variant: Variant | null = null): TutorPlan[] {
   const rows = catalog?.plans.filter((p) => p.target_role === "parent") ?? [];
   if (rows.length === 0) return TUTOR_PLANS.parent;
+  const exp = catalog && variant ? experimentFor(catalog, "parent") : null;
+  const variantPrice = (planId: string, interval: BillingInterval) => {
+    const o = exp && variant ? exp[variant].offers.find((x) => x.plan_id === planId && x.interval === interval) : undefined;
+    return o ? Number(o.price) : null;
+  };
   return rows.map((p) => {
     const perStudent = p.max_students > p.min_students && p.extra_student_price_monthly > 0;
-    const monthlyBase = Number(p.base_price_monthly);
-    const annual = p.base_price_annual == null ? null : Number(p.base_price_annual);
+    // Precios por unidad: el plan completo, o un estudiante en Familia.
+    const baseMonthly = perStudent ? Number(p.extra_student_price_monthly) : Number(p.base_price_monthly);
+    const baseAnnual = p.base_price_annual == null ? null : Number(p.base_price_annual) / (perStudent ? p.min_students : 1);
+    const monthly = variantPrice(p.id, "monthly") ?? baseMonthly;
+    const annual = variantPrice(p.id, "annual") ?? baseAnnual;
     return {
       id: p.id,
       name: p.name,
@@ -199,10 +209,11 @@ export function parentPlans(catalog: PricingCatalog | null): TutorPlan[] {
       seats: p.min_students,
       maxSeats: p.max_students,
       perStudent,
-      priceMxn: perStudent ? Number(p.extra_student_price_monthly) : monthlyBase,
+      priceMxn: monthly,
       perks: p.features,
       badge: p.badge ?? undefined,
-      annualDiscount: annual && monthlyBase > 0 ? Math.max(0, 1 - annual / (monthlyBase * 12)) : undefined,
+      // Las tarjetas sacan el anual del mensual con este descuento (annualPriceOf); así da justo el precio anual.
+      annualDiscount: annual && monthly > 0 ? Math.max(0, 1 - annual / (monthly * 12)) : undefined,
     };
   });
 }

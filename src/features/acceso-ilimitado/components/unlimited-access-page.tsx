@@ -71,7 +71,7 @@ function summarize(catalog: PricingCatalog, variant: Variant, params: URLSearchP
     };
   }
 
-  const tutorPlan = parentPlans(catalog).find((p) => p.id === plan.id);
+  const tutorPlan = parentPlans(catalog, variant).find((p) => p.id === plan.id);
   if (!tutorPlan || (interval !== "monthly" && interval !== "annual")) return null;
   const asked = Number(params.get("estudiantes")) || tutorPlan.seats;
   const seats = tutorPlan.perStudent ? Math.min(Math.max(asked, tutorPlan.seats), tutorPlan.maxSeats ?? 6) : tutorPlan.seats;
