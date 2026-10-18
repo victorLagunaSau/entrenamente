@@ -212,7 +212,9 @@ export function CheckoutPanel({
             </p>
           ) : (
             open && (
-              <div className="min-h-80 overflow-hidden rounded-xl bg-white">
+              // shrink-0: dentro del modal (flex-col con scroll) el formulario de Stripe no debe encogerse y recortarse;
+              // crece a su altura y el modal es el que se desplaza (en el celular no se podía bajar al botón de pagar).
+              <div className="min-h-80 shrink-0 overflow-hidden rounded-xl bg-white">
                 <EmbeddedCheckoutProvider key={method} stripe={getStripe()} options={{ fetchClientSecret, onComplete }}>
                   <EmbeddedCheckout />
                 </EmbeddedCheckoutProvider>
