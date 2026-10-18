@@ -10,6 +10,7 @@ import { ModeGuard, useMode } from "@/features/modes/components/mode-guard";
 import { ModeSwitcher } from "@/features/modes/components/mode-switcher";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 import { RenewalNotice } from "@/features/pagos/components/renewal-notice";
+import { PlanRequestsBanner } from "@/features/vinculo/components/plan-requests-banner";
 import { cn } from "@/lib/utils";
 
 import { TUTOR_COPY } from "../lib/tutor-plans";
@@ -35,6 +36,7 @@ export function TutorDashboard({ children }: { children: React.ReactNode }) {
             <ModeSwitcher />
             <TutorHeader />
             <RenewalNotice />
+            <TutorRequests />
             <TutorTabs />
             <TutorBody>{children}</TutorBody>
           </div>
@@ -42,6 +44,11 @@ export function TutorDashboard({ children }: { children: React.ReactNode }) {
       </PanelShell>
     </ModeGuard>
   );
+}
+
+function TutorRequests() {
+  const { kind } = useTutor();
+  return <PlanRequestsBanner child={kind === "parent"} />;
 }
 
 function TutorHeader() {

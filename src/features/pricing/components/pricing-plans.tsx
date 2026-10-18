@@ -4,6 +4,7 @@ import * as React from "react";
 import { CircleAlert, GraduationCap, HeartHandshake } from "lucide-react";
 
 import { getViewer } from "@/features/modes/services/viewer-service";
+import { LinkedTutorPanel, useMyTutors } from "@/features/vinculo/components/linked-tutor-panel";
 import { cn } from "@/lib/utils";
 
 import { useImpression, usePricing, type PricingState } from "../hooks/use-pricing";
@@ -87,10 +88,15 @@ export function PricingPlans({ source, initialRole = "student" }: { source: stri
   );
 }
 
-/** Ofertas flash vigentes + planes de un rol, con los precios de la variante del usuario. */
+/**
+ * Ofertas flash vigentes + planes de un rol, con los precios de la variante del usuario.
+ * El estudiante vinculado a un tutor no compra: ve el estado de su cuenta y le pide el plan a su tutor.
+ */
 export function RolePlans({ pricing, role, compact = false }: { pricing: PricingState; role: PricingRole; compact?: boolean }) {
   const { catalog, variant, choose } = pricing;
-  if (!catalog || !variant) return null;
+  const { tutors, reload } = useMyTutors(role === "student" && pricing.loggedIn);
+  if (!catalog || !variant || !tutors) return null;
+  if (role === "student" && tutors.length) return <LinkedTutorPanel tutors={tutors} onChange={reload} />;
   const sales = activeFlashSales(catalog, role);
 
   return (
