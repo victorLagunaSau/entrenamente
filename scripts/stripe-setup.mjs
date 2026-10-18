@@ -5,7 +5,7 @@
  * lo que ya existe con el mismo monto se deja igual.
  *
  *   node --env-file=.env.local scripts/stripe-setup.mjs          # usa STRIPE_SECRET_KEY (sk_test_…)
- *   node --env-file=.env.local scripts/stripe-setup.mjs --live   # obligatorio para una clave sk_live_…
+ *   node --env-file=.env.local scripts/stripe-setup.mjs --live   # obligatorio para una clave real (sk_live_… o rk_live_…)
  *
  * Los montos son la lista de precios de la migración 20261019000000_precios_stripe.sql. Si cambian en Supabase,
  * cambiarlos aquí y volver a correrlo: el precio nuevo toma el lookup_key y el anterior se archiva.
@@ -19,7 +19,8 @@ if (!key) {
   console.error("Falta STRIPE_SECRET_KEY (ponla en .env.local).");
   process.exit(1);
 }
-if (key.startsWith("sk_live_") && !process.argv.includes("--live")) {
+const live = /^(sk|rk)_live_/.test(key);
+if (live && !process.argv.includes("--live")) {
   console.error("Es una clave de PRODUCCIÓN. Si de verdad quieres crear el catálogo real, agrega --live.");
   process.exit(1);
 }
@@ -123,7 +124,7 @@ async function ensurePortal() {
   return (await stripe.billingPortal.configurations.create(config)).id;
 }
 
-console.log(`Stripe en modo ${key.startsWith("sk_live_") ? "PRODUCCIÓN" : "prueba"}\n`);
+console.log(`Stripe en modo ${live ? "PRODUCCIÓN" : "prueba"}\n`);
 for (const p of PRODUCTS) console.log(`Producto ${p.id}: ${await ensureProduct(p)}`);
 for (const p of PRICES) console.log(`Precio ${p.lookup} $${p.amount}: ${await ensurePrice(p)}`);
 const tax = await ensureTaxRate();
