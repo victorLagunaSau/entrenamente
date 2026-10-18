@@ -3,7 +3,7 @@
  * Regresa { url } para redirigir; al terminar vuelve a la página de donde salió.
  */
 
-import { stripe, supabaseAdmin, userFromRequest } from "@/features/pagos/server/clients";
+import { stripe, stripeLive, supabaseAdmin, userFromRequest } from "@/features/pagos/server/clients";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
       .from("stripe_customers")
       .select("customer_id")
       .eq("user_id", user.id)
+      .eq("livemode", stripeLive())
       .maybeSingle();
     if (!data?.customer_id) return Response.json({ error: "Aún no tienes pagos con tarjeta." }, { status: 404 });
 

@@ -35,7 +35,7 @@ import {
 } from "@/features/pricing/lib/pricing";
 import { cn } from "@/lib/utils";
 
-import { ErrorLine, errorText, formatDateTime } from "./revenue-workspace";
+import { ErrorLine, errorText, formatDateTime, useIncludeTests } from "./revenue-workspace";
 
 const CYCLES: BillingInterval[] = ["monthly", "quarterly", "annual"];
 const VARIANTS: Variant[] = ["variant_a", "variant_b"];
@@ -61,14 +61,15 @@ export function CatalogTab() {
   const [sales, setSales] = React.useState<PlanSales[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
+  const includeTests = useIncludeTests();
   const load = React.useCallback(() => {
-    Promise.all([getPricingAdmin(), getPlanSales()])
+    Promise.all([getPricingAdmin(), getPlanSales(includeTests)])
       .then(([d, s]) => {
         setData(d);
         setSales(s);
       })
       .catch((e) => setError(errorText(e, "No pudimos cargar los planes.")));
-  }, []);
+  }, [includeTests]);
   React.useEffect(load, [load]);
 
   if (!data) return error ? <ErrorLine text={error} /> : <div className="h-80 animate-pulse rounded-2xl bg-card motion-reduce:animate-none" />;
