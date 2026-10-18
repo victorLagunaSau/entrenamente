@@ -137,17 +137,20 @@ export type Receipt = {
   stripe_subscription_id: string | null;
   sale_title: string | null;
   discount_pct: number | null;
+  /** true = pago real; false = prueba (sandbox de Stripe o marcado a mano). */
+  livemode: boolean;
   user: { id: string; alias: string; email: string; full_name: string; user_type: UserType } | null;
 };
 
 export const getPricingAdmin = () => rpc<PricingAdmin>("admin_precios");
 
-export const getAbMetrics = (experimentId: string | null) =>
-  rpc<AbMetrics>("admin_metricas_ab", { p_experiment: experimentId });
+// includeTests: también cuenta los pagos de la sandbox de Stripe y los recibos marcados como prueba.
+export const getAbMetrics = (experimentId: string | null, includeTests = false) =>
+  rpc<AbMetrics>("admin_metricas_ab", { p_experiment: experimentId, p_pruebas: includeTests });
 
 /** Sin la migración 20261022000000 regresa [] para que la pestaña de planes siga funcionando. */
-export const getPlanSales = () =>
-  rpc<PlanSales[]>("admin_ventas_planes").catch((e: unknown) => {
+export const getPlanSales = (includeTests = false) =>
+  rpc<PlanSales[]>("admin_ventas_planes", { p_pruebas: includeTests }).catch((e: unknown) => {
     if (e instanceof RevenueError && /admin_ventas_planes|migración/.test(e.message)) return [];
     throw e;
   });
@@ -204,7 +207,12 @@ export const saveFlashSale = (f: FlashSaleInput) =>
 export const setFlashSaleActive = (id: string, active: boolean) =>
   rpc<void>("admin_estado_oferta", { p_id: id, p_active: active });
 
-export const searchReceipts = (q: string) => rpc<Receipt[]>("admin_buscar_recibos", { p_q: q });
+export const searchReceipts = (q: string, includeTests = false) =>
+  rpc<Receipt[]>("admin_buscar_recibos", { p_q: q, p_pruebas: includeTests });
+
+/** livemode false = prueba (no cuenta en ingresos ni en el A/B). */
+export const setReceiptLivemode = (id: string, livemode: boolean) =>
+  rpc<Receipt>("admin_modo_recibo", { p_id: id, p_livemode: livemode });
 
 export const issueReceipt = (r: {
   userId: string;

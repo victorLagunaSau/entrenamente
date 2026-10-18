@@ -138,3 +138,25 @@ export async function deleteUser(id: string): Promise<void> {
 
 export const formatDay = (iso: string) =>
   new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+
+/** Acceso de la cuenta (ban de Supabase Auth): deshabilitada no puede iniciar sesión; no se borra nada. */
+export type AccountState = { disabled: boolean; until: string | null };
+
+async function accountCall(init?: RequestInit, id?: string): Promise<AccountState> {
+  const { data } = await supabase.auth.getSession();
+  const res = await fetch(`/api/admin/cuenta${id ? `?id=${encodeURIComponent(id)}` : ""}`, {
+    ...init,
+    headers: {
+      "content-type": "application/json",
+      ...(data.session ? { authorization: `Bearer ${data.session.access_token}` } : {}),
+    },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? "No pudimos conectar con el servidor.");
+  return body as AccountState;
+}
+
+export const getAccountState = (id: string) => accountCall(undefined, id);
+
+export const setAccountDisabled = (id: string, disabled: boolean) =>
+  accountCall({ method: "POST", body: JSON.stringify({ id, disabled }) });

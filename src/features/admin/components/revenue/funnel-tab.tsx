@@ -20,7 +20,7 @@ import {
 import { formatMxn, INTERVAL_LABEL, VARIANT_LABEL, type VariantConfig } from "@/features/pricing/lib/pricing";
 import { cn } from "@/lib/utils";
 
-import { ErrorLine, errorText, formatDay } from "./revenue-workspace";
+import { ErrorLine, errorText, formatDay, useIncludeTests } from "./revenue-workspace";
 
 const STATUS: Record<ExperimentStatus, { label: string; className: string }> = {
   active: { label: "Activo", className: "bg-success/15 text-success" },
@@ -36,11 +36,12 @@ export function FunnelTab() {
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
+  const includeTests = useIncludeTests();
   const load = React.useCallback(async (id: string | null) => {
     setBusy(true);
     setError(null);
     try {
-      const [admin, m] = await Promise.all([getPricingAdmin(), getAbMetrics(id)]);
+      const [admin, m] = await Promise.all([getPricingAdmin(), getAbMetrics(id, includeTests)]);
       setExperiments(admin.experiments);
       setMetrics(m);
       setSelected(m.experiment?.id ?? null);
@@ -49,10 +50,13 @@ export function FunnelTab() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [includeTests]);
 
+  // Al cambiar "Incluir pruebas" recarga el experimento que se está viendo.
+  const selectedRef = React.useRef(selected);
+  selectedRef.current = selected;
   React.useEffect(() => {
-    void load(null);
+    void load(selectedRef.current);
   }, [load]);
 
   const changeStatus = async (status: ExperimentStatus) => {

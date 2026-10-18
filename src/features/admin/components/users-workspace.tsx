@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CircleAlert, KeyRound, Loader2, Pencil, Plus, Search, Trash2, UserX } from "lucide-react";
+import { CircleAlert, KeyRound, Loader2, Lock, LockOpen, Pencil, Plus, Search, Trash2, UserX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +22,9 @@ import {
   changeUserType,
   deleteLicense,
   deleteUser,
+  getAccountState,
+  setAccountDisabled,
+  type AccountState,
   formatDay,
   getUser,
   grantLicense,
@@ -296,6 +299,8 @@ function UserDetail({
         </div>
       )}
 
+      <AccountAccess id={user.id} self={self} />
+
       <div className="flex flex-col gap-2 rounded-xl border border-destructive/40 p-4">
         <p className="text-sm font-semibold text-destructive">Zona de peligro</p>
         <p className="text-xs text-muted-foreground text-pretty">
@@ -361,6 +366,60 @@ function UserDetail({
 }
 
 /** Estudiantes vinculados al padre/maestro consultado: un botón por cuenta para abrir su ficha. */
+/** Deshabilitar sin borrar: la cuenta no puede iniciar sesión y conserva todo (útil para las cuentas de prueba). */
+function AccountAccess({ id, self }: { id: string; self: boolean }) {
+  const [account, setAccount] = React.useState<AccountState | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    setAccount(null);
+    getAccountState(id)
+      .then((a) => active && setAccount(a))
+      .catch((err) => active && setError((err as Error).message || "No pudimos leer el acceso de la cuenta."));
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const toggle = async () => {
+    if (!account) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setAccount(await setAccountDisabled(id, !account.disabled));
+    } catch (err) {
+      setError((err as Error).message || "No pudimos cambiar el acceso de la cuenta.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border p-4">
+      <p className="text-sm font-semibold">
+        Acceso a la cuenta:{" "}
+        {account ? (
+          account.disabled ? <span className="text-destructive">deshabilitada</span> : <span className="text-success">activa</span>
+        ) : (
+          "…"
+        )}
+      </p>
+      <p className="text-xs text-muted-foreground text-pretty">
+        Deshabilitada no puede iniciar sesión; sus recibos, licencias y exámenes se conservan y se puede rehabilitar.
+      </p>
+      {account && (
+        <Button variant="outline" className="w-fit" disabled={self || busy} onClick={() => void toggle()}>
+          {busy ? <Loader2 className="animate-spin motion-reduce:animate-none" /> : account.disabled ? <LockOpen /> : <Lock />}
+          {account.disabled ? "Rehabilitar cuenta" : "Deshabilitar cuenta"}
+        </Button>
+      )}
+      {error && <ErrorLine text={error} />}
+    </div>
+  );
+}
+
 function Affiliates({ tutor, selected, onSelect }: { tutor: AdminUser; selected: string | null; onSelect: (id: string) => void }) {
   const seated = new Set(tutor.licencias.filter((l) => l.vigente).flatMap((l) => l.ocupados.map((o) => o.id)));
   return (

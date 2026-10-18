@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarPlus, ExternalLink, Loader2, Power, ReceiptText, Search, X } from "lucide-react";
+import { CalendarPlus, ExternalLink, FlaskConical, Loader2, Power, ReceiptText, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   issueReceipt,
   type Receipt,
   searchReceipts,
+  setReceiptLivemode,
   setReceiptStatus,
 } from "@/features/admin/services/revenue-service";
 import { searchUsers, type UserHit, userTypeLabel } from "@/features/admin/services/users-service";
@@ -21,7 +22,7 @@ import { payCode } from "@/features/pagos/lib/pay-code";
 import { formatMxn, INTERVAL_LABEL, VARIANT_LABEL, type BillingInterval } from "@/features/pricing/lib/pricing";
 import { cn } from "@/lib/utils";
 
-import { ErrorLine, errorText, formatDay } from "./revenue-workspace";
+import { ErrorLine, errorText, formatDay, useIncludeTests } from "./revenue-workspace";
 
 /** Pestaña 2: buscador de recibos con su vigencia, extensión manual de días y desactivación. */
 export function ReceiptsTab() {
@@ -30,19 +31,29 @@ export function ReceiptsTab() {
   const [searching, setSearching] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [issuing, setIssuing] = React.useState(false);
+  const includeTests = useIncludeTests();
 
   const search = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setSearching(true);
     setError(null);
     try {
-      setRows(await searchReceipts(query));
+      setRows(await searchReceipts(query, includeTests));
     } catch (err) {
       setError(errorText(err, "No pudimos buscar recibos."));
     } finally {
       setSearching(false);
     }
   };
+
+  // Al cambiar "Incluir pruebas" repite la búsqueda que ya se hizo.
+  const searched = rows !== null;
+  const searchRef = React.useRef(search);
+  searchRef.current = search;
+  React.useEffect(() => {
+    if (searched) void searchRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al cambiar el interruptor
+  }, [includeTests]);
 
   const replace = (r: Receipt) => setRows((rs) => rs?.map((x) => (x.id === r.id ? r : x)) ?? [r]);
 
@@ -134,7 +145,14 @@ function ReceiptRow({ receipt: r, onChange }: { receipt: Receipt; onChange: (r: 
             )}
           </p>
         </div>
-        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", state.className)}>{state.label}</span>
+        <div className="flex items-center gap-1.5">
+          {!r.livemode && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-energy/15 px-2.5 py-0.5 text-xs font-semibold text-energy">
+              <FlaskConical className="size-3" aria-hidden /> Prueba
+            </span>
+          )}
+          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", state.className)}>{state.label}</span>
+        </div>
       </div>
 
       <dl className="grid gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
@@ -168,6 +186,16 @@ function ReceiptRow({ receipt: r, onChange }: { receipt: Receipt; onChange: (r: 
           onClick={() => void run(() => setReceiptStatus(r.id, r.status === "refunded" ? "active" : "refunded"))}
         >
           <Power /> {r.status === "refunded" ? "Reactivar" : "Desactivar recibo"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          disabled={busy}
+          title={r.livemode ? "No cuenta en ingresos ni en el A/B" : "Vuelve a contar en ingresos y en el A/B"}
+          onClick={() => void run(() => setReceiptLivemode(r.id, !r.livemode))}
+        >
+          <FlaskConical /> {r.livemode ? "Marcar como prueba" : "Marcar como real"}
         </Button>
         {busy && <Loader2 className="size-4 animate-spin text-brand-light motion-reduce:animate-none" />}
       </div>

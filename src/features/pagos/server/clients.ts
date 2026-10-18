@@ -1,6 +1,6 @@
 /**
  * Clientes del servidor (rutas /api/stripe/*). Nunca se importan desde el navegador: usan claves secretas.
- *   · STRIPE_SECRET_KEY      sk_test_… / sk_live_…
+ *   · STRIPE_SECRET_KEY      sk_test_… (sandbox) / sk_live_… o rk_live_… (real)
  *   · SUPABASE_SECRET_KEY    clave secreta (service role) de Supabase: llama a las funciones stripe_*
  */
 
@@ -14,6 +14,12 @@ export class ConfigError extends Error {}
 
 /** Stripe se configura con claves de entorno; sin ellas el pago en línea queda apagado. */
 export const stripeEnabled = () => Boolean(process.env.STRIPE_SECRET_KEY && process.env.SUPABASE_SECRET_KEY);
+
+/**
+ * true con claves reales (sk_live_/rk_live_), false con las de la sandbox. Localhost usa la sandbox y producción la
+ * cuenta real, pero comparten Supabase: los clientes de Stripe se guardan por modo y cada recibo dice el suyo.
+ */
+export const stripeLive = () => /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "");
 
 export function stripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;

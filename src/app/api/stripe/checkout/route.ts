@@ -8,7 +8,7 @@
 import type Stripe from "stripe";
 
 import type { CheckoutRequest, CheckoutResponse, PayMethod, Quote } from "@/features/pagos/lib/types";
-import { ConfigError, stripe, stripeEnabled, supabaseAdmin, userFromRequest } from "@/features/pagos/server/clients";
+import { ConfigError, stripe, stripeEnabled, stripeLive, supabaseAdmin, userFromRequest } from "@/features/pagos/server/clients";
 import { metadataFor } from "@/features/pagos/server/fulfill";
 
 export const runtime = "nodejs";
@@ -56,10 +56,16 @@ export async function POST(req: Request) {
   }
 }
 
-/** Cliente de Stripe del usuario (uno por cuenta; SPEI lo necesita para darle su CLABE). */
+/** Cliente de Stripe del usuario (uno por cuenta y modo; SPEI lo necesita para darle su CLABE). */
 async function customerFor(userId: string, email: string | null) {
   const admin = supabaseAdmin();
-  const { data } = await admin.from("stripe_customers").select("customer_id").eq("user_id", userId).maybeSingle();
+  const livemode = stripeLive();
+  const { data } = await admin
+    .from("stripe_customers")
+    .select("customer_id")
+    .eq("user_id", userId)
+    .eq("livemode", livemode)
+    .maybeSingle();
   if (data?.customer_id) return data.customer_id as string;
 
   const { data: profile } = await admin.from("profiles").select("full_name").eq("id", userId).maybeSingle();
@@ -67,7 +73,7 @@ async function customerFor(userId: string, email: string | null) {
     { email: email ?? undefined, name: profile?.full_name || undefined, metadata: { user_id: userId } },
     { idempotencyKey: `customer-${userId}` }
   );
-  await admin.from("stripe_customers").upsert({ user_id: userId, customer_id: customer.id });
+  await admin.from("stripe_customers").upsert({ user_id: userId, customer_id: customer.id, livemode });
   return customer.id;
 }
 
