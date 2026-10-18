@@ -22,6 +22,7 @@ import {
   Sparkles,
   Star,
   Target,
+  TriangleAlert,
   Trophy,
   UserMinus,
   UserPlus,
@@ -973,7 +974,10 @@ function SeatActions({ student }: { student: TutorStudent }) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [confirm, setConfirm] = React.useState(false);
-  const canActivate = !student.active && !!panel!.license?.active;
+  const license = panel!.license;
+  const canActivate = !student.active && !!license?.active;
+  // Sin cupos libres: para darle acceso hay que pasar a un plan con más estudiantes (Suscripción).
+  const full = canActivate && license!.used >= license!.seats;
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -996,11 +1000,24 @@ function SeatActions({ student }: { student: TutorStudent }) {
           {busy ? <Loader2 className="animate-spin" /> : <PowerOff />} Liberar cupo
         </Button>
       ) : (
-        canActivate && (
+        canActivate &&
+        !full && (
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => run(() => activateSeat(student.id))}>
             {busy ? <Loader2 className="animate-spin" /> : <Power />} Activar
           </Button>
         )
+      )}
+      {full && (
+        <div role="status" className="flex w-full flex-col gap-2 rounded-xl border border-gold/40 bg-gold/10 p-3 text-xs sm:flex-row sm:items-center">
+          <span className="flex-1 text-pretty">
+            <TriangleAlert className="mr-1 inline size-3.5 text-gold" aria-hidden />
+            Has alcanzado el límite de estudiantes de tu plan actual. Para activar a {student.alias}, selecciona uno de los
+            planes superiores disponibles.
+          </span>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/app/dashboard/billing">Ver planes</Link>
+          </Button>
+        </div>
       )}
       <Button variant="ghost" size="sm" className="hover:text-destructive" onClick={() => setConfirm(true)}>
         <UserMinus /> Quitar
@@ -1016,7 +1033,8 @@ function SeatActions({ student }: { student: TutorStudent }) {
           <DialogHeader>
             <DialogTitle>¿Quitar a {student.alias} de tu panel?</DialogTitle>
             <DialogDescription>
-              Se libera su cupo y dejarás de ver sus estadísticas. Su cuenta y su historial de exámenes no se borran.
+              Se libera su cupo. Perderás el monitoreo académico, reportes de WhatsApp/PDF y estadísticas de este
+              estudiante, y su cuenta volverá a la versión Demo. Su historial de exámenes no se borra.
             </DialogDescription>
           </DialogHeader>
           {error && (

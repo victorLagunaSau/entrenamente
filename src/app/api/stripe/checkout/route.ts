@@ -28,6 +28,16 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => null)) as CheckoutRequest | null;
     if (!body?.plan || !body.periodo) return json({ error: "Falta el plan o el periodo." }, 400);
 
+    // Estudiante vinculado a un tutor: no compra; se lo pide a su tutor (toda la facturación vive en el tutor).
+    const { data: linked } = await supabaseAdmin()
+      .from("tutor_students")
+      .select("owner_id")
+      .eq("student_id", user.id)
+      .limit(1);
+    if (linked?.length) {
+      return json({ error: "Tu cuenta está vinculada a tu tutor: pídele que active o renueve tu plan." }, 409);
+    }
+
     const { data, error } = await supabaseAdmin().rpc("stripe_cotizar", {
       p_user: user.id,
       p_plan: body.plan,
