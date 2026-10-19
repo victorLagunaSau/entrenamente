@@ -30,10 +30,17 @@ export function InviteButton({ disabled, variant = "brand" }: { disabled?: boole
       <Button variant={variant} onClick={() => setOpen(true)} disabled={disabled}>
         <UserPlus /> Invitar Estudiante
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg">{open && <InviteBody />}</DialogContent>
-      </Dialog>
+      <InviteDialog open={open} onOpenChange={setOpen} />
     </>
+  );
+}
+
+/** El diálogo de invitaciones sin su botón (p. ej. desde la guía de inicio). */
+export function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">{open && <InviteBody />}</DialogContent>
+    </Dialog>
   );
 }
 
