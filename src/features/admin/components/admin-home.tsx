@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, FileJson, School, Sparkles, Users } from "lucide-react";
+import { BarChart3, BellRing, FileJson, School, Sparkles, Users } from "lucide-react";
 
 import { HomeTools } from "@/features/modes/components/home-tools";
 import { useMode } from "@/features/modes/components/mode-guard";
@@ -24,6 +24,12 @@ export function AdminHome() {
             description: "Usuarios registrados, licencias y cupones.",
             icon: Users,
             href: "/admin/users",
+          },
+          {
+            label: "Notificaciones",
+            description: "Avisos y promociones a usuarios específicos o a grupos.",
+            icon: BellRing,
+            href: "/admin/notificaciones",
           },
           {
             label: "Banco de Preguntas",
