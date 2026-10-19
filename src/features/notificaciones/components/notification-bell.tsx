@@ -13,6 +13,7 @@ import {
   isWelcome,
   showBrowserNotification,
 } from "../lib/presentation";
+import { enableWebPush, isWebPushSubscribed, syncWebPush, webPushSupport, webPushTurnedOff } from "../lib/web-push";
 import { getInbox, markRead, subscribeToNew, type AppNotification, type Inbox } from "../services/notificaciones-service";
 
 const REFRESH_MS = 60_000;
@@ -58,9 +59,14 @@ export function NotificationBell({ userId }: { userId: string }) {
   const openRef = React.useRef<(n: AppNotification) => void>(() => {});
   const [permission, setPermission] = React.useState<NotificationPermission | "unsupported">("unsupported");
 
+  // Push con la app cerrada: ofrecerlo si este dispositivo lo admite y aún no está suscrito.
+  const [pushOffer, setPushOffer] = React.useState(false);
+
   React.useEffect(() => {
     if (browserNotificationsSupported()) setPermission(Notification.permission);
-  }, []);
+    syncWebPush();
+    if (webPushSupport() === "ready" && !webPushTurnedOff()) isWebPushSubscribed().then((on) => setPushOffer(!on));
+  }, [userId]);
 
   const dismissToast = React.useCallback((id: string) => setToasts((t) => t.filter((n) => n.id !== id)), []);
 
@@ -177,7 +183,16 @@ export function NotificationBell({ userId }: { userId: string }) {
   };
   openRef.current = openItem;
 
-  const askPermission = async () => setPermission(await Notification.requestPermission());
+  // Se pide al tocar "Activar", nunca al cargar.
+  const askPermission = async () => {
+    try {
+      const result = await enableWebPush();
+      setPermission(result);
+      if (result === "granted") setPushOffer(false);
+    } catch {
+      setPermission(Notification.permission);
+    }
+  };
 
   const markAll = async () => {
     setMarking(true);
@@ -272,9 +287,13 @@ export function NotificationBell({ userId }: { userId: string }) {
             </ul>
           )}
 
-          {permission === "default" && (
+          {(permission === "default" || (permission === "granted" && pushOffer)) && (
             <div className="flex items-center justify-between gap-3 border-t bg-background/40 px-4 py-3">
-              <p className="text-xs text-muted-foreground text-pretty">Recibe los avisos aunque estés en otra pestaña.</p>
+              <p className="text-xs text-muted-foreground text-pretty">
+                {webPushSupport() === "ready"
+                  ? "Recibe los avisos en este dispositivo aunque la app esté cerrada."
+                  : "Recibe los avisos aunque estés en otra pestaña."}
+              </p>
               <button
                 type="button"
                 onClick={askPermission}
