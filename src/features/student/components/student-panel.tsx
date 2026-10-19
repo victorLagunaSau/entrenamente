@@ -18,6 +18,7 @@ import { getFreeExamHistory, getRachaHistory } from "../services/exam-record-ser
 import { getStudentCareers, type StudentCareer } from "../services/student-careers-service";
 import { getHomeCareers, type HomeCareer } from "../services/student-home";
 import { getStudentSummary, type StudentSummary } from "../services/student-service";
+import { ProStartGuide } from "./pro-start-guide";
 import { FreeExamModule, StreaksModule, StudyPlanModule } from "./home-modules";
 import { DemoHome } from "./demo/demo-home";
 import { DEMO_NAV, PRO_NAV, StudentNav, StudentTopNav } from "./student-nav";
@@ -62,6 +63,8 @@ function StudentHome() {
   const [plans, setPlans] = React.useState<StudentPlan[] | null>(null);
   const [wizardOpen, setWizardOpen] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
+  // Para la guía de inicio: ¿ya jugó alguna racha (aunque hoy esté apagada)?
+  const [hizoRacha, setHizoRacha] = React.useState(false);
 
   // Sin las tablas del plan (migración pendiente) el módulo se muestra vacío.
   const loadPlans = React.useCallback(() => {
@@ -84,6 +87,7 @@ function StudentHome() {
         setSummary(s);
         setProfileCareers(list);
         setCareers(getHomeCareers(list, history, rachas));
+        setHizoRacha([...rachas.values()].some((fechas) => fechas.length > 0));
       })
       .catch(() => setFailed(true));
     loadPlans();
@@ -119,6 +123,18 @@ function StudentHome() {
       <StudentWelcome summary={summary} careers={profileCareers} streakDays={bestStreak} />
       {careers.length > 0 && (
         <>
+          {plans !== null && (
+            <ProStartGuide
+              userId={summary.id}
+              tienePlan={plans.length > 0}
+              hizoLibre={careers.some((c) => c.exams.length > 0)}
+              hizoRacha={hizoRacha}
+              canCreatePlan={planCareers.length > 0}
+              onCreatePlan={() => setWizardOpen(true)}
+              libreHref={`/app/student/exam?carrera=${encodeURIComponent(careers[0].id)}`}
+              onRacha={() => playRacha(careers[0].id)}
+            />
+          )}
           <StudyPlanModule plans={plans} canCreate={planCareers.length > 0} onCreate={() => setWizardOpen(true)} />
           <PlanWizard open={wizardOpen} onOpenChange={setWizardOpen} careers={planCareers} onCreated={loadPlans} />
           <FreeExamModule careers={careers} />
