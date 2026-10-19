@@ -228,7 +228,10 @@ function EmptyStudents() {
 function FamilyBar({ insights }: { insights: Map<string, Insight> | null }) {
   const { kind, panel } = useTutor();
   const license = panel!.license!;
-  const ratio = Math.min(license.used / license.seats, 1);
+  // Quien tiene acceso con otro plan (propio o de otra escuela) también está activo; tu cupo queda libre para cuando ese plan venza.
+  const propios = panel!.students.filter((s) => s.access === "otra");
+  const activos = license.used + propios.length;
+  const ratio = Math.min(activos / license.seats, 1);
   const all = insights ? [...insights.values()] : [];
   const weekExams = all.reduce((n, i) => n + i.week.exams, 0);
   const weekSeconds = all.reduce((n, i) => n + i.week.seconds, 0);
@@ -256,7 +259,7 @@ function FamilyBar({ insights }: { insights: Map<string, Insight> | null }) {
             </span>
           </p>
           <h2 id="family-title" className="text-lg font-bold sm:text-xl">
-            Tienes <span className="tabular-nums">{license.used}</span> de <span className="tabular-nums">{license.seats}</span>{" "}
+            Tienes <span className="tabular-nums">{activos}</span> de <span className="tabular-nums">{license.seats}</span>{" "}
             estudiantes activos
           </h2>
           <div
@@ -264,11 +267,17 @@ function FamilyBar({ insights }: { insights: Map<string, Insight> | null }) {
             aria-label="Cupos utilizados"
             aria-valuemin={0}
             aria-valuemax={license.seats}
-            aria-valuenow={license.used}
+            aria-valuenow={activos}
             className="h-2 w-full max-w-md overflow-hidden rounded-full bg-muted"
           >
             <div className="h-full rounded-full bg-brand-gradient transition-[width]" style={{ width: `${ratio * 100}%` }} />
           </div>
+          {propios.length > 0 && (
+            <p className="text-xs text-pretty text-muted-foreground">
+              {propios.length === 1 ? `${propios[0].alias} tiene acceso con otro plan` : `${propios.length} estudiantes tienen acceso con otro plan`}
+              ; cuando venza, pasa{propios.length === 1 ? "" : "n"} a tu cupo automáticamente.
+            </p>
+          )}
         </div>
         <AddStudentAction />
       </div>
@@ -975,7 +984,8 @@ function SeatActions({ student }: { student: TutorStudent }) {
   const [error, setError] = React.useState("");
   const [confirm, setConfirm] = React.useState(false);
   const license = panel!.license;
-  const canActivate = !student.active && !!license?.active;
+  // Con su propio plan vigente no ocupa tu cupo (assign_seat lo rechazaría).
+  const canActivate = !student.active && student.access !== "otra" && !!license?.active;
   // Sin cupos libres: para darle acceso hay que pasar a un plan con más estudiantes (Suscripción).
   const full = canActivate && license!.used >= license!.seats;
 
