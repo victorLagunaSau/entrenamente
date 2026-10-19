@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { ExamReport } from "@/features/exam/components/libre/exam-report";
 import type { ExamRecord } from "@/features/exam/lib/libre";
 import { useUniTheme } from "@/features/exam/lib/uni-theme";
-import { ModeGuard } from "@/features/modes/components/mode-guard";
+import { useGuiaVista } from "@/features/guia";
+import { ModeGuard, useMode } from "@/features/modes/components/mode-guard";
 import { PanelShell } from "@/features/modes/components/panel-shell";
 
+import { GUIA_TUTOR_ERRORES } from "../lib/tutor-guia";
 import { errorMessage, getTutorExamRecord } from "../services/tutor-service";
 
 /**
@@ -45,6 +47,13 @@ function Loader() {
   }, [id]);
 
   useUniTheme(record ? record.target.institucion.id : undefined);
+
+  // Paso 5 de la guía del tutor: ya revisó una guía de errores.
+  const { viewer } = useMode();
+  const { marcarVista } = useGuiaVista(GUIA_TUTOR_ERRORES, viewer.id);
+  React.useEffect(() => {
+    if (record) marcarVista();
+  }, [record, marcarVista]);
 
   if (error || record === null) {
     return (

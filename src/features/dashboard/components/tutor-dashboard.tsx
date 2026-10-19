@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { TUTOR_COPY } from "../lib/tutor-plans";
 import { errorMessage, setTrialPlan } from "../services/tutor-service";
 import { TutorProvider, useTutor } from "./tutor-context";
+import { TutorGuiaMenuItem, useGuiaTutor } from "./tutor-guide";
 
 export const TUTOR_TABS = [
   { href: "/app/dashboard", label: "Estudiantes", icon: Users },
@@ -30,8 +31,8 @@ export const TUTOR_TABS = [
 export function TutorDashboard({ children }: { children: React.ReactNode }) {
   return (
     <ModeGuard mode="parent">
-      <PanelShell footer={<TutorBottomNav />}>
-        <TutorProvider>
+      <TutorProvider>
+        <TutorShell>
           <div className="flex flex-col gap-6">
             <ModeSwitcher />
             <TutorHeader />
@@ -40,9 +41,24 @@ export function TutorDashboard({ children }: { children: React.ReactNode }) {
             <TutorTabs />
             <TutorBody>{children}</TutorBody>
           </div>
-        </TutorProvider>
-      </PanelShell>
+        </TutorShell>
+      </TutorProvider>
     </ModeGuard>
+  );
+}
+
+/** Marco con la guía de configuración flotante y «Guía de uso» (con su punto rojo) en el menú de cuenta. */
+function TutorShell({ children }: { children: React.ReactNode }) {
+  const { estado, guia } = useGuiaTutor();
+  return (
+    <PanelShell
+      footer={<TutorBottomNav />}
+      accountPending={estado.avisar}
+      accountFooter={<TutorGuiaMenuItem pendiente={estado.pendiente} />}
+    >
+      {children}
+      {guia}
+    </PanelShell>
   );
 }
 

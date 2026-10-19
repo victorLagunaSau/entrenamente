@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  BarChart3,
   CalendarCheck,
   Check,
   ChevronDown,
@@ -13,6 +12,7 @@ import {
   FileDown,
   Flame,
   Grid3x3,
+  Hourglass,
   Loader2,
   Lock,
   MessageCircle,
@@ -24,9 +24,12 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useGuiaVista } from "@/features/guia";
+import { useMode } from "@/features/modes/components/mode-guard";
 import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
+import { GUIA_TUTOR_STATS } from "../lib/tutor-guia";
 import { computeStats, EXAM_TYPES, formatHours, whatsappSummary, type TutorStats } from "../lib/tutor-stats";
 import { getTutorExams, type ExamType, type TutorExam, type TutorStudent } from "../services/tutor-service";
 import { MateriaHeatmap, WeeklyScoreChart } from "./charts";
@@ -132,6 +135,14 @@ function Analytics({ demo }: { demo: boolean }) {
   const ready = exams && exams !== "error" && exams.key === key ? exams.data : null;
   const stats = React.useMemo(() => (ready ? computeStats(ready) : null), [ready]);
 
+  // Paso 4 de la guía del tutor: ya vio estadísticas con datos.
+  const { viewer } = useMode();
+  const { marcarVista } = useGuiaVista(GUIA_TUTOR_STATS, viewer.id);
+  const conDatos = !demo && !!stats && stats.exams > 0;
+  React.useEffect(() => {
+    if (conDatos) marcarVista();
+  }, [conDatos, marcarVista]);
+
   return (
     <div className="flex flex-col gap-6">
       {!demo && <SubjectPicker subject={subject} onChange={setSubject} />}
@@ -161,17 +172,15 @@ function Analytics({ demo }: { demo: boolean }) {
             </LockedBlock>
           </>
         ) : (
-        <>
-          <ExportBar info={info} stats={stats} exams={ready} />
-          {stats.exams === 0 ? (
-            <Empty icon={BarChart3} title="Aún no hay exámenes">
-              {info.single ? `${info.label} todavía` : "Todavía nadie"} no ha terminado un examen. Las estadísticas aparecerán
-              aquí en cuanto lo haga{info.single ? "" : "n"}.
-            </Empty>
-          ) : (
+        stats.exams === 0 ? (
+          // Candado hasta el primer examen: sin gráficas, promedios ni exportación.
+          <WaitingFirstExam info={info} />
+        ) : (
+          <>
+            <ExportBar info={info} stats={stats} exams={ready} />
             <Dashboard info={info} stats={stats} exams={ready} />
-          )}
-        </>
+          </>
+        )
         )
       )}
     </div>
@@ -477,6 +486,31 @@ function Card({
         {aside}
       </div>
       {children}
+    </section>
+  );
+}
+
+/** Estado de espera animado mientras ningún estudiante del filtro termina su primer examen. */
+function WaitingFirstExam({ info }: { info: SubjectInfo }) {
+  const quien = info.single ? info.students[0].alias : "tus estudiantes";
+  return (
+    <section role="status" className="relative flex flex-col items-center gap-4 overflow-hidden rounded-2xl border border-dashed border-brand-light/40 px-6 py-14 text-center">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 flex h-24 items-end justify-center gap-2 opacity-20">
+        {[40, 70, 55, 85, 60, 75, 45].map((h, i) => (
+          <span
+            key={i}
+            className="w-6 rounded-t-md bg-brand-gradient motion-safe:animate-pulse"
+            style={{ height: `${h}%`, animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </div>
+      <span className="relative grid size-14 place-items-center rounded-2xl bg-primary/15 text-brand-light">
+        <Hourglass className="size-7 motion-safe:animate-[spin_3s_ease-in-out_infinite]" aria-hidden />
+      </span>
+      <h2 className="relative text-lg font-bold text-balance">Esperando a que {quien} complete su primer examen…</h2>
+      <p className="relative max-w-md text-sm text-muted-foreground text-pretty">
+        En cuanto lo termine se desbloquean las gráficas, los promedios y la exportación del reporte para WhatsApp y PDF.
+      </p>
     </section>
   );
 }
