@@ -77,7 +77,8 @@ Las claves secretas **no se mandan por chat ni por correo**: se pegan directo en
 3. **Developers → Webhooks → Add endpoint**: `https://<dominio>/api/stripe/webhook` con los eventos
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
    `invoice.paid`, `customer.subscription.created`, `customer.subscription.updated`,
-   `customer.subscription.deleted`. Copia su `whsec_…` a `STRIPE_WEBHOOK_SECRET` y vuelve a desplegar.
+   `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.upcoming` (estos dos últimos: avisos P5 y P8
+   del centro de notificaciones). Copia su `whsec_…` a `STRIPE_WEBHOOK_SECRET` y vuelve a desplegar.
 4. Compra real de validación (Plan Estudiante mensual con tu tarjeta) y reembolso desde el Dashboard.
 
 Sin `STRIPE_SECRET_KEY` / `SUPABASE_SECRET_KEY` la pantalla de pago muestra "El pago en línea se habilita muy

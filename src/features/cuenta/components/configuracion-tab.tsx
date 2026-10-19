@@ -12,9 +12,11 @@ import {
   GraduationCap,
   KeyRound,
   Loader2,
+  Lock,
   LogOut,
   Presentation,
   Repeat,
+  Send,
   ShieldAlert,
   Trash2,
   Users,
@@ -25,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { PASSWORD_MIN, sendPasswordReset, signInWithPassword, updatePassword } from "@/features/login/services/login-service";
 import { homePathFor } from "@/features/modes/modes";
+import { sendTestNotification } from "@/features/notificaciones/services/notificaciones-service";
 import { cn } from "@/lib/utils";
 
 import { USER_TYPE_LABELS } from "../lib/profile";
@@ -33,6 +36,7 @@ import {
   CuentaError,
   deleteMyAccount,
   type NotificationPrefs,
+  type NotificationPrefsPatch,
   saveNotificaciones,
   signOutEverywhere,
 } from "../services/cuenta-service";
@@ -55,18 +59,41 @@ export function ConfiguracionTab(ctx: CuentaContext) {
 
 // ───────────────────────── Notificaciones ─────────────────────────
 
-type PrefKey = Exclude<keyof NotificationPrefs, "hora">;
+type Categoria = keyof NotificationPrefs["categorias"];
+type Canal = keyof NotificationPrefs["canales"];
 
-const STUDENT_PREFS: { key: PrefKey; label: string; description: string }[] = [
+const STUDENT_PREFS: { key: Categoria; label: string; description: string }[] = [
   { key: "plan", label: "Examen del día", description: "Te recordamos el examen de tu plan de estudios." },
   { key: "racha", label: "Racha en riesgo", description: "Un aviso antes de que se pierda tu racha diaria." },
-  { key: "resultados", label: "Resultados y logros", description: "Cuando subes de nivel o terminas un plan." },
+  { key: "resultados", label: "Resultados y logros", description: "Cuando subes de nivel o detectamos un tema a reforzar." },
+  { key: "contenido", label: "Contenido de tus carreras", description: "Preguntas y guías nuevas para tus metas." },
 ];
-const TUTOR_PREFS: { key: PrefKey; label: string; description: string }[] = [
+const TUTOR_PREFS: { key: Categoria; label: string; description: string }[] = [
   { key: "tutor_resumen", label: "Resumen semanal", description: "Cómo les fue a tus estudiantes en la semana." },
   { key: "resultados", label: "Resultados de tus estudiantes", description: "Cuando terminan un examen o un plan." },
 ];
+// Dentro de Entrena Mente (campana y avisos flotantes) siempre; push cuando uses la app en tu celular.
+const CANALES: { key: Canal; label: string; description: string }[] = [
+  { key: "push", label: "Notificaciones push", description: "En la app de Entrena Mente de tu celular." },
+];
+const SIEMPRE = ["Pagos, recibos y vencimiento de tu plan", "Avisos de tu cuenta", "Vinculación con tu tutor o tus estudiantes"];
 const HORAS = ["07:00", "09:00", "12:00", "15:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
+const SILENCIO_DESDE = ["20:00", "21:00", "22:00", "23:00", "00:00"];
+const SILENCIO_HASTA = ["05:00", "06:00", "07:00", "08:00", "09:00"];
+const ZONAS = [
+  { id: "America/Mexico_City", label: "Centro de México" },
+  { id: "America/Cancun", label: "Quintana Roo" },
+  { id: "America/Mazatlan", label: "Pacífico (Sinaloa, Nayarit, BCS)" },
+  { id: "America/Hermosillo", label: "Sonora" },
+  { id: "America/Tijuana", label: "Baja California" },
+  { id: "America/Guatemala", label: "Guatemala" },
+  { id: "America/Los_Angeles", label: "EE. UU. Pacífico" },
+  { id: "America/Chicago", label: "EE. UU. Centro" },
+  { id: "America/New_York", label: "EE. UU. Este" },
+];
+
+/** La opción guardada siempre aparece aunque no esté en la lista. */
+const withCurrent = (list: string[], current: string) => (list.includes(current) ? list : [current, ...list]);
 
 type DeviceState = "unsupported" | NotificationPermission;
 
@@ -80,13 +107,14 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
     setDevice(typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported");
   }, []);
 
-  const update = async (key: keyof NotificationPrefs, value: boolean | string) => {
+  /** `optimistic` = cómo se ve mientras se guarda; `patch` = lo que se manda. */
+  const update = async (key: string, optimistic: NotificationPrefs, patch: NotificationPrefsPatch) => {
     const previous = prefs;
-    setPrefs({ ...prefs, [key]: value });
+    setPrefs(optimistic);
     setSaving(key);
     setError("");
     try {
-      setPrefs(await saveNotificaciones({ [key]: value }));
+      setPrefs(await saveNotificaciones(patch));
     } catch (e) {
       setPrefs(previous);
       setError(message(e));
@@ -94,6 +122,12 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
       setSaving(null);
     }
   };
+  const setCategoria = (key: Categoria, value: boolean) =>
+    update(key, { ...prefs, categorias: { ...prefs.categorias, [key]: value } }, { categorias: { [key]: value } });
+  const setCanal = (key: Canal, value: boolean) =>
+    update(`canal-${key}`, { ...prefs, canales: { ...prefs.canales, [key]: value } }, { canales: { [key]: value } });
+  const setSilencio = (key: "desde" | "hasta", value: string) =>
+    update(`silencio-${key}`, { ...prefs, silencio: { ...prefs.silencio, [key]: value } }, { silencio: { [key]: value } });
 
   const enableDevice = async () => {
     const result = await Notification.requestPermission();
@@ -101,10 +135,38 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
     if (result === "granted") new Notification("¡Listo!", { body: "Así te avisaremos en este dispositivo.", icon: "/favicon/estudiante/android-icon-192x192.png" });
   };
 
+  const [testing, setTesting] = React.useState(false);
+  const [testMessage, setTestMessage] = React.useState({ error: "", success: "" });
+  const sendTest = async () => {
+    setTesting(true);
+    setTestMessage({ error: "", success: "" });
+    try {
+      const sent = await sendTestNotification();
+      setTestMessage(
+        sent
+          ? { error: "", success: "Listo: en un momento lo ves aparecer y en la campana." }
+          : { error: "Ya te mandamos uno hace un momento. Intenta en un minuto.", success: "" }
+      );
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      setTestMessage({
+        error:
+          code === "PGRST202" || code === "42883"
+            ? "Falta correr en Supabase la migración 20261027010000_aviso_prueba.sql."
+            : "No pudimos mandar el aviso. Intenta de nuevo.",
+        success: "",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const list = cuenta.userType === "student" ? STUDENT_PREFS : TUTOR_PREFS;
+  // Promociones solo para mayores de edad (la base tampoco se las manda a menores).
+  const adult = cuenta.edad !== null && cuenta.edad >= 18;
 
   return (
-    <Section icon={Bell} title="Notificaciones" description="Elige qué avisos quieres recibir y a qué hora.">
+    <Section icon={Bell} title="Notificaciones" description="Elige qué avisos quieres recibir, por dónde y a qué hora.">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/40 p-4">
         <div className="flex items-center gap-3 text-sm">
           <BellRing className="size-5 text-secondary" aria-hidden />
@@ -123,45 +185,145 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
         )}
       </div>
 
-      <div className="divide-y">
+      <div className="flex flex-col gap-2 rounded-xl border bg-background/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-pretty">¿Quieres ver cómo se ve un aviso? Mándate uno de prueba.</p>
+          <Button variant="outline" size="sm" disabled={testing} onClick={sendTest}>
+            {testing ? <Loader2 className="animate-spin" /> : <Send />} Enviarme un aviso de prueba
+          </Button>
+        </div>
+        <FormMessage error={testMessage.error} success={testMessage.success} />
+      </div>
+
+      <PrefGroup title="En tu celular">
+        {CANALES.map((c) => (
+          <Toggle
+            key={c.key}
+            id={`canal-${c.key}`}
+            label={c.label}
+            description={c.description}
+            checked={prefs.canales[c.key]}
+            disabled={saving === `canal-${c.key}`}
+            onChange={(v) => setCanal(c.key, v)}
+          />
+        ))}
+      </PrefGroup>
+
+      <PrefGroup title="Qué te avisamos">
         {list.map((p) => (
           <Toggle
             key={p.key}
             id={`pref-${p.key}`}
             label={p.label}
             description={p.description}
-            checked={prefs[p.key]}
+            checked={prefs.categorias[p.key]}
             disabled={saving === p.key}
-            onChange={(v) => update(p.key, v)}
+            onChange={(v) => setCategoria(p.key, v)}
           />
         ))}
         <Toggle
-          id="pref-novedades"
+          id="pref-marketing"
           label="Novedades y promociones"
-          description="Funciones nuevas y descuentos. Puedes apagarlo cuando quieras."
-          checked={prefs.novedades}
-          disabled={saving === "novedades"}
-          onChange={(v) => update("novedades", v)}
+          description={
+            adult
+              ? "Funciones nuevas y descuentos. Puedes apagarlo cuando quieras."
+              : cuenta.edad === null
+                ? "Agrega tu fecha de nacimiento en Perfil para elegir si las recibes."
+                : "Solo para mayores de 18 años."
+          }
+          checked={adult && prefs.categorias.marketing}
+          disabled={!adult || saving === "marketing"}
+          onChange={(v) => setCategoria("marketing", v)}
         />
+      </PrefGroup>
+
+      <div className="rounded-xl border bg-background/40 p-4">
+        <p className="flex items-center gap-2 text-sm font-medium">
+          <Lock className="size-4 text-muted-foreground" aria-hidden /> Siempre activos
+        </p>
+        <ul className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
+          {SIEMPRE.map((s) => (
+            <li key={s}>· {s}</li>
+          ))}
+        </ul>
+        <p className="mt-2 text-xs text-muted-foreground text-pretty">
+          Son avisos importantes: te llegan aunque apagues los demás.
+        </p>
       </div>
 
-      <Field label="Hora de los recordatorios" htmlFor="pref-hora" className="sm:max-w-xs">
-        <select
-          id="pref-hora"
-          value={prefs.hora}
-          disabled={saving === "hora"}
-          onChange={(e) => update("hora", e.target.value)}
-          className={selectClass}
-        >
-          {(HORAS.includes(prefs.hora) ? HORAS : [prefs.hora, ...HORAS]).map((h) => (
-            <option key={h} value={h}>
-              {h} h
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Hora de los recordatorios" htmlFor="pref-hora">
+          <select
+            id="pref-hora"
+            value={prefs.hora}
+            disabled={saving === "hora"}
+            onChange={(e) => update("hora", { ...prefs, hora: e.target.value }, { hora: e.target.value })}
+            className={selectClass}
+          >
+            {withCurrent(HORAS, prefs.hora).map((h) => (
+              <option key={h} value={h}>
+                {h} h
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Zona horaria" htmlFor="pref-zona">
+          <select
+            id="pref-zona"
+            value={prefs.zona}
+            disabled={saving === "zona"}
+            onChange={(e) => update("zona", { ...prefs, zona: e.target.value }, { zona: e.target.value })}
+            className={selectClass}
+          >
+            {(ZONAS.some((z) => z.id === prefs.zona) ? ZONAS : [{ id: prefs.zona, label: prefs.zona }, ...ZONAS]).map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Sin avisos desde" htmlFor="pref-silencio-desde">
+          <select
+            id="pref-silencio-desde"
+            value={prefs.silencio.desde}
+            disabled={saving === "silencio-desde"}
+            onChange={(e) => setSilencio("desde", e.target.value)}
+            className={selectClass}
+          >
+            {withCurrent(SILENCIO_DESDE, prefs.silencio.desde).map((h) => (
+              <option key={h} value={h}>
+                {h} h
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Hasta" htmlFor="pref-silencio-hasta">
+          <select
+            id="pref-silencio-hasta"
+            value={prefs.silencio.hasta}
+            disabled={saving === "silencio-hasta"}
+            onChange={(e) => setSilencio("hasta", e.target.value)}
+            className={selectClass}
+          >
+            {withCurrent(SILENCIO_HASTA, prefs.silencio.hasta).map((h) => (
+              <option key={h} value={h}>
+                {h} h
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <FormMessage error={error} />
     </Section>
+  );
+}
+
+function PrefGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="font-mono text-xs tracking-wide text-muted-foreground uppercase">{title}</p>
+      <div className="divide-y">{children}</div>
+    </div>
   );
 }
 
