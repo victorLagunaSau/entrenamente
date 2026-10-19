@@ -1,16 +1,14 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CircleAlert, Loader2, ShieldX } from "lucide-react";
+import { CircleAlert, Loader2 } from "lucide-react";
 
 import { Logo } from "@/components/layout/logo";
-import { Button } from "@/components/ui/button";
 import { useSession } from "@/features/auth/hooks/use-session";
 import { syncVariantOnce } from "@/features/pricing/services/pricing-service";
 
-import { canViewMode, homePathFor, MODES, type Mode, ownMode } from "../modes";
+import { canViewMode, homePathFor, type Mode, ownMode } from "../modes";
 import { getViewer, type Viewer } from "../services/viewer-service";
 
 type ModeValue = { viewer: Viewer; mode: Mode; /** Vuelve a leer el perfil (p. ej. tras cambiar nombre o foto). */ refreshViewer: () => void };
@@ -26,7 +24,7 @@ export function useMode() {
 
 /**
  * Protección en el cliente de cada home (sin middleware por el export estático de Capacitor).
- * Sin sesión → login; rol sin acceso a este modo → 403. La seguridad real de los datos la da RLS.
+ * Sin sesión → login; rol sin acceso a este modo → su propio home. La seguridad real de los datos la da RLS.
  * Sin `mode` (pantallas de cuenta) se usa el modo propio del rol.
  */
 export function ModeGuard({ mode: requested, children }: { mode?: Mode; children: React.ReactNode }) {
@@ -69,37 +67,27 @@ export function ModeGuard({ mode: requested, children }: { mode?: Mode; children
     [viewer, requested, refreshViewer]
   );
 
-  if (!session || viewer === undefined) {
-    return (
-      <div className="grid min-h-dvh place-items-center" role="status" aria-label="Verificando acceso">
-        <Loader2 className="size-6 animate-spin text-brand-light motion-reduce:animate-none" />
-      </div>
-    );
-  }
+  if (!session || viewer === undefined) return <Checking label="Verificando acceso" />;
   if (viewer === "error" || !value) return <AccessError />;
-  if (!canViewMode(value.viewer.userType, value.mode))
-    return <Forbidden mode={value.mode} home={homePathFor(value.viewer.userType)} />;
+  if (!canViewMode(value.viewer.userType, value.mode)) return <GoHome home={homePathFor(value.viewer.userType)} />;
 
   return <ModeContext.Provider value={value}>{children}</ModeContext.Provider>;
 }
 
-function Forbidden({ mode, home }: { mode: Mode; home: string }) {
+/** Rol sin acceso a este modo: en lugar de un 403, se le lleva directo a su propio home. */
+function GoHome({ home }: { home: string }) {
+  const router = useRouter();
+  React.useEffect(() => {
+    router.replace(home);
+  }, [home, router]);
+  return <Checking label="Abriendo tu panel" />;
+}
+
+function Checking({ label }: { label: string }) {
   return (
-    <GuardScreen>
-      <span className="grid size-14 place-items-center rounded-2xl bg-destructive/15 text-destructive">
-        <ShieldX className="size-7" />
-      </span>
-      <code className="rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1 font-mono text-xs text-destructive">
-        403 · Acceso denegado
-      </code>
-      <h1 className="text-2xl font-bold text-balance">Esta sección es solo para el modo {MODES[mode].label}</h1>
-      <p className="max-w-sm text-sm text-muted-foreground text-pretty">
-        Tu cuenta no tiene acceso a este panel. Si crees que es un error, contacta al equipo de Entrena Mente.
-      </p>
-      <Button asChild variant="brand">
-        <Link href={home}>Ir a mi panel</Link>
-      </Button>
-    </GuardScreen>
+    <div className="grid min-h-dvh place-items-center" role="status" aria-label={label}>
+      <Loader2 className="size-6 animate-spin text-brand-light motion-reduce:animate-none" />
+    </div>
   );
 }
 
