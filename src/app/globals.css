@@ -344,25 +344,6 @@ html[data-jumping] .reveal {
   }
 }
 
-/* Reporte PDF del home Padre / Maestro: al imprimir solo se ve #tutor-report, con los colores de la marca. */
-@media print {
-  @page {
-    size: letter;
-    margin: 12mm;
-  }
-  body:has(#tutor-report) > *:not(#tutor-report) {
-    display: none !important;
-  }
-  #tutor-report {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  html:has(#tutor-report),
-  body:has(#tutor-report) {
-    background: var(--background);
-  }
-}
-
 /* Ejemplo de Guía de errores de la landing (features/landing/components/guide-example): al imprimir solo se ve la hoja. */
 @media print {
   body:has(> #guia-ejemplo-print) > :not(#guia-ejemplo-print) {
