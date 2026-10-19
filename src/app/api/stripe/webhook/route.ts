@@ -12,7 +12,6 @@ import type Stripe from "stripe";
 
 import { stripe, supabaseAdmin } from "@/features/pagos/server/clients";
 import { fulfillInvoice, fulfillSession, syncSubscription } from "@/features/pagos/server/fulfill";
-import { sendPendingEmails } from "@/features/notificaciones/server/notify";
 import { notifyAsyncPaymentFailed, notifyPaymentFailed, notifyUpcoming } from "@/features/notificaciones/server/pagos";
 
 export const runtime = "nodejs";
@@ -58,8 +57,6 @@ export async function POST(req: Request) {
         break;
     }
     await supabaseAdmin().from("stripe_events").upsert({ id: event.id, type: event.type }, { ignoreDuplicates: true });
-    // El correo del aviso (pago recibido, tarjeta rechazada…) sale ya; si falla, lo manda el despachador después.
-    await sendPendingEmails(10).catch((err) => console.error("[stripe/webhook] correos", err));
     return Response.json({ received: true });
   } catch (err) {
     console.error(`[stripe/webhook] ${event.type} ${event.id}`, err);

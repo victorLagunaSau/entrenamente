@@ -2,13 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, CheckCheck, Loader2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-import { getInbox, markRead, type AppNotification, type Inbox } from "../services/notificaciones-service";
+import { getInbox, markRead, subscribeToNew, type AppNotification, type Inbox } from "../services/notificaciones-service";
 
 const REFRESH_MS = 60_000;
+const TOAST_MS = 7_000;
+const MAX_TOASTS = 3;
 
 const relative = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
 
@@ -28,8 +30,8 @@ function ago(iso: string) {
 
 /**
  * Campana del header: contador de no leídos, últimos 10 avisos y "Marcar todas como leídas".
- * Se actualiza al abrir, cada minuto y al volver a la pestaña. Si la bandeja aún no existe (migración sin
- * correr) no se muestra.
+ * Los avisos nuevos llegan al instante (Realtime) y aparecen como aviso flotante unos segundos; además se
+ * actualiza al abrir, cada minuto y al volver a la pestaña. Si la bandeja aún no existe no se muestra.
  */
 export function NotificationBell({ userId }: { userId: string }) {
   const router = useRouter();
@@ -37,16 +39,50 @@ export function NotificationBell({ userId }: { userId: string }) {
   const [unavailable, setUnavailable] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [marking, setMarking] = React.useState(false);
+  const [toasts, setToasts] = React.useState<AppNotification[]>([]);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const panelId = React.useId();
+  // Avisos ya vistos: solo los nuevos (y sin leer) salen como aviso flotante. null = aún no hay primera carga.
+  const seenRef = React.useRef<Set<string> | null>(null);
+
+  const dismissToast = React.useCallback((id: string) => setToasts((t) => t.filter((n) => n.id !== id)), []);
+
+  /** Marca como vistos y saca como flotantes los que no se habían visto. */
+  const announce = React.useCallback(
+    (list: AppNotification[]) => {
+      const seen = seenRef.current;
+      if (!seen) {
+        seenRef.current = new Set(list.map((n) => n.id));
+        return;
+      }
+      const fresh = list.filter((n) => !seen.has(n.id) && !n.readAt);
+      list.forEach((n) => seen.add(n.id));
+      if (!fresh.length) return;
+      setToasts((t) => [...fresh, ...t].slice(0, MAX_TOASTS));
+      fresh.forEach((n) => window.setTimeout(() => dismissToast(n.id), TOAST_MS));
+    },
+    [dismissToast]
+  );
 
   const refresh = React.useCallback(async () => {
     try {
-      setInbox(await getInbox(userId));
+      const next = await getInbox(userId);
+      announce(next.items);
+      setInbox(next);
     } catch {
       setUnavailable(true);
     }
-  }, [userId]);
+  }, [userId, announce]);
+
+  // Tiempo real: el aviso entra a la lista, suma al contador y aparece flotando.
+  React.useEffect(() => {
+    if (unavailable) return;
+    return subscribeToNew(userId, (n) => {
+      if (seenRef.current?.has(n.id)) return;
+      announce([n]);
+      setInbox((prev) => prev && { items: [n, ...prev.items].slice(0, 10), unread: prev.unread + 1 });
+    });
+  }, [userId, unavailable, announce]);
 
   React.useEffect(() => {
     refresh();
@@ -99,6 +135,7 @@ export function NotificationBell({ userId }: { userId: string }) {
 
   const openItem = (n: AppNotification) => {
     setOpen(false);
+    dismissToast(n.id);
     if (!n.readAt) {
       markLocal([n.id]);
       markRead([n.id]).catch(refresh);
@@ -109,6 +146,7 @@ export function NotificationBell({ userId }: { userId: string }) {
   const markAll = async () => {
     setMarking(true);
     markLocal(null);
+    setToasts([]);
     try {
       await markRead();
     } catch {
@@ -197,6 +235,39 @@ export function NotificationBell({ userId }: { userId: string }) {
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {toasts.length > 0 && (
+        <div
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-4 top-20 z-50 flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6"
+        >
+          {toasts.map((n) => (
+            <div
+              key={n.id}
+              role="status"
+              className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-brand-light/40 bg-card p-3 shadow-2xl shadow-glow-secondary motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-4"
+            >
+              <button type="button" onClick={() => openItem(n)} className="flex min-w-0 flex-1 gap-3 text-left focus-visible:outline-none">
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white">
+                  <Bell className="size-4" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-pretty">{n.title}</span>
+                  <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground text-pretty">{n.body}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => dismissToast(n.id)}
+                aria-label="Cerrar aviso"
+                className="-mt-1 -mr-1 grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>

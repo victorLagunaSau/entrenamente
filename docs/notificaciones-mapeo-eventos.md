@@ -5,6 +5,11 @@ Cada evento está cruzado contra el código actual: **qué lo dispara hoy** (RPC
 
 Fecha: 2026-10-19 · Base: `main` @ 3ecc59d
 
+> **Decisión (2026-10-19): sin correo ni WhatsApp.** Los avisos viven dentro de Entrena Mente: campana + aviso
+> flotante en tiempo real (Supabase Realtime). El siguiente canal será **push** en las apps (Capacitor + FCM/APNs):
+> ya existen `push_tokens`, `registrar_dispositivo_push()` y las entregas push pendientes que crea `notificar()`
+> (migración `20261027000000`). Donde abajo dice ✉️ o 💬, léase 🔔 + 📱. Los vencimientos corren con pg_cron.
+
 ---
 
 ## 0. Lo que ya existe (punto de partida)

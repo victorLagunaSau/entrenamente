@@ -14,12 +14,9 @@ import {
   Loader2,
   Lock,
   LogOut,
-  Mail,
-  MessageCircle,
   Presentation,
   Repeat,
   ShieldAlert,
-  Smartphone,
   Trash2,
   Users,
 } from "lucide-react";
@@ -73,10 +70,9 @@ const TUTOR_PREFS: { key: Categoria; label: string; description: string }[] = [
   { key: "tutor_resumen", label: "Resumen semanal", description: "Cómo les fue a tus estudiantes en la semana." },
   { key: "resultados", label: "Resultados de tus estudiantes", description: "Cuando terminan un examen o un plan." },
 ];
-const CANALES: { key: Canal; icon: LucideIcon; label: string; description: string; soon?: boolean }[] = [
-  { key: "email", icon: Mail, label: "Correo", description: "Recordatorios y resultados también por correo." },
-  { key: "push", icon: Smartphone, label: "Notificaciones push", description: "En tu celular y en este navegador." },
-  { key: "whatsapp", icon: MessageCircle, label: "WhatsApp", description: "Solo avisos importantes de tu plan.", soon: true },
+// Dentro de Entrena Mente (campana y avisos flotantes) siempre; push cuando uses la app en tu celular.
+const CANALES: { key: Canal; label: string; description: string }[] = [
+  { key: "push", label: "Notificaciones push", description: "En la app de Entrena Mente de tu celular." },
 ];
 const SIEMPRE = ["Pagos, recibos y vencimiento de tu plan", "Avisos de tu cuenta", "Vinculación con tu tutor o tus estudiantes"];
 const HORAS = ["07:00", "09:00", "12:00", "15:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
@@ -161,15 +157,15 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
         )}
       </div>
 
-      <PrefGroup title="Por dónde te avisamos">
+      <PrefGroup title="En tu celular">
         {CANALES.map((c) => (
           <Toggle
             key={c.key}
             id={`canal-${c.key}`}
-            label={c.soon ? `${c.label} · Pronto` : c.label}
+            label={c.label}
             description={c.description}
-            checked={!c.soon && prefs.canales[c.key]}
-            disabled={c.soon || saving === `canal-${c.key}`}
+            checked={prefs.canales[c.key]}
+            disabled={saving === `canal-${c.key}`}
             onChange={(v) => setCanal(c.key, v)}
           />
         ))}
@@ -213,7 +209,7 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
           ))}
         </ul>
         <p className="mt-2 text-xs text-muted-foreground text-pretty">
-          Son avisos importantes: te llegan en la campana y por correo aunque apagues los demás.
+          Son avisos importantes: te llegan aunque apagues los demás.
         </p>
       </div>
 
