@@ -8,6 +8,7 @@
 -- · Realtime: la campana recibe cada aviso nuevo al instante (respeta RLS: cada quien solo ve los suyos).
 -- · pg_cron: procesar_vencimientos() todos los días a las 8:00 (CDMX); ya no hace falta el cron de Vercel.
 -- · Se quitan las funciones del despachador de correo.
+-- · enviarme_aviso_prueba(): cada usuario se manda un aviso de prueba desde Configuración (máximo uno por minuto).
 
 begin;
 
@@ -16,6 +17,10 @@ create extension if not exists pg_cron;
 -- ═════════════════════════ 1. Catálogo sin correo ═════════════════════════
 
 update public.notification_events set canales = '{in_app,push}';
+
+insert into public.notification_events (code, categoria, critico, canales, descripcion)
+values ('T1', 'cuenta', true, '{in_app,push}', 'Aviso de prueba que el usuario se manda desde Configuración')
+on conflict (code) do nothing;
 
 update public.notification_deliveries
 set status = 'skipped', skip_reason = 'correo_desactivado', claimed_at = null
@@ -130,6 +135,19 @@ begin
 end;
 $$;
 
+-- Para comprobar la campana (y, con la app, el push del celular). La clave por minuto evita abusos.
+create or replace function public.enviarme_aviso_prueba()
+returns boolean
+language sql volatile security definer set search_path = ''
+as $$
+  select public.notificar(
+    public.exigir_sesion(), 'T1', '¡Tus avisos funcionan!',
+    'Así te llegarán los avisos de tu plan, tus pagos y tus estudiantes. Toca aquí para ir a tus preferencias.',
+    '/app/cuenta?tab=configuracion',
+    'T1:' || to_char(now(), 'YYYYMMDDHH24MI')
+  ) is not null
+$$;
+
 -- ═════════════════════════ 4. Tiempo real y cron ═════════════════════════
 
 do $$
@@ -151,6 +169,8 @@ select cron.schedule('notificaciones-vencimientos', '0 14 * * *', 'select public
 
 revoke execute on function public.registrar_dispositivo_push(text, text, text) from public, anon;
 revoke execute on function public.quitar_dispositivo_push(text) from public, anon;
+revoke execute on function public.enviarme_aviso_prueba() from public, anon;
+grant execute on function public.enviarme_aviso_prueba() to authenticated;
 revoke execute on function public.notificar(uuid, varchar, text, text, text, text) from public, anon, authenticated;
 grant execute on function public.registrar_dispositivo_push(text, text, text) to authenticated;
 grant execute on function public.quitar_dispositivo_push(text) to authenticated;

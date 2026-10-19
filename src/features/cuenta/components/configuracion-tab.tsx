@@ -16,6 +16,7 @@ import {
   LogOut,
   Presentation,
   Repeat,
+  Send,
   ShieldAlert,
   Trash2,
   Users,
@@ -26,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { PASSWORD_MIN, sendPasswordReset, signInWithPassword, updatePassword } from "@/features/login/services/login-service";
 import { homePathFor } from "@/features/modes/modes";
+import { sendTestNotification } from "@/features/notificaciones/services/notificaciones-service";
 import { cn } from "@/lib/utils";
 
 import { USER_TYPE_LABELS } from "../lib/profile";
@@ -133,6 +135,32 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
     if (result === "granted") new Notification("¡Listo!", { body: "Así te avisaremos en este dispositivo.", icon: "/favicon/estudiante/android-icon-192x192.png" });
   };
 
+  const [testing, setTesting] = React.useState(false);
+  const [testMessage, setTestMessage] = React.useState({ error: "", success: "" });
+  const sendTest = async () => {
+    setTesting(true);
+    setTestMessage({ error: "", success: "" });
+    try {
+      const sent = await sendTestNotification();
+      setTestMessage(
+        sent
+          ? { error: "", success: "Listo: en un momento lo ves aparecer y en la campana." }
+          : { error: "Ya te mandamos uno hace un momento. Intenta en un minuto.", success: "" }
+      );
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      setTestMessage({
+        error:
+          code === "PGRST202" || code === "42883"
+            ? "Falta correr en Supabase la migración 20261027000000_notificaciones_sin_correo.sql."
+            : "No pudimos mandar el aviso. Intenta de nuevo.",
+        success: "",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const list = cuenta.userType === "student" ? STUDENT_PREFS : TUTOR_PREFS;
   // Promociones solo para mayores de edad (la base tampoco se las manda a menores).
   const adult = cuenta.edad !== null && cuenta.edad >= 18;
@@ -155,6 +183,16 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
             <Bell /> Activar
           </Button>
         )}
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-xl border bg-background/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-pretty">¿Quieres ver cómo se ve un aviso? Mándate uno de prueba.</p>
+          <Button variant="outline" size="sm" disabled={testing} onClick={sendTest}>
+            {testing ? <Loader2 className="animate-spin" /> : <Send />} Enviarme un aviso de prueba
+          </Button>
+        </div>
+        <FormMessage error={testMessage.error} success={testMessage.success} />
       </div>
 
       <PrefGroup title="En tu celular">

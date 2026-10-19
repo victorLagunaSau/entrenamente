@@ -103,3 +103,10 @@ export async function unregisterPushDevice(token: string): Promise<void> {
   const { error } = await supabase.rpc("quitar_dispositivo_push", { p_token: token });
   if (error) throw error;
 }
+
+/** Aviso de prueba para el propio usuario. false = ya mandó uno en este minuto. */
+export async function sendTestNotification(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("enviarme_aviso_prueba");
+  if (error) throw error;
+  return Boolean(data);
+}
