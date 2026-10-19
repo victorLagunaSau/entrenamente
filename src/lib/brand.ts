@@ -41,3 +41,13 @@ export function brandIcons(audience: Audience): Metadata["icons"] {
     other: { rel: "mask-icon", url: `${base}/safari-pinned-tab.svg`, color: BRAND.themeColor },
   };
 }
+
+/** Íconos + manifest de la WebApp instalable: la versión maestro se instala con su propio ícono desde el panel. */
+export function brandApp(audience: Audience): Pick<Metadata, "icons" | "manifest" | "appleWebApp"> {
+  return {
+    icons: brandIcons(audience),
+    manifest: `/pwa/${audience}/manifest.webmanifest`,
+    // iOS: abre a pantalla completa desde el ícono de inicio; la barra de estado negra no se encima al contenido.
+    appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "black" },
+  };
+}
