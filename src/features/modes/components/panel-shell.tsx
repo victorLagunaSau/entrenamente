@@ -17,7 +17,8 @@ import { useMode } from "./mode-guard";
 
 /**
  * Estructura de todos los homes: sin barra lateral. `footer` = menú inferior fijo (solo celular y tablet);
- * `topNav` = sus accesos en la barra superior (computadora). `accountExtra` = opciones extra del menú de cuenta.
+ * `topNav` = sus accesos en la barra superior (computadora). `accountExtra` = opciones extra del menú de cuenta
+ * (`accountPending` = punto rojo en el avatar).
  * `home` = destino de "Inicio" y del logo cuando el modo tiene más de un home (Pro/Demo del estudiante).
  */
 export function PanelShell({
@@ -25,12 +26,15 @@ export function PanelShell({
   footer,
   topNav,
   accountExtra,
+  accountPending,
   home: homeOverride,
 }: {
   children: React.ReactNode;
   footer?: React.ReactNode;
   topNav?: React.ReactNode;
   accountExtra?: React.ReactNode;
+  /** Punto rojo en el avatar (algo pendiente en el menú de cuenta). */
+  accountPending?: boolean;
   home?: string;
 }) {
   const { viewer, mode } = useMode();
@@ -65,6 +69,7 @@ export function PanelShell({
               onLogout={logout}
               leaving={leaving}
               extra={accountExtra}
+              pending={accountPending}
             />
           </div>
         </div>

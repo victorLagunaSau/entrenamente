@@ -6,7 +6,7 @@ import { CircleAlert, CircleHelp, Sparkles } from "lucide-react";
 import { UniversityBadge } from "@/components/layout/university-badge";
 import { Button } from "@/components/ui/button";
 import { getCatalogoActivo } from "@/features/catalogo";
-import { useGuiaVista } from "@/features/guia";
+import { useGuiaPedida, useGuiaVista } from "@/features/guia";
 
 import { DemoError, type DemoCampaign, fillTemplate, type FreeExam, getDemoCampaign, getFreeExams } from "../../services/demo-service";
 import { getStudentSummary, type StudentSummary } from "../../services/student-service";
@@ -40,6 +40,7 @@ export function DemoHome() {
   React.useEffect(() => {
     if (vista === false) setGuiaOpen(true);
   }, [vista]);
+  useGuiaPedida(() => setGuiaOpen(true), data !== null);
   const onGuia = (open: boolean) => {
     setGuiaOpen(open);
     if (!open) marcarVista();

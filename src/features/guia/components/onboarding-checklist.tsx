@@ -41,7 +41,7 @@ export function OnboardingChecklist({
   const pct = Math.round((hechos / pasos.length) * 100);
 
   return (
-    <section aria-labelledby="guia-inicio-title" className={cn("relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-brand-light/30 bg-card p-5 sm:p-6", className)}>
+    <section id="guia-inicio" aria-labelledby="guia-inicio-title" className={cn("relative flex scroll-mt-20 flex-col gap-4 overflow-hidden rounded-2xl border border-brand-light/30 bg-card p-5 sm:p-6", className)}>
       <div aria-hidden className="pointer-events-none absolute -top-20 -left-20 size-56 rounded-full bg-brand-gradient opacity-10 blur-3xl" />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">

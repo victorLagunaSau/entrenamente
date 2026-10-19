@@ -1,12 +1,14 @@
 "use client";
 
+import * as React from "react";
 import { CalendarDays, Flame, NotebookPen } from "lucide-react";
 
-import { type GuiaPaso, OnboardingChecklist, useGuiaVista } from "@/features/guia";
+import { type GuiaPaso, OnboardingChecklist, useGuiaPedida, useGuiaVista } from "@/features/guia";
 
 /**
  * Guía de inicio del Estudiante Pro: plan por fecha oficial (sugerido), un examen libre y la racha. Cada paso
- * se marca solo con lo que ya hizo el alumno; desaparece al completar los 3 o si la oculta.
+ * se marca solo con lo que ya hizo el alumno; desaparece al completar los 3 o si la oculta, y vuelve desde el
+ * menú de cuenta ("Guía de uso").
  */
 export function ProStartGuide({
   userId,
@@ -27,8 +29,18 @@ export function ProStartGuide({
   libreHref: string;
   onRacha: () => void;
 }) {
-  const { vista: oculta, marcarVista: ocultar } = useGuiaVista("pro", userId);
-  if (oculta !== false || (tienePlan && hizoLibre && hizoRacha)) return null;
+  const { vista: oculta, marcarVista } = useGuiaVista("pro", userId);
+  // Desde el menú "Guía de uso" se vuelve a mostrar aunque esté oculta o completa.
+  const [pedida, setPedida] = React.useState(false);
+  useGuiaPedida(() => {
+    setPedida(true);
+    window.setTimeout(() => document.getElementById("guia-inicio")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }, true);
+  const ocultar = () => {
+    setPedida(false);
+    marcarVista();
+  };
+  if (!pedida && (oculta !== false || (tienePlan && hizoLibre && hizoRacha))) return null;
 
   const pasos: GuiaPaso[] = [
     {
