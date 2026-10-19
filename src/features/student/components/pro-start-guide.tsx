@@ -1,12 +1,14 @@
 "use client";
 
+import * as React from "react";
 import { CalendarDays, Flame, NotebookPen } from "lucide-react";
 
-import { type GuiaPaso, OnboardingChecklist, useGuiaVista } from "@/features/guia";
+import { FloatingChecklist, type GuiaPaso, useGuiaPedida, useGuiaVista } from "@/features/guia";
 
 /**
- * Guía de inicio del Estudiante Pro: plan por fecha oficial (sugerido), un examen libre y la racha. Cada paso
- * se marca solo con lo que ya hizo el alumno; desaparece al completar los 3 o si la oculta.
+ * Guía de inicio del Estudiante Pro (notificación flotante): plan por fecha oficial (sugerido), un examen libre y la racha. Cada paso
+ * se marca solo con lo que ya hizo el alumno; desaparece al completar los 3 o si la oculta, y vuelve desde el
+ * menú de cuenta ("Guía de uso").
  */
 export function ProStartGuide({
   userId,
@@ -27,8 +29,16 @@ export function ProStartGuide({
   libreHref: string;
   onRacha: () => void;
 }) {
-  const { vista: oculta, marcarVista: ocultar } = useGuiaVista("pro", userId);
-  if (oculta !== false || (tienePlan && hizoLibre && hizoRacha)) return null;
+  const { vista: oculta, marcarVista } = useGuiaVista("pro", userId);
+  // Desde el menú "Guía de uso" se vuelve a mostrar aunque esté oculta o completa.
+  // Cada pedido incrementa el contador: la guía aparece y se despliega aunque estuviera minimizada.
+  const [pedida, setPedida] = React.useState(0);
+  useGuiaPedida(() => setPedida((n) => n + 1), true);
+  const ocultar = () => {
+    setPedida(0);
+    marcarVista();
+  };
+  if (pedida === 0 && (oculta !== false || (tienePlan && hizoLibre && hizoRacha))) return null;
 
   const pasos: GuiaPaso[] = [
     {
@@ -60,5 +70,5 @@ export function ProStartGuide({
     },
   ];
 
-  return <OnboardingChecklist title="Tus primeros pasos de alto rendimiento" pasos={pasos} layout="grid" sugerido="plan" onDismiss={ocultar} />;
+  return <FloatingChecklist title="Tus primeros pasos de alto rendimiento" pasos={pasos} sugerido="plan" onDismiss={ocultar} abrir={pedida} />;
 }

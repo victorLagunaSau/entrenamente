@@ -16,10 +16,14 @@ type Props = {
   onLogout: () => void;
   leaving: boolean;
   extra?: React.ReactNode;
+  /** Opciones que van al final, después de Configuración y antes de Cerrar sesión (p. ej. "Guía de uso"). */
+  footerExtra?: React.ReactNode;
+  /** Punto rojo en el avatar: hay algo pendiente (p. ej. la guía de uso sin completar). */
+  pending?: boolean;
 };
 
 /** Botón redondo de perfil; despliega nombre, correo, opciones del home (`extra`), Perfil, Configuración y Cerrar sesión. */
-export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra }: Props) {
+export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra, footerExtra, pending }: Props) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
@@ -50,13 +54,14 @@ export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra 
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label="Mi cuenta"
+        aria-label={pending ? "Mi cuenta (tienes algo pendiente)" : "Mi cuenta"}
         className={cn(
-          "rounded-full ring-2 ring-transparent transition-shadow hover:ring-brand-light/40 focus-visible:ring-ring/60 focus-visible:outline-none",
+          "relative rounded-full ring-2 ring-transparent transition-shadow hover:ring-brand-light/40 focus-visible:ring-ring/60 focus-visible:outline-none",
           open && "ring-brand-light/60"
         )}
       >
         <UserAvatar avatarUrl={avatarUrl} alias={alias} />
+        {pending && <RedDot className="absolute top-0 right-0" />}
       </button>
 
       {open && (
@@ -68,10 +73,17 @@ export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra 
               <p className="truncate text-xs text-muted-foreground">{email}</p>
             </div>
           </div>
-          <ul className="p-1.5">
+          {/* Cualquier opción cierra el menú (también las extras del home). */}
+          <ul className="p-1.5" onClick={(e) => (e.target as HTMLElement).closest("button") && setOpen(false)}>
             {extra}
             <MenuItem icon={User} label="Perfil" onClick={() => go(ACCOUNT_PATHS.perfil)} />
             <MenuItem icon={Settings} label="Configuración" onClick={() => go(ACCOUNT_PATHS.configuracion)} />
+            {footerExtra && (
+              <>
+                <li className="my-1 border-t" aria-hidden />
+                {footerExtra}
+              </>
+            )}
             <li className="my-1 border-t" aria-hidden />
             <MenuItem icon={LogOut} label={leaving ? "Cerrando sesión…" : "Cerrar sesión"} onClick={onLogout} disabled={leaving} />
           </ul>
@@ -87,11 +99,14 @@ export function MenuItem({
   label,
   onClick,
   disabled,
+  dot,
 }: {
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
   disabled?: boolean;
+  /** Punto rojo: algo pendiente en esta opción. */
+  dot?: boolean;
 }) {
   const pending = !onClick;
   return (
@@ -104,8 +119,18 @@ export function MenuItem({
       >
         <Icon className="size-4 text-muted-foreground" aria-hidden />
         {label}
+        {dot && <RedDot className="ml-auto" label="Pendiente" />}
         {pending && <span className="ml-auto rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">Pronto</span>}
       </button>
     </li>
+  );
+}
+
+/** Aviso mínimo de "hay algo pendiente" (primer tipo de notificación). */
+function RedDot({ className, label }: { className?: string; label?: string }) {
+  return (
+    <span className={cn("size-3 shrink-0 rounded-full border-2 border-card bg-destructive", className)}>
+      {label && <span className="sr-only">{label}</span>}
+    </span>
   );
 }

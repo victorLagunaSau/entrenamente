@@ -3,6 +3,8 @@
 import * as React from "react";
 
 const PREFIX = "em.guia.v1";
+/** Avisa en esta pestaña que cambió una marca de guía (localStorage no lo avisa a la misma pestaña). */
+const CAMBIO = "em-guia-cambio";
 
 function read(key: string): boolean {
   try {
@@ -23,6 +25,10 @@ export function useGuiaVista(guia: string, userId: string | null | undefined) {
 
   React.useEffect(() => {
     setVista(key ? read(key) : null);
+    if (!key) return;
+    const sync = () => setVista(read(key));
+    window.addEventListener(CAMBIO, sync);
+    return () => window.removeEventListener(CAMBIO, sync);
   }, [key]);
 
   const marcarVista = React.useCallback(() => {
@@ -33,6 +39,7 @@ export function useGuiaVista(guia: string, userId: string | null | undefined) {
     } catch {
       // Igual que arriba: la guía volverá a salir en la próxima visita.
     }
+    window.dispatchEvent(new Event(CAMBIO));
   }, [key]);
 
   return { vista, marcarVista };
