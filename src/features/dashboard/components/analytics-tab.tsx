@@ -135,10 +135,10 @@ function Analytics({ demo }: { demo: boolean }) {
   const ready = exams && exams !== "error" && exams.key === key ? exams.data : null;
   const stats = React.useMemo(() => (ready ? computeStats(ready) : null), [ready]);
 
-  // Paso 4 de la guía del tutor: ya vio estadísticas con datos.
+  // Paso 4 de la guía del tutor: ya vio estadísticas con datos (sin plan cuenta lo que ve de sus exámenes gratis).
   const { viewer } = useMode();
   const { marcarVista } = useGuiaVista(GUIA_TUTOR_STATS, viewer.id);
-  const conDatos = !demo && !!stats && stats.exams > 0;
+  const conDatos = !!stats && stats.exams > 0;
   React.useEffect(() => {
     if (conDatos) marcarVista();
   }, [conDatos, marcarVista]);
