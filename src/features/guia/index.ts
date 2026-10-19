@@ -1,0 +1,3 @@
+export { StepGuide } from "./components/step-guide";
+export { useGuiaVista } from "./hooks/use-guia-vista";
+export type { GuiaAccion, GuiaPaso, GuiaTone } from "./types";

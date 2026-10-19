@@ -1,13 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { CircleAlert, Sparkles } from "lucide-react";
+import { CircleAlert, CircleHelp, Sparkles } from "lucide-react";
 
 import { UniversityBadge } from "@/components/layout/university-badge";
+import { Button } from "@/components/ui/button";
 import { getCatalogoActivo } from "@/features/catalogo";
+import { useGuiaVista } from "@/features/guia";
 
 import { DemoError, type DemoCampaign, fillTemplate, type FreeExam, getDemoCampaign, getFreeExams } from "../../services/demo-service";
 import { getStudentSummary, type StudentSummary } from "../../services/student-service";
+import { DemoStartGuide } from "./demo-guide";
 import { DemoPath, type PathBlock } from "./demo-path";
 import { DemoGuide, DemoGuidePlaceholder, DemoStats } from "./demo-results";
 import { useImpression, usePricing } from "@/features/pricing/hooks/use-pricing";
@@ -31,6 +34,16 @@ export function DemoHome() {
   const [unlock, setUnlock] = React.useState<{ open: boolean; focus: UnlockFocus }>({ open: false, focus: null });
   const pricing = usePricing("home-demo");
   useImpression(pricing, data ? "student" : null, "home-demo");
+  const [guiaOpen, setGuiaOpen] = React.useState(false);
+  const { vista, marcarVista } = useGuiaVista("demo", data?.summary.id);
+  // La guía de inicio se abre sola la primera vez que el alumno entra a su home.
+  React.useEffect(() => {
+    if (vista === false) setGuiaOpen(true);
+  }, [vista]);
+  const onGuia = (open: boolean) => {
+    setGuiaOpen(open);
+    if (!open) marcarVista();
+  };
 
   React.useEffect(() => {
     let active = true;
@@ -88,9 +101,14 @@ export function DemoHome() {
     <>
       <section id="saludo" className="relative flex scroll-mt-20 flex-col gap-3 overflow-hidden rounded-3xl border bg-card p-5 sm:p-8">
         <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 size-64 rounded-full bg-brand-gradient opacity-15 blur-3xl" />
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-brand-light/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-brand-light">
-          <Sparkles className="size-3.5" aria-hidden /> {campaign.tituloCampana}
-        </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-brand-light/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-brand-light">
+            <Sparkles className="size-3.5" aria-hidden /> {campaign.tituloCampana}
+          </span>
+          <Button variant="ghost" size="sm" className="relative" onClick={() => setGuiaOpen(true)}>
+            <CircleHelp aria-hidden /> Cómo funciona
+          </Button>
+        </div>
         <h1 className="text-2xl font-bold text-balance sm:text-3xl">{fillTemplate(campaign.tituloBienvenida, texts)}</h1>
         <p className="max-w-2xl text-cool text-pretty">{fillTemplate(campaign.subtitulo, texts)}</p>
         {goal && (
@@ -129,6 +147,14 @@ export function DemoHome() {
       {/* Espacio para que el muro flotante no tape el pie del home. */}
       <div aria-hidden className="h-16 sm:h-12" />
       <PaywallBar phrase={campaign.fraseCierre} price={price} onUnlock={() => openPlans()} />
+      <DemoStartGuide
+        open={guiaOpen}
+        onOpenChange={onGuia}
+        total={total}
+        used={campaign.pruebasUsadas}
+        meta={goal ? `${goal.careerName} - ${goal.universityShort}` : null}
+        onUnlock={() => window.setTimeout(() => openPlans(), 250)}
+      />
       <PlansDialog
         open={unlock.open}
         focus={unlock.focus}
