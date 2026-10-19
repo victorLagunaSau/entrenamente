@@ -6,6 +6,7 @@
 import type { AuthError } from "@supabase/supabase-js";
 
 import { homePathFor, ownMode } from "@/features/modes/modes";
+import { disableWebPush } from "@/features/notificaciones/lib/web-push";
 import { studentHomePath } from "@/features/student/services/access-service";
 import { supabase } from "@/lib/supabase/client";
 
@@ -26,7 +27,9 @@ export function authErrorMessage(error: AuthError | null | undefined) {
   return (error?.code && MESSAGES[error.code]) || "Algo salió mal. Intenta de nuevo.";
 }
 
+/** Antes de salir quita el push de este dispositivo: ya no le llegan avisos de esta cuenta. */
 export async function signOut() {
+  await disableWebPush();
   await supabase.auth.signOut();
 }
 

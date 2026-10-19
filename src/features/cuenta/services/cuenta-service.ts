@@ -5,6 +5,7 @@
  */
 
 import type { UserType } from "@/features/modes/modes";
+import { disableWebPush } from "@/features/notificaciones/lib/web-push";
 import { supabase } from "@/lib/supabase/client";
 
 import { AVATAR_MAX_INPUT_MB, AVATAR_MIN_SIDE, AVATAR_SIDE, AVATAR_TYPES } from "../lib/profile";
@@ -256,6 +257,7 @@ export async function getAuthProviders(): Promise<string[]> {
 }
 
 export async function signOutEverywhere() {
+  await disableWebPush();
   const { error } = await supabase.auth.signOut({ scope: "global" });
   if (error) throw new CuentaError("No pudimos cerrar tus sesiones. Intenta de nuevo.");
 }

@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { PASSWORD_MIN, sendPasswordReset, signInWithPassword, updatePassword } from "@/features/login/services/login-service";
 import { homePathFor } from "@/features/modes/modes";
+import { disableWebPush, enableWebPush, isWebPushSubscribed, webPushSupport } from "@/features/notificaciones/lib/web-push";
 import { sendTestNotification } from "@/features/notificaciones/services/notificaciones-service";
 import { cn } from "@/lib/utils";
 
@@ -95,7 +96,16 @@ const ZONAS = [
 /** La opción guardada siempre aparece aunque no esté en la lista. */
 const withCurrent = (list: string[], current: string) => (list.includes(current) ? list : [current, ...list]);
 
-type DeviceState = "unsupported" | NotificationPermission;
+/** subscribed = push con la app cerrada; install = iPhone/iPad en el navegador (falta instalar la app). */
+type DeviceState = "unsupported" | "install" | "subscribed" | NotificationPermission;
+
+async function readDeviceState(): Promise<DeviceState> {
+  const support = webPushSupport();
+  if (support === "install") return "install";
+  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
+  if (Notification.permission === "granted" && support === "ready" && (await isWebPushSubscribed())) return "subscribed";
+  return Notification.permission;
+}
 
 function NotificacionesSection({ cuenta }: CuentaContext) {
   const [prefs, setPrefs] = React.useState(cuenta.notificationPrefs);
@@ -103,8 +113,11 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
   const [error, setError] = React.useState("");
   const [device, setDevice] = React.useState<DeviceState>("default");
 
+  const [enabling, setEnabling] = React.useState(false);
+  const pushReady = device !== "unsupported" && webPushSupport() === "ready";
+
   React.useEffect(() => {
-    setDevice(typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported");
+    readDeviceState().then(setDevice);
   }, []);
 
   /** `optimistic` = cómo se ve mientras se guarda; `patch` = lo que se manda. */
@@ -124,15 +137,30 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
   };
   const setCategoria = (key: Categoria, value: boolean) =>
     update(key, { ...prefs, categorias: { ...prefs.categorias, [key]: value } }, { categorias: { [key]: value } });
-  const setCanal = (key: Canal, value: boolean) =>
-    update(`canal-${key}`, { ...prefs, canales: { ...prefs.canales, [key]: value } }, { canales: { [key]: value } });
+  const setCanal = async (key: Canal, value: boolean) => {
+    // Apagar el canal quita la suscripción de este dispositivo; prenderlo la vuelve a crear si ya hay permiso.
+    if (key === "push" && pushReady) {
+      if (!value) await disableWebPush(true);
+      else if (Notification.permission === "granted") await enableWebPush().catch(() => undefined);
+      readDeviceState().then(setDevice);
+    }
+    await update(`canal-${key}`, { ...prefs, canales: { ...prefs.canales, [key]: value } }, { canales: { [key]: value } });
+  };
   const setSilencio = (key: "desde" | "hasta", value: string) =>
     update(`silencio-${key}`, { ...prefs, silencio: { ...prefs.silencio, [key]: value } }, { silencio: { [key]: value } });
 
   const enableDevice = async () => {
-    const result = await Notification.requestPermission();
-    setDevice(result);
-    if (result === "granted") new Notification("¡Listo!", { body: "Así te avisaremos en este dispositivo.", icon: "/favicon/estudiante/android-icon-192x192.png" });
+    setEnabling(true);
+    setError("");
+    try {
+      const result = await enableWebPush();
+      if (result === "granted" && !prefs.canales.push) await setCanal("push", true);
+      setDevice(await readDeviceState());
+    } catch {
+      setError("No pudimos activar los avisos en este dispositivo. Intenta de nuevo.");
+    } finally {
+      setEnabling(false);
+    }
   };
 
   const [testing, setTesting] = React.useState(false);
@@ -170,17 +198,25 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/40 p-4">
         <div className="flex items-center gap-3 text-sm">
           <BellRing className="size-5 text-secondary" aria-hidden />
-          {device === "granted"
-            ? "Avisos activados en este dispositivo."
-            : device === "denied"
-              ? "Bloqueaste los avisos: actívalos desde los ajustes de tu navegador."
-              : device === "unsupported"
-                ? "Este dispositivo no admite avisos del navegador."
-                : "Activa los avisos en este dispositivo."}
+          <span className="text-pretty">
+            {device === "subscribed"
+              ? "Avisos activados en este dispositivo, aunque la app esté cerrada."
+              : device === "granted"
+                ? pushReady
+                  ? "Activa los avisos para recibirlos aunque la app esté cerrada."
+                  : "Avisos activados en este dispositivo."
+                : device === "denied"
+                  ? "Bloqueaste los avisos: actívalos desde los ajustes de tu navegador."
+                  : device === "install"
+                    ? "En iPhone y iPad los avisos llegan con la app instalada: toca Compartir → Agregar a inicio y ábrela desde ahí (iOS 16.4 o más reciente)."
+                    : device === "unsupported"
+                      ? "Este dispositivo no admite avisos del navegador."
+                      : "Activa los avisos en este dispositivo."}
+          </span>
         </div>
-        {device === "default" && (
-          <Button variant="outline" size="sm" onClick={enableDevice}>
-            <Bell /> Activar
+        {(device === "default" || (device === "granted" && pushReady)) && (
+          <Button variant="outline" size="sm" disabled={enabling} onClick={enableDevice}>
+            {enabling ? <Loader2 className="animate-spin" /> : <Bell />} Activar
           </Button>
         )}
       </div>
