@@ -25,7 +25,7 @@ import { DEMO_NAV, PRO_NAV, StudentNav, StudentTopNav } from "./student-nav";
 import { StudentWelcome } from "./student-welcome";
 import { TierGuard, TierSwitcher } from "./tier-guard";
 import { AddSchoolMenuItem } from "./add-school-menu-item";
-import { GuiaMenuItem, useGuiaPendiente } from "./guia-menu-item";
+import { GuiaMenuItem, useEstadoGuia } from "./guia-menu-item";
 
 /**
  * Home del estudiante con menú inferior. `pro` = suscripción activa (/app/student/home): Saludo → Plan →
@@ -51,22 +51,18 @@ export function StudentPanel({ tier }: { tier: StudentTier }) {
   );
 }
 
-/** Marco del home con el menú de cuenta: "Guía de uso" y punto rojo mientras la guía no esté completa. */
+/** Marco del home: "Guía de uso" al final del menú con su punto rojo; el del avatar solo hasta que la vea. */
 function StudentShell({ tier, nav, children }: { tier: StudentTier; nav: typeof PRO_NAV; children: React.ReactNode }) {
   const { viewer } = useMode();
-  const pendiente = useGuiaPendiente(tier, viewer.id) === true;
+  const guia = useEstadoGuia(tier, viewer.id);
   return (
     <PanelShell
       home={STUDENT_HOMES[tier]}
       footer={<StudentNav items={nav} />}
       topNav={<StudentTopNav items={nav} />}
-      accountPending={pendiente}
-      accountExtra={
-        <>
-          <GuiaMenuItem tier={tier} pendiente={pendiente} />
-          <AddSchoolMenuItem />
-        </>
-      }
+      accountPending={guia.avisar}
+      accountExtra={<AddSchoolMenuItem />}
+      accountFooter={<GuiaMenuItem tier={tier} userId={viewer.id} pendiente={guia.pendiente} />}
     >
       {children}
     </PanelShell>

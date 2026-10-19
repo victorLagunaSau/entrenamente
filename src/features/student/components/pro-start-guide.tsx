@@ -3,10 +3,10 @@
 import * as React from "react";
 import { CalendarDays, Flame, NotebookPen } from "lucide-react";
 
-import { type GuiaPaso, OnboardingChecklist, useGuiaPedida, useGuiaVista } from "@/features/guia";
+import { FloatingChecklist, type GuiaPaso, useGuiaPedida, useGuiaVista } from "@/features/guia";
 
 /**
- * Guía de inicio del Estudiante Pro: plan por fecha oficial (sugerido), un examen libre y la racha. Cada paso
+ * Guía de inicio del Estudiante Pro (notificación flotante): plan por fecha oficial (sugerido), un examen libre y la racha. Cada paso
  * se marca solo con lo que ya hizo el alumno; desaparece al completar los 3 o si la oculta, y vuelve desde el
  * menú de cuenta ("Guía de uso").
  */
@@ -31,16 +31,14 @@ export function ProStartGuide({
 }) {
   const { vista: oculta, marcarVista } = useGuiaVista("pro", userId);
   // Desde el menú "Guía de uso" se vuelve a mostrar aunque esté oculta o completa.
-  const [pedida, setPedida] = React.useState(false);
-  useGuiaPedida(() => {
-    setPedida(true);
-    window.setTimeout(() => document.getElementById("guia-inicio")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  }, true);
+  // Cada pedido incrementa el contador: la guía aparece y se despliega aunque estuviera minimizada.
+  const [pedida, setPedida] = React.useState(0);
+  useGuiaPedida(() => setPedida((n) => n + 1), true);
   const ocultar = () => {
-    setPedida(false);
+    setPedida(0);
     marcarVista();
   };
-  if (!pedida && (oculta !== false || (tienePlan && hizoLibre && hizoRacha))) return null;
+  if (pedida === 0 && (oculta !== false || (tienePlan && hizoLibre && hizoRacha))) return null;
 
   const pasos: GuiaPaso[] = [
     {
@@ -72,5 +70,5 @@ export function ProStartGuide({
     },
   ];
 
-  return <OnboardingChecklist title="Tus primeros pasos de alto rendimiento" pasos={pasos} layout="grid" sugerido="plan" onDismiss={ocultar} />;
+  return <FloatingChecklist title="Tus primeros pasos de alto rendimiento" pasos={pasos} sugerido="plan" onDismiss={ocultar} abrir={pedida} />;
 }

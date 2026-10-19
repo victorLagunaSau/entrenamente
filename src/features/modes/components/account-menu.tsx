@@ -16,12 +16,14 @@ type Props = {
   onLogout: () => void;
   leaving: boolean;
   extra?: React.ReactNode;
+  /** Opciones que van al final, después de Configuración y antes de Cerrar sesión (p. ej. "Guía de uso"). */
+  footerExtra?: React.ReactNode;
   /** Punto rojo en el avatar: hay algo pendiente (p. ej. la guía de uso sin completar). */
   pending?: boolean;
 };
 
 /** Botón redondo de perfil; despliega nombre, correo, opciones del home (`extra`), Perfil, Configuración y Cerrar sesión. */
-export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra, pending }: Props) {
+export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra, footerExtra, pending }: Props) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
@@ -76,6 +78,12 @@ export function AccountMenu({ alias, email, avatarUrl, onLogout, leaving, extra,
             {extra}
             <MenuItem icon={User} label="Perfil" onClick={() => go(ACCOUNT_PATHS.perfil)} />
             <MenuItem icon={Settings} label="Configuración" onClick={() => go(ACCOUNT_PATHS.configuracion)} />
+            {footerExtra && (
+              <>
+                <li className="my-1 border-t" aria-hidden />
+                {footerExtra}
+              </>
+            )}
             <li className="my-1 border-t" aria-hidden />
             <MenuItem icon={LogOut} label={leaving ? "Cerrando sesión…" : "Cerrar sesión"} onClick={onLogout} disabled={leaving} />
           </ul>

@@ -26,6 +26,7 @@ export function PanelShell({
   footer,
   topNav,
   accountExtra,
+  accountFooter,
   accountPending,
   home: homeOverride,
 }: {
@@ -33,6 +34,8 @@ export function PanelShell({
   footer?: React.ReactNode;
   topNav?: React.ReactNode;
   accountExtra?: React.ReactNode;
+  /** Opciones al final del menú de cuenta, antes de Cerrar sesión. */
+  accountFooter?: React.ReactNode;
   /** Punto rojo en el avatar (algo pendiente en el menú de cuenta). */
   accountPending?: boolean;
   home?: string;
@@ -69,6 +72,7 @@ export function PanelShell({
               onLogout={logout}
               leaving={leaving}
               extra={accountExtra}
+              footerExtra={accountFooter}
               pending={accountPending}
             />
           </div>
