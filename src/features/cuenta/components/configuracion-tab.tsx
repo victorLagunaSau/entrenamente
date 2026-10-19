@@ -152,7 +152,7 @@ function NotificacionesSection({ cuenta }: CuentaContext) {
       setTestMessage({
         error:
           code === "PGRST202" || code === "42883"
-            ? "Falta correr en Supabase la migración 20261027000000_notificaciones_sin_correo.sql."
+            ? "Falta correr en Supabase la migración 20261027010000_aviso_prueba.sql."
             : "No pudimos mandar el aviso. Intenta de nuevo.",
         success: "",
       });
