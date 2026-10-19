@@ -1,11 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { Bell, CheckCheck, Loader2, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, BellRing, CheckCheck, Loader2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+import {
+  applyTabCount,
+  browserNotificationsSupported,
+  eventIcon,
+  isWelcome,
+  showBrowserNotification,
+} from "../lib/presentation";
 import { getInbox, markRead, subscribeToNew, type AppNotification, type Inbox } from "../services/notificaciones-service";
 
 const REFRESH_MS = 60_000;
@@ -31,10 +38,13 @@ function ago(iso: string) {
 /**
  * Campana del header: contador de no leídos, últimos 10 avisos y "Marcar todas como leídas".
  * Los avisos nuevos llegan al instante (Realtime) y aparecen como aviso flotante unos segundos; además se
- * actualiza al abrir, cada minuto y al volver a la pestaña. Si la bandeja aún no existe no se muestra.
+ * actualiza al abrir, cada minuto y al volver a la pestaña. Con avisos sin leer, la pestaña muestra "(n)" en su
+ * título; si la pestaña está en segundo plano y el navegador dio permiso, sale también la notificación del sistema.
+ * Si la bandeja aún no existe no se muestra.
  */
 export function NotificationBell({ userId }: { userId: string }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [inbox, setInbox] = React.useState<Inbox | null>(null);
   const [unavailable, setUnavailable] = React.useState(false);
   const [open, setOpen] = React.useState(false);
@@ -44,6 +54,13 @@ export function NotificationBell({ userId }: { userId: string }) {
   const panelId = React.useId();
   // Avisos ya vistos: solo los nuevos (y sin leer) salen como aviso flotante. null = aún no hay primera carga.
   const seenRef = React.useRef<Set<string> | null>(null);
+  // openItem se define más abajo; las notificaciones del navegador lo llaman al tocarse.
+  const openRef = React.useRef<(n: AppNotification) => void>(() => {});
+  const [permission, setPermission] = React.useState<NotificationPermission | "unsupported">("unsupported");
+
+  React.useEffect(() => {
+    if (browserNotificationsSupported()) setPermission(Notification.permission);
+  }, []);
 
   const dismissToast = React.useCallback((id: string) => setToasts((t) => t.filter((n) => n.id !== id)), []);
 
@@ -59,7 +76,10 @@ export function NotificationBell({ userId }: { userId: string }) {
       list.forEach((n) => seen.add(n.id));
       if (!fresh.length) return;
       setToasts((t) => [...fresh, ...t].slice(0, MAX_TOASTS));
-      fresh.forEach((n) => window.setTimeout(() => dismissToast(n.id), TOAST_MS));
+      fresh.forEach((n) => {
+        window.setTimeout(() => dismissToast(n.id), TOAST_MS);
+        showBrowserNotification(n, () => openRef.current(n));
+      });
     },
     [dismissToast]
   );
@@ -94,6 +114,19 @@ export function NotificationBell({ userId }: { userId: string }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [refresh]);
+
+  // "(n)" en la pestaña. Next reescribe el título al cambiar de página: se vuelve a poner cuando eso pasa.
+  const unreadCount = inbox?.unread ?? 0;
+  React.useEffect(() => {
+    applyTabCount(unreadCount);
+    const title = document.querySelector("title");
+    if (!title) return;
+    const observer = new MutationObserver(() => applyTabCount(unreadCount));
+    observer.observe(title, { childList: true, characterData: true, subtree: true });
+    return () => observer.disconnect();
+  }, [unreadCount, pathname]);
+
+  React.useEffect(() => () => applyTabCount(0), []);
 
   React.useEffect(() => {
     if (!open) return;
@@ -142,6 +175,9 @@ export function NotificationBell({ userId }: { userId: string }) {
     }
     if (n.actionUrl) router.push(n.actionUrl);
   };
+  openRef.current = openItem;
+
+  const askPermission = async () => setPermission(await Notification.requestPermission());
 
   const markAll = async () => {
     setMarking(true);
@@ -215,25 +251,38 @@ export function NotificationBell({ userId }: { userId: string }) {
                     onClick={() => openItem(n)}
                     className={cn(
                       "flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
-                      !n.readAt && "bg-brand-light/5"
+                      !n.readAt && "bg-brand-light/5",
+                      isWelcome(n) && "bg-primary/10"
                     )}
                   >
-                    <span
-                      className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-brand-light")}
-                      aria-hidden
-                    />
+                    <EventIcon n={n} />
                     <span className="min-w-0 flex-1">
                       <span className={cn("block text-sm text-pretty", n.readAt ? "font-medium" : "font-semibold")}>
                         {n.title}
                         {!n.readAt && <span className="sr-only"> (sin leer)</span>}
                       </span>
-                      <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground text-pretty">{n.body}</span>
+                      <span className={cn("mt-0.5 block text-xs text-muted-foreground text-pretty", !isWelcome(n) && "line-clamp-2")}>
+                        {n.body}
+                      </span>
                       <span className="mt-1 block text-[11px] text-muted-foreground/80">{ago(n.createdAt)}</span>
                     </span>
                   </button>
                 </li>
               ))}
             </ul>
+          )}
+
+          {permission === "default" && (
+            <div className="flex items-center justify-between gap-3 border-t bg-background/40 px-4 py-3">
+              <p className="text-xs text-muted-foreground text-pretty">Recibe los avisos aunque estés en otra pestaña.</p>
+              <button
+                type="button"
+                onClick={askPermission}
+                className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-brand-light hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+              >
+                <BellRing className="size-3.5" /> Activar
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -250,9 +299,7 @@ export function NotificationBell({ userId }: { userId: string }) {
               className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-brand-light/40 bg-card p-3 shadow-2xl shadow-glow-secondary motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-4"
             >
               <button type="button" onClick={() => openItem(n)} className="flex min-w-0 flex-1 gap-3 text-left focus-visible:outline-none">
-                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white">
-                  <Bell className="size-4" aria-hidden />
-                </span>
+                <EventIcon n={n} highlight />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-pretty">{n.title}</span>
                   <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground text-pretty">{n.body}</span>
@@ -271,5 +318,25 @@ export function NotificationBell({ userId }: { userId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Ícono del tipo de aviso; con punto azul si no se ha leído. La bienvenida (y el aviso flotante) en degradado. */
+function EventIcon({ n, highlight }: { n: AppNotification; highlight?: boolean }) {
+  const Icon = eventIcon(n.eventCode);
+  const strong = highlight || isWelcome(n);
+  return (
+    <span
+      className={cn(
+        "relative grid size-9 shrink-0 place-items-center rounded-xl",
+        strong ? "bg-brand-gradient text-white" : "bg-muted text-brand-light"
+      )}
+      aria-hidden
+    >
+      <Icon className="size-4" />
+      {!highlight && !n.readAt && (
+        <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-card bg-brand-light" />
+      )}
+    </span>
   );
 }
