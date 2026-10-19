@@ -22,10 +22,20 @@ const examAccuracy = (e: TutorExam) => {
 const minutes = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 /**
- * Reporte ejecutivo para imprimir o "Guardar como PDF". Se monta en <body> solo mientras se imprime;
- * el CSS de impresión (globals.css) oculta todo lo demás. Conserva los colores de la marca al imprimir.
+ * Reporte ejecutivo en PDF. Se monta en <body>, fuera de pantalla y a ancho de hoja carta, solo mientras
+ * lib/report-pdf lo convierte en archivo; `reportRef` recibe el nodo ya dibujado.
  */
-export function TutorReport({ info, stats, exams }: { info: SubjectInfo; stats: TutorStats; exams: TutorExam[] }) {
+export function TutorReport({
+  info,
+  stats,
+  exams,
+  reportRef,
+}: {
+  info: SubjectInfo;
+  stats: TutorStats;
+  exams: TutorExam[];
+  reportRef: React.Ref<HTMLDivElement>;
+}) {
   const { kind } = useTutor();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
@@ -36,9 +46,13 @@ export function TutorReport({ info, stats, exams }: { info: SubjectInfo; stats: 
   const logo = LOGOS.maestro.full;
 
   return createPortal(
-    <div id="tutor-report" className="hidden bg-background text-foreground print:block">
+    <div
+      ref={reportRef}
+      aria-hidden
+      className="pointer-events-none fixed top-0 left-[-10000px] w-[816px] bg-background text-foreground"
+    >
       <header className="flex items-center justify-between gap-6 border-b pb-4">
-        {/* eslint-disable-next-line @next/next/no-img-element -- impresión: sin optimización de next/image */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- PDF: sin optimización de next/image */}
         <img src={logo.src} alt={BRAND.name} className="h-12 w-auto" />
         <div className="text-right">
           <p className="text-xs text-muted-foreground">{TUTOR_COPY[kind].title}</p>

@@ -29,6 +29,7 @@ import { useMode } from "@/features/modes/components/mode-guard";
 import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
+import { downloadReportPdf } from "../lib/report-pdf";
 import { GUIA_TUTOR_STATS } from "../lib/tutor-guia";
 import { computeStats, EXAM_TYPES, formatHours, whatsappSummary, type TutorStats } from "../lib/tutor-stats";
 import { getTutorExams, type ExamType, type TutorExam, type TutorStudent } from "../services/tutor-service";
@@ -292,16 +293,17 @@ function ExportBar({ info, stats, exams }: { info: SubjectInfo; stats: TutorStat
     } catch {}
   };
 
-  // El reporte se monta solo para imprimir; "Guardar como PDF" en el diálogo del navegador lo descarga.
+  // El reporte se monta fuera de pantalla solo para generar el PDF (en iPhone print() no deja guardarlo).
+  const [reportNode, setReportNode] = React.useState<HTMLDivElement | null>(null);
+  const [pdfError, setPdfError] = React.useState(false);
   React.useEffect(() => {
-    if (!printing) return;
-    // Deja cargar logo y gráficas; print() bloquea hasta que se cierra el diálogo.
-    const t = setTimeout(() => {
-      window.print();
-      setPrinting(false);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [printing]);
+    if (!reportNode) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const slug = info.label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "");
+    downloadReportPdf(reportNode, `Reporte-${slug ? `${slug}-` : ""}${date}.pdf`)
+      .catch(() => setPdfError(true))
+      .finally(() => setPrinting(false));
+  }, [reportNode, info.label]);
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center">
@@ -313,14 +315,26 @@ function ExportBar({ info, stats, exams }: { info: SubjectInfo; stats: TutorStat
           {copied ? <Check /> : <MessageCircle />} {copied ? "¡Resumen copiado!" : "Copiar Resumen para WhatsApp"}
         </Button>
         {panel!.license ? (
-          <Button variant="default" onClick={() => setPrinting(true)} disabled={printing || stats.exams === 0}>
+          <Button
+            variant="default"
+            onClick={() => {
+              setPdfError(false);
+              setPrinting(true);
+            }}
+            disabled={printing || stats.exams === 0}
+          >
             {printing ? <Loader2 className="animate-spin" /> : <FileDown />} Descargar Reporte PDF
           </Button>
         ) : (
           <ActivateWithPlan label="Reporte PDF · Activa con tu plan" className="h-10" />
         )}
       </div>
-      {printing && <TutorReport info={info} stats={stats} exams={exams} />}
+      {pdfError && (
+        <p role="alert" className="text-xs text-destructive">
+          No pudimos generar el PDF. Inténtalo de nuevo.
+        </p>
+      )}
+      {printing && <TutorReport info={info} stats={stats} exams={exams} reportRef={setReportNode} />}
     </div>
   );
 }
