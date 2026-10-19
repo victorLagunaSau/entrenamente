@@ -8,6 +8,7 @@ import { House } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/features/auth/services/auth-service";
+import { NotificationBell } from "@/features/notificaciones/components/notification-bell";
 import { cn } from "@/lib/utils";
 
 import { MODES } from "../modes";
@@ -65,6 +66,7 @@ export function PanelShell({
               </Link>
             </Button>
             {topNav}
+            <NotificationBell userId={viewer.id} />
             <AccountMenu
               alias={viewer.alias}
               email={viewer.email}

@@ -1,0 +1,204 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Bell, CheckCheck, Loader2 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+import { getInbox, markRead, type AppNotification, type Inbox } from "../services/notificaciones-service";
+
+const REFRESH_MS = 60_000;
+
+const relative = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+
+/** "hace 5 minutos", "ayer"… */
+function ago(iso: string) {
+  const seconds = (new Date(iso).getTime() - Date.now()) / 1000;
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["day", 86_400],
+    ["hour", 3_600],
+    ["minute", 60],
+  ];
+  for (const [unit, size] of steps) {
+    if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
+  }
+  return "justo ahora";
+}
+
+/**
+ * Campana del header: contador de no leídos, últimos 10 avisos y "Marcar todas como leídas".
+ * Se actualiza al abrir, cada minuto y al volver a la pestaña. Si la bandeja aún no existe (migración sin
+ * correr) no se muestra.
+ */
+export function NotificationBell({ userId }: { userId: string }) {
+  const router = useRouter();
+  const [inbox, setInbox] = React.useState<Inbox | null>(null);
+  const [unavailable, setUnavailable] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+  const [marking, setMarking] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const panelId = React.useId();
+
+  const refresh = React.useCallback(async () => {
+    try {
+      setInbox(await getInbox(userId));
+    } catch {
+      setUnavailable(true);
+    }
+  }, [userId]);
+
+  React.useEffect(() => {
+    refresh();
+    const timer = window.setInterval(() => document.visibilityState === "visible" && refresh(), REFRESH_MS);
+    const onVisible = () => document.visibilityState === "visible" && refresh();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refresh]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  if (unavailable) return null;
+
+  const unread = inbox?.unread ?? 0;
+  const items = inbox?.items ?? [];
+
+  const toggle = () => {
+    setOpen((v) => !v);
+    if (!open) refresh();
+  };
+
+  // Lectura optimista: la campana responde al instante y la base se pone al día detrás.
+  const markLocal = (ids: string[] | null) =>
+    setInbox((prev) => {
+      if (!prev) return prev;
+      const now = new Date().toISOString();
+      let cleared = 0;
+      const next = prev.items.map((n) => {
+        if (n.readAt || (ids && !ids.includes(n.id))) return n;
+        cleared++;
+        return { ...n, readAt: now };
+      });
+      return { items: next, unread: ids ? Math.max(0, prev.unread - cleared) : 0 };
+    });
+
+  const openItem = (n: AppNotification) => {
+    setOpen(false);
+    if (!n.readAt) {
+      markLocal([n.id]);
+      markRead([n.id]).catch(refresh);
+    }
+    if (n.actionUrl) router.push(n.actionUrl);
+  };
+
+  const markAll = async () => {
+    setMarking(true);
+    markLocal(null);
+    try {
+      await markRead();
+    } catch {
+      await refresh();
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-label={unread ? `Notificaciones: ${unread} sin leer` : "Notificaciones"}
+        className={cn(
+          "relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+          open && "bg-accent text-foreground"
+        )}
+      >
+        <Bell className="size-5" aria-hidden />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-background bg-destructive px-1 font-mono text-[10px] leading-none font-semibold text-white">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          id={panelId}
+          className="fixed inset-x-4 top-16 z-40 overflow-hidden rounded-2xl border bg-card shadow-xl sm:absolute sm:inset-x-auto sm:top-12 sm:right-0 sm:w-96"
+        >
+          <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+            <p className="text-sm font-semibold">Notificaciones</p>
+            {unread > 0 && (
+              <button
+                type="button"
+                onClick={markAll}
+                disabled={marking}
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-brand-light hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-60"
+              >
+                {marking ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCheck className="size-3.5" />}
+                Marcar todas como leídas
+              </button>
+            )}
+          </div>
+
+          {inbox === null ? (
+            <div className="flex justify-center py-10 text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" aria-label="Cargando" />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+              <Bell className="size-6 text-muted-foreground" aria-hidden />
+              <p className="text-sm text-muted-foreground text-pretty">Aquí verás los avisos de tus exámenes, tu plan y tus pagos.</p>
+            </div>
+          ) : (
+            <ul className="max-h-[min(28rem,70dvh)] divide-y overflow-y-auto">
+              {items.map((n) => (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => openItem(n)}
+                    className={cn(
+                      "flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
+                      !n.readAt && "bg-brand-light/5"
+                    )}
+                  >
+                    <span
+                      className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-brand-light")}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block text-sm text-pretty", n.readAt ? "font-medium" : "font-semibold")}>
+                        {n.title}
+                        {!n.readAt && <span className="sr-only"> (sin leer)</span>}
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground text-pretty">{n.body}</span>
+                      <span className="mt-1 block text-[11px] text-muted-foreground/80">{ago(n.createdAt)}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

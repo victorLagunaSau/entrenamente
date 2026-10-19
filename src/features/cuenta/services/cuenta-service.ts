@@ -11,14 +11,56 @@ import { AVATAR_MAX_INPUT_MB, AVATAR_MIN_SIDE, AVATAR_SIDE, AVATAR_TYPES } from 
 
 export class CuentaError extends Error {}
 
+/** Preferencias v2 (migración 20261026000000). Pagos, cuenta y vínculos con el tutor no se pueden apagar. */
 export type NotificationPrefs = {
-  plan: boolean;
-  racha: boolean;
-  resultados: boolean;
-  tutor_resumen: boolean;
-  novedades: boolean;
+  v: 2;
+  canales: { push: boolean; email: boolean; whatsapp: boolean };
+  categorias: {
+    plan: boolean;
+    racha: boolean;
+    resultados: boolean;
+    tutor_resumen: boolean;
+    contenido: boolean;
+    marketing: boolean;
+  };
+  /** Hora de los recordatorios (HH:MM). */
   hora: string;
+  /** Sin avisos push entre estas horas (salvo los críticos). */
+  silencio: { desde: string; hasta: string };
+  zona: string;
 };
+
+/** Cambio parcial: solo lo que se envía se guarda. */
+export type NotificationPrefsPatch = {
+  canales?: Partial<NotificationPrefs["canales"]>;
+  categorias?: Partial<NotificationPrefs["categorias"]>;
+  hora?: string;
+  silencio?: Partial<NotificationPrefs["silencio"]>;
+  zona?: string;
+};
+
+type LegacyPrefs = Partial<Record<"plan" | "racha" | "resultados" | "tutor_resumen" | "novedades", boolean>> & { hora?: string };
+
+/** Acepta el formato anterior (antes de correr la migración) y lo lleva a v2. */
+export function toPrefsV2(raw: NotificationPrefs | LegacyPrefs | null | undefined): NotificationPrefs {
+  if (raw && "v" in raw && raw.v === 2) return raw;
+  const old = (raw ?? {}) as LegacyPrefs;
+  return {
+    v: 2,
+    canales: { push: true, email: true, whatsapp: false },
+    categorias: {
+      plan: old.plan ?? true,
+      racha: old.racha ?? true,
+      resultados: old.resultados ?? true,
+      tutor_resumen: old.tutor_resumen ?? true,
+      contenido: true,
+      marketing: old.novedades ?? false,
+    },
+    hora: old.hora ?? "18:00",
+    silencio: { desde: "22:00", hasta: "07:00" },
+    zona: "America/Mexico_City",
+  };
+}
 
 export type MiCuenta = {
   id: string;
@@ -54,7 +96,7 @@ type Row = {
   phone: string | null;
   estado: string | null;
   pais: string | null;
-  notification_prefs: NotificationPrefs;
+  notification_prefs: NotificationPrefs | LegacyPrefs;
   created_at: string;
   privacy_accepted_at: string | null;
   student: { origin_school: string | null; not_studying: boolean; grado: string | null; promedio: number | null } | null;
@@ -86,7 +128,7 @@ export async function getMiCuenta(): Promise<MiCuenta> {
     phone: r.phone,
     estado: r.estado,
     pais: r.pais?.trim() || null,
-    notificationPrefs: r.notification_prefs,
+    notificationPrefs: toPrefsV2(r.notification_prefs),
     createdAt: r.created_at,
     privacyAcceptedAt: r.privacy_accepted_at,
     student: r.student && {
@@ -134,10 +176,13 @@ export async function savePerfil(input: PerfilInput) {
   if (error) fail(error);
 }
 
-export async function saveNotificaciones(prefs: Partial<NotificationPrefs>): Promise<NotificationPrefs> {
-  const { data, error } = await supabase.rpc("guardar_mis_notificaciones", { p_prefs: prefs });
+export async function saveNotificaciones(patch: NotificationPrefsPatch): Promise<NotificationPrefs> {
+  const { data, error } = await supabase.rpc("guardar_mis_notificaciones", { p_prefs: patch });
   if (error) fail(error);
-  return data as NotificationPrefs;
+  const saved = data as NotificationPrefs | LegacyPrefs;
+  // Sin la migración v2 la base ignora el cambio: se avisa en vez de fingir que se guardó.
+  if (!("v" in saved) || saved.v !== 2) throw new CuentaError("Falta correr en Supabase la migración 20261026000000_notificaciones.sql.");
+  return saved;
 }
 
 export async function setAvatar(avatar: string | null) {
