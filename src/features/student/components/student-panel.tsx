@@ -12,6 +12,7 @@ import { RenewalNotice } from "@/features/pagos/components/renewal-notice";
 import { PlanWizard } from "@/features/plan/components/plan-wizard";
 import type { StudentPlan } from "@/features/plan/lib/plan";
 import { getMyPlans } from "@/features/plan/services/plan-service";
+import { ToeflMenuItem } from "@/features/toefl/components/toefl-home";
 
 import { STUDENT_HOMES, type StudentTier } from "../services/access-service";
 import { getFreeExamHistory, getRachaHistory } from "../services/exam-record-service";
@@ -61,7 +62,12 @@ function StudentShell({ tier, nav, children }: { tier: StudentTier; nav: typeof 
       footer={<StudentNav items={nav} />}
       topNav={<StudentTopNav items={nav} />}
       accountPending={guia.avisar}
-      accountExtra={<AddSchoolMenuItem />}
+      accountExtra={
+        <>
+          <AddSchoolMenuItem />
+          <ToeflMenuItem />
+        </>
+      }
       accountFooter={<GuiaMenuItem tier={tier} userId={viewer.id} pendiente={guia.pendiente} />}
     >
       {children}

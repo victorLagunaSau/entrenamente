@@ -175,7 +175,8 @@ export async function getTutorExams(studentIds: string[]): Promise<TutorExam[]> 
   const { data, error } = await supabase.rpc("estadisticas_tutor", { p_estudiantes: studentIds });
   if (error) throw error;
 
-  return (data as ExamRow[]).map((e) => ({
+  // TOEFL tiene su propio reporte (niveles MCER): el panel del tutor sigue con los exámenes de admisión.
+  return (data as ExamRow[]).filter((e) => !String(e.exam_type).startsWith("toefl_")).map((e) => ({
     id: e.id,
     studentId: e.student_id,
     folio: e.folio,
