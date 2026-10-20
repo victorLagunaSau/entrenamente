@@ -16,7 +16,8 @@ const ICON_TONE: Record<GuiaTone, string> = {
 };
 
 /**
- * Guía de inicio como notificación flotante (abajo a la derecha, sobre el menú inferior en celular): avance
+ * Guía de inicio como notificación flotante (abajo a la derecha, sobre el menú inferior en celular; ahí más baja
+ * y compacta para no tapar la pantalla, y siempre bajo el header y sus notificaciones): avance
  * "n/total" con barra y los pasos en acordeón, con el siguiente pendiente abierto. Se minimiza a una pastilla y
  * `onDismiss` la cierra. `abrir` cambia → se vuelve a desplegar (p. ej. al pedirla desde el menú).
  */
@@ -71,16 +72,16 @@ export function FloatingChecklist({
           role="dialog"
           aria-modal="false"
           aria-labelledby="guia-inicio-title"
-          className="pointer-events-auto flex max-h-[min(34rem,calc(100dvh-10rem))] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-brand-light/40 bg-card shadow-2xl shadow-glow-secondary motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-6"
+          className="pointer-events-auto flex max-h-[min(26rem,calc(100dvh-14rem))] w-full lg:max-h-[min(34rem,calc(100dvh-10rem))] max-w-sm flex-col overflow-hidden rounded-2xl border border-brand-light/40 bg-card shadow-2xl shadow-glow-secondary motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-6"
         >
-          <header className="flex flex-col gap-3 bg-primary/10 p-4 pb-3">
+          <header className="flex flex-col gap-2.5 bg-primary/10 p-3 sm:gap-3 sm:p-4 sm:pb-3">
             <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white">
+              <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white sm:size-9">
                 <Rocket className="size-4" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold tracking-wide text-brand-light uppercase">Guía de inicio · {progreso}</p>
-                <h2 id="guia-inicio-title" className="font-bold text-balance">
+                <h2 id="guia-inicio-title" className="text-sm leading-snug font-bold text-balance sm:text-base">
                   {title}
                 </h2>
               </div>

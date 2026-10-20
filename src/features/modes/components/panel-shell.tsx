@@ -56,7 +56,8 @@ export function PanelShell({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
+      {/* z-[45]: sobre la guía flotante (z-40), para que notificaciones y menú de cuenta nunca queden debajo. */}
+      <header className="sticky top-0 z-[45] border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 md:px-8">
           <Logo audience={audience} href={home} className="h-8" />
           <div className="ml-auto flex items-center gap-2">
