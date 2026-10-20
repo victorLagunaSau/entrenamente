@@ -13,10 +13,18 @@ import { AddSchoolMenuItem } from "@/features/student/components/add-school-menu
 import { cn } from "@/lib/utils";
 
 import { MCER_INFO } from "../lib/mcer";
-import { getEstado, setAgeRange, type ToeflEstado } from "../services/toefl-service";
+import { getEstado, setAgeRange, type ToeflAttempt, type ToeflEstado } from "../services/toefl-service";
 import { AGE_RANGE_LABEL, AGE_RANGES, type AgeRange } from "../types";
+import { PromotionProgress, ToeflModes } from "./toefl-modes";
 
 export const TOEFL_PATH = "/app/student/toefl";
+
+const TIPO_LABEL: Record<ToeflAttempt["tipo"], string> = {
+  toefl_diagnostico: "Diagnóstico",
+  toefl_practica: "Práctica libre",
+  toefl_plan: "Sesión del plan",
+  toefl_racha: "Racha",
+};
 
 /** «TOEFL ITP» del menú de cuenta del alumno. */
 export function ToeflMenuItem() {
@@ -86,7 +94,10 @@ function ToeflHome() {
 
       {estado && (
         <>
-          <LevelCard estado={estado} />
+          <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:p-5">
+            <LevelCard estado={estado} />
+            <PromotionProgress estado={estado} />
+          </div>
 
           <section className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:p-5" aria-labelledby="toefl-edad">
             <div>
@@ -116,6 +127,8 @@ function ToeflHome() {
             </div>
           </section>
 
+          <ToeflModes estado={estado} onChanged={load} />
+
           <DiagnosticoCard estado={estado} />
 
           {estado.historial.length > 0 && (
@@ -129,7 +142,7 @@ function ToeflHome() {
                     <Link href={`${TOEFL_PATH}/resultado?id=${h.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent">
                       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 font-bold text-brand-light">{h.nivel}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block font-medium">{h.tipo === "toefl_diagnostico" ? "Diagnóstico" : "Práctica"}</span>
+                        <span className="block font-medium">{TIPO_LABEL[h.tipo]}</span>
                         <span className="block text-xs text-muted-foreground">
                           {new Date(h.fecha).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })} · {h.folio}
                         </span>
@@ -151,7 +164,7 @@ function ToeflHome() {
 function LevelCard({ estado }: { estado: ToeflEstado }) {
   const info = estado.nivel ? MCER_INFO[estado.nivel] : null;
   return (
-    <section className="flex items-center gap-4 rounded-2xl border bg-card p-4 sm:p-5" aria-label="Tu nivel">
+    <section className="flex items-center gap-4" aria-label="Tu nivel">
       <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-primary/15 text-2xl font-bold text-brand-light">
         {estado.nivel ?? <Gauge className="size-7" />}
       </span>

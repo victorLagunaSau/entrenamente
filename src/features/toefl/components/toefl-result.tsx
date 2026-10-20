@@ -63,7 +63,10 @@ function ResultLoader() {
 
 function ToeflResult({ record }: { record: ToeflRecord }) {
   const pct = record.maximo > 0 ? Math.round((100 * record.puntos) / record.maximo) : 0;
-  const info = MCER_INFO[record.nivel];
+  const diagnostico = record.tipo === "toefl_diagnostico";
+  const promovido = record.promocion?.promovido ?? false;
+  const nivelMostrado = record.promocion?.nivelNuevo ?? record.nivel;
+  const info = MCER_INFO[nivelMostrado];
   const subio = record.nivelAnterior && MCER_LEVELS.indexOf(record.nivel) > MCER_LEVELS.indexOf(record.nivelAnterior);
   const porNivel = new Map(record.porNivel.map((n) => [n.nivel, n]));
 
@@ -74,20 +77,30 @@ function ToeflResult({ record }: { record: ToeflRecord }) {
           <ArrowLeft className="size-4" /> TOEFL ITP
         </Link>
         <p className="font-mono text-xs text-muted-foreground">{record.folio}</p>
-        <h1 className="text-2xl font-bold sm:text-3xl">{record.tipo === "toefl_diagnostico" ? "Resultado del diagnóstico" : "Resultado"}</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">{TITULOS[record.tipo]}</h1>
         <p className="text-sm text-muted-foreground">
           {new Date(record.fecha).toLocaleString("es-MX", { dateStyle: "long", timeStyle: "short" })}
         </p>
       </header>
 
       <section className="flex flex-col items-center gap-3 rounded-2xl border bg-card p-6 text-center" aria-label="Nivel asignado">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Tu nivel inicial</p>
-        <span className="grid size-24 place-items-center rounded-3xl bg-primary/15 text-4xl font-bold text-brand-light">{record.nivel}</span>
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          {diagnostico ? "Tu nivel inicial" : promovido ? "¡Subiste de nivel!" : "Tu nivel"}
+        </p>
+        <span className="grid size-24 place-items-center rounded-3xl bg-primary/15 text-4xl font-bold text-brand-light">{nivelMostrado}</span>
         <div>
           <p className="text-lg font-bold">{info.nombre}</p>
           <p className="text-sm text-muted-foreground">{info.descripcion}</p>
         </div>
-        {record.nivelAnterior && record.nivelAnterior !== record.nivel && (
+        {promovido && (
+          <p className="flex items-center gap-1 text-sm font-medium text-secondary">
+            <ArrowUpRight className="size-4" /> Antes: {record.nivel}
+          </p>
+        )}
+        {record.promocion && !promovido && record.promocion.nivelSuperior && record.tipo !== "toefl_racha" && (
+          <PromotionNote nivelSuperior={record.promocion.nivelSuperior} pct={record.promocion.pctSuperior} />
+        )}
+        {diagnostico && record.nivelAnterior && record.nivelAnterior !== record.nivel && (
           <p className={cn("flex items-center gap-1 text-sm font-medium", subio ? "text-secondary" : "text-muted-foreground")}>
             {subio && <ArrowUpRight className="size-4" />}Antes: {record.nivelAnterior}
           </p>
@@ -124,7 +137,11 @@ function ToeflResult({ record }: { record: ToeflRecord }) {
           <h2 id="toefl-niveles" className="font-semibold">
             Por nivel MCER
           </h2>
-          <p className="text-sm text-muted-foreground">Tu nivel es el más alto que aprobaste (50 % o más) sin saltarte niveles.</p>
+          <p className="text-sm text-muted-foreground">
+            {diagnostico
+              ? "Tu nivel es el más alto que aprobaste (50 % o más) sin saltarte niveles."
+              : "Aciertos de este examen en cada nivel."}
+          </p>
         </div>
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
           {MCER_LEVELS.map((l) => {
@@ -136,7 +153,7 @@ function ToeflResult({ record }: { record: ToeflRecord }) {
                 className={cn(
                   "flex flex-col items-center rounded-xl border p-2 text-center",
                   !n && "border-dashed text-muted-foreground",
-                  l === record.nivel && "border-primary bg-primary/10"
+                  l === nivelMostrado && "border-primary bg-primary/10"
                 )}
               >
                 <span className="font-bold">{l}</span>
@@ -153,6 +170,26 @@ function ToeflResult({ record }: { record: ToeflRecord }) {
         <Link href={TOEFL_PATH}>Ir a TOEFL ITP</Link>
       </Button>
     </div>
+  );
+}
+
+const TITULOS: Record<ToeflRecord["tipo"], string> = {
+  toefl_diagnostico: "Resultado del diagnóstico",
+  toefl_practica: "Resultado de la práctica",
+  toefl_plan: "Resultado de la sesión del plan",
+  toefl_racha: "Resultado de la racha",
+};
+
+function PromotionNote({ nivelSuperior, pct }: { nivelSuperior: string; pct: number | null }) {
+  const ok = pct !== null && pct >= 80;
+  return (
+    <p className="max-w-sm text-sm text-muted-foreground">
+      {pct === null
+        ? `Este examen no tuvo preguntas ${nivelSuperior}.`
+        : ok
+          ? `${Math.round(pct)} % en ${nivelSuperior}: logra 80 % o más en tu próximo simulacro para subir de nivel.`
+          : `${Math.round(pct)} % en ${nivelSuperior}. Necesitas 80 % o más en 2 simulacros seguidos para subir.`}
+    </p>
   );
 }
 

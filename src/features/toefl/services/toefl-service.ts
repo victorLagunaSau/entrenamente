@@ -43,7 +43,21 @@ export type ToeflEstado = {
   diagnosticos: number;
   puedeDiagnostico: boolean;
   preguntasDisponibles: number;
+  /** Avance hacia el siguiente nivel; null sin nivel o en C2. */
+  promocion: { nivelSuperior: McerLevel; seguidos: number; ultimoPct: number | null } | null;
+  plan: ToeflPlan | null;
+  racha: { hechaHoy: boolean; diasSeguidos: number };
   historial: ToeflAttempt[];
+};
+
+export type ToeflPlan = {
+  examDate: string | null;
+  /** Días ISO: 1 = lunes … 7 = domingo. */
+  dias: number[];
+  tocaHoy: boolean;
+  hechaHoy: boolean;
+  /** Fechas (yyyy-mm-dd) con sesión hecha en la semana actual. */
+  semana: string[];
 };
 
 export async function getEstado(): Promise<ToeflEstado> {
@@ -56,6 +70,9 @@ export async function getEstado(): Promise<ToeflEstado> {
     diagnosticos: number;
     puede_diagnostico: boolean;
     preguntas_disponibles: number;
+    promocion: { nivel_superior: McerLevel; seguidos: number; ultimo_pct: number | null } | null;
+    plan: { exam_date: string | null; dias: number[]; toca_hoy: boolean; hecha_hoy: boolean; semana: string[] } | null;
+    racha: { hecha_hoy: boolean; dias_seguidos: number } | null;
     historial: ToeflAttempt[];
   };
   return {
@@ -65,6 +82,13 @@ export async function getEstado(): Promise<ToeflEstado> {
     diagnosticos: d.diagnosticos,
     puedeDiagnostico: d.puede_diagnostico,
     preguntasDisponibles: d.preguntas_disponibles,
+    promocion: d.promocion
+      ? { nivelSuperior: d.promocion.nivel_superior, seguidos: d.promocion.seguidos, ultimoPct: d.promocion.ultimo_pct === null ? null : Number(d.promocion.ultimo_pct) }
+      : null,
+    plan: d.plan
+      ? { examDate: d.plan.exam_date, dias: d.plan.dias, tocaHoy: d.plan.toca_hoy, hechaHoy: d.plan.hecha_hoy, semana: d.plan.semana }
+      : null,
+    racha: { hechaHoy: d.racha?.hecha_hoy ?? false, diasSeguidos: d.racha?.dias_seguidos ?? 0 },
     historial: d.historial,
   };
 }
@@ -92,7 +116,11 @@ type ItemRow = {
 export async function generarDiagnostico(): Promise<PlayerItem[]> {
   const { data, error } = await supabase.rpc("generar_diagnostico_toefl");
   if (error) fail(error);
-  return (data as ItemRow[]).map((r) => ({
+  return toItems(data as ItemRow[]);
+}
+
+function toItems(rows: ItemRow[]): PlayerItem[] {
+  return rows.map((r) => ({
     id: r.id,
     section: r.section,
     mcerLevel: r.mcer_level,
@@ -119,6 +147,43 @@ export async function guardarDiagnostico(sheet: PlayerSheet): Promise<number> {
   });
   if (error) fail(error);
   return data as number;
+}
+
+/* ─────────────────────────── Práctica, plan y racha ─────────────────────────── */
+
+export type ExamTipo = "toefl_practica" | "toefl_plan" | "toefl_racha";
+
+export type ToeflExam = { nivel: McerLevel; nivelSuperior: McerLevel | null; tiempoLimite: number; items: PlayerItem[] };
+
+/** 60 % del nivel actual + 40 % del superior; práctica y plan 30–40 min, racha 5 preguntas en 10:00. */
+export async function generarExamen(tipo: ExamTipo): Promise<ToeflExam> {
+  const { data, error } = await supabase.rpc("generar_examen_toefl", { p_tipo: tipo });
+  if (error) fail(error);
+  const d = data as { nivel: McerLevel; nivel_superior: McerLevel | null; tiempo_limite: number; items: ItemRow[] };
+  return { nivel: d.nivel, nivelSuperior: d.nivel_superior, tiempoLimite: d.tiempo_limite, items: toItems(d.items) };
+}
+
+/** Califica, congela y, si toca, sube el nivel; devuelve el id de exam_history. */
+export async function guardarExamen(tipo: ExamTipo, sheet: PlayerSheet): Promise<number> {
+  const { data, error } = await supabase.rpc("guardar_examen_toefl", {
+    p_tipo: tipo,
+    p_respuestas: sheet.respuestas.map((r) => ({ id: r.id, respuesta_id: r.respuestaId, segundos: Math.round(r.segundos) })),
+    p_tiempo_usado: Math.round(sheet.tiempoUsado),
+    p_agotado: sheet.agotado,
+    p_aviso_aceptado: true,
+  });
+  if (error) fail(error);
+  return (data as { id: number }).id;
+}
+
+export async function guardarPlan(examDate: string | null, dias: number[]): Promise<void> {
+  const { error } = await supabase.rpc("guardar_plan_toefl", { p_fecha: examDate, p_dias: dias });
+  if (error) fail(error);
+}
+
+export async function cancelarPlan(): Promise<void> {
+  const { error } = await supabase.rpc("cancelar_plan_toefl");
+  if (error) fail(error);
 }
 
 /* ─────────────────────────── Intento congelado ─────────────────────────── */
@@ -149,6 +214,8 @@ export type ToeflRecord = {
   tipo: ToeflAttempt["tipo"];
   nivel: McerLevel;
   nivelAnterior: McerLevel | null;
+  /** Práctica y plan: avance hacia el siguiente nivel. */
+  promocion: { nivelSuperior: McerLevel | null; pctSuperior: number | null; promovido: boolean; nivelNuevo: McerLevel } | null;
   total: number;
   respondidas: number;
   puntos: number;
@@ -167,7 +234,13 @@ export async function getIntento(id: number): Promise<ToeflRecord | null> {
   if (error) fail(error);
   if (!data) return null;
   const f = data.frozen_exam_data as {
-    toefl?: { nivel_anterior: McerLevel | null };
+    toefl?: {
+      nivel_anterior?: McerLevel | null;
+      nivel_superior?: McerLevel | null;
+      pct_superior?: number | string | null;
+      promovido?: boolean;
+      nivel_nuevo?: McerLevel;
+    };
     resumen_por_nivel?: ToeflRecord["porNivel"];
     resumen_por_materia?: ToeflRecord["porSeccion"];
     questions_snapshot?: SnapshotQuestion[];
@@ -178,6 +251,15 @@ export async function getIntento(id: number): Promise<ToeflRecord | null> {
     tipo: data.exam_type,
     nivel: data.level,
     nivelAnterior: f.toefl?.nivel_anterior ?? null,
+    promocion:
+      f.toefl && "promovido" in f.toefl
+        ? {
+            nivelSuperior: f.toefl.nivel_superior ?? null,
+            pctSuperior: f.toefl.pct_superior === null || f.toefl.pct_superior === undefined ? null : Number(f.toefl.pct_superior),
+            promovido: Boolean(f.toefl.promovido),
+            nivelNuevo: f.toefl.nivel_nuevo ?? data.level,
+          }
+        : null,
     total: data.total_questions,
     respondidas: data.answered_questions,
     puntos: Number(data.score_achieved),
