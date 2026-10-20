@@ -14,6 +14,7 @@ import { MCER_INFO } from "../lib/mcer";
 import { formatClock } from "../lib/player";
 import { getIntento, type ToeflRecord } from "../services/toefl-service";
 import { MCER_LEVELS, SECTION_LABEL } from "../types";
+import { ErrorGuide } from "./error-guide";
 import { TOEFL_PATH } from "./toefl-home";
 
 /** /app/student/toefl/resultado?id=: nivel asignado y desglose por sección y nivel MCER. */
@@ -165,6 +166,8 @@ function ToeflResult({ record }: { record: ToeflRecord }) {
           })}
         </ul>
       </section>
+
+      {record.preguntas.length > 0 && <ErrorGuide preguntas={record.preguntas} />}
 
       <Button asChild className="self-start">
         <Link href={TOEFL_PATH}>Ir a TOEFL ITP</Link>
