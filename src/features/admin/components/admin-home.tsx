@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BellRing, FileJson, School, Sparkles, Users } from "lucide-react";
+import { BarChart3, BellRing, FileJson, Languages, School, Sparkles, Users } from "lucide-react";
 
 import { HomeTools } from "@/features/modes/components/home-tools";
 import { useMode } from "@/features/modes/components/mode-guard";
@@ -36,6 +36,12 @@ export function AdminHome() {
             description: "Búsqueda, captura, edición y carga por JSON.",
             icon: FileJson,
             href: "/admin/ingest",
+          },
+          {
+            label: "TOEFL ITP",
+            description: "Paquetes .zip con audios, inventario por edad y nivel MCER.",
+            icon: Languages,
+            href: "/admin/toefl-import",
           },
           {
             label: "Escuelas y Carreras",
