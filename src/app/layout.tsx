@@ -28,7 +28,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className="dark">
+    // suppressHydrationWarning: el script de la landing marca <html> antes de que cargue React.
+    <html lang="es" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} ${poppins.variable}`}>
         <IdentidadProvider>{children}</IdentidadProvider>
         <ServiceWorker />
