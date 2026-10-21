@@ -5,6 +5,7 @@
 
 import type { AuthError } from "@supabase/supabase-js";
 
+import { forgetHome, rememberHome } from "@/features/landing/lib/session-redirect";
 import { homePathFor, ownMode } from "@/features/modes/modes";
 import { disableWebPush } from "@/features/notificaciones/lib/web-push";
 import { studentHomePath } from "@/features/student/services/access-service";
@@ -31,11 +32,13 @@ export function authErrorMessage(error: AuthError | null | undefined) {
 export async function signOut() {
   await disableWebPush();
   await supabase.auth.signOut();
+  forgetHome();
 }
 
 /**
  * Panel al que entra cada tipo de usuario tras iniciar sesión. Admin → /admin; estudiante →
- * home Pro o Demo según su suscripción; padres/maestros → su dashboard.
+ * home Pro o Demo según su suscripción; padres/maestros → su dashboard. Se recuerda para que la landing
+ * redirija al instante la próxima vez.
  */
 export async function homePathForCurrentUser(): Promise<string> {
   // Filtrar por el propio id: padres y admins también pueden leer otros perfiles (RLS).
@@ -43,6 +46,10 @@ export async function homePathForCurrentUser(): Promise<string> {
   if (!auth.user) return homePathFor(null);
   const { data } = await supabase.from("profiles").select("user_type").eq("id", auth.user.id).maybeSingle();
   const userType = data?.user_type ?? null;
-  if (ownMode(userType) === "student") return studentHomePath().catch(() => homePathFor(userType));
-  return homePathFor(userType);
+  const path =
+    ownMode(userType) === "student"
+      ? await studentHomePath().catch(() => homePathFor(userType))
+      : homePathFor(userType);
+  rememberHome(auth.user.id, path);
+  return path;
 }
